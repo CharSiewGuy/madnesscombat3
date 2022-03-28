@@ -16,4 +16,4 @@ Character:WaitForChild("Humanoid").Died:Connect(function()
 end)
 
 local uis = game:GetService("UserInputService")
-uis.MouseIconEnabled = true
+uis.MouseIconEnabled = false
