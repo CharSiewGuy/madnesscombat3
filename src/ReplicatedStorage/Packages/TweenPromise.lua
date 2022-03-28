@@ -1,4 +1,4 @@
-local Promise = require(game:GetService("ReplicatedStorage").Common.Packages.Promise)
+local Promise = require(game:GetService("ReplicatedStorage").Packages.Promise)
 local TweenService = game:GetService("TweenService")
 
 function tween(obj, tweenInfo, props)
