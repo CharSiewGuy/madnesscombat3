@@ -26,12 +26,12 @@ enabled.Changed:Connect(function(val)
 	end
 end)
 
-game:GetService("RunService").Heartbeat:Connect(function(dt)
+game:GetService("RunService").Heartbeat:Connect(function()
 	if character:FindFirstChild("HumanoidRootPart") then
 		if enabled.Value then
 			if humanoidRootPart:FindFirstChild("RootJoint") then
 				local waist = humanoidRootPart.RootJoint
-				waist.C0 = waistC0 * CFrame.fromEulerAnglesYXZ(math.asin(camera.CFrame.LookVector.y) * -0.75, 0, 0)
+				waist.C0 = waistC0 * CFrame.fromEulerAnglesYXZ(math.asin(camera.CFrame.LookVector.y) * -1, 0, 0)
 				tiltAt:FireServer(waist.C0)
 			end
 		end

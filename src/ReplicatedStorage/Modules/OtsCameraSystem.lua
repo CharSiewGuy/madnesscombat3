@@ -253,7 +253,7 @@ function CLASS:Update()
 		if (self.IsCharacterAligned == true) then
 			local newHumanoidRootPartCFrame = CFrame.new(humanoidRootPart.Position) *
 				CFrame.Angles(0, self.HorizontalAngle, 0)
-			humanoidRootPart.CFrame = humanoidRootPart.CFrame:Lerp(newHumanoidRootPartCFrame, activeCameraSettings.LerpSpeed/2)
+			humanoidRootPart.CFrame = humanoidRootPart.CFrame:Lerp(newHumanoidRootPartCFrame, activeCameraSettings.LerpSpeed/4)
 		end
 		----
 

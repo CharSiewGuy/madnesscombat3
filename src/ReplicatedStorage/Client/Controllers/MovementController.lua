@@ -8,13 +8,12 @@ local MovementController = Knit.CreateController { Name = "MovementController" }
 MovementController._janitor = Janitor.new()
 
 function MovementController:KnitStart()
-    Knit.Player.CharacterAppearanceLoaded:Connect(function(character)
-        local hum = character.Humanoid
-        local humanoidRootPart = character.HumanoidRootPart
+    Knit.Player.CharacterAdded:Connect(function(character)
+        local hum = character:WaitForChild("Humanoid")
+        local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
         local function getMovingDir()
             local dir = humanoidRootPart.CFrame:VectorToObjectSpace(hum.MoveDirection)
-            --print(dir)
             if dir.X < -0.9 then return "left" end
             if dir.X > 0.9 then return "right" end
             if dir.Z < 0 then return "forward" end
@@ -26,9 +25,13 @@ function MovementController:KnitStart()
             
             if hum.MoveDirection.Magnitude > 0 then
                 if getMovingDir() == "forward" then
-                    hum.WalkSpeed = 20
+                    if hum.WalkSpeed ~= 20 then
+                        hum.WalkSpeed = 20
+                    end
                 else
-                    hum.WalkSpeed = 16
+                    if hum.WalkSpeed ~= 16 then
+                        hum.WalkSpeed = 16
+                    end                
                 end
             end
         end))

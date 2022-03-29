@@ -27,6 +27,9 @@ local animNames = {
 	run = 	{
 		{ id = "rbxassetid://7054485106", weight = 10 } 
 			}, 
+	runbackward = 	{
+		{ id = "rbxassetid://6784655614", weight = 10 } 
+			},  
 	jump = 	{
 				{ id = "rbxassetid://6785337481", weight = 10 } 
 			}, 
@@ -325,9 +328,22 @@ end
 
 local userInputService = game:GetService("UserInputService")
 
+function playRunAnim()
+	local dir = HumanoidRootPart.CFrame:VectorToObjectSpace(Humanoid.MoveDirection)
+	if dir.X < -0.9 or dir.X > 0.9 then
+		playAnimation("walk", 0.2, Humanoid)
+		setAnimationSpeed(0.9)
+	elseif dir.Z > 0.5 then
+		playAnimation("runbackward", 0.2, Humanoid)
+	else
+		playAnimation("walk", 0.2, Humanoid)
+		setAnimationSpeed(1.1)
+	end
+end
+
 function onRunning(speed)
 	if speed > 0.01 then
-		playAnimation("walk", 0.1, Humanoid)
+		playRunAnim()
 		pose = "Running"
 	else
 		if emoteNames[currentAnim] == nil then
@@ -448,7 +464,7 @@ function move(time)
 		playAnimation("sit", 0.5, Humanoid)
 		return
 	elseif (pose == "Running") then
-		playAnimation("walk", 0.1, Humanoid)
+		playRunAnim()
 	elseif (pose == "Dead" or pose == "GettingUp" or pose == "FallingDown" or pose == "Seated" or pose == "PlatformStanding") then
 --		print("Wha " .. pose)
 		stopAllAnimations()
