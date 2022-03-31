@@ -18,13 +18,14 @@ function BreadGunController:KnitStart()
         local holdingGun = animator:LoadAnimation(ReplicatedStorage.Client.Assets.Animations.HoldingGun)
         holdingGun:Play()
 
-        local shootingAnim = animator:LoadAnimation(ReplicatedStorage.Client.Assets.Animations.Shooting)
+        local pointingGun = animator:LoadAnimation(ReplicatedStorage.Client.Assets.Animations.PointingGun)
 
         local function handleAction(actionName, inputState)
             if actionName == "Shoot" then
                 if inputState == Enum.UserInputState.Begin then
-                    shootingAnim:Play() 
+                    pointingGun:Play(0) 
                 elseif inputState == Enum.UserInputState.End then
+                    pointingGun:Stop()
                 end
             end
         end
