@@ -18,18 +18,13 @@ function BreadGunController:KnitStart()
         local holdingGun = animator:LoadAnimation(ReplicatedStorage.Client.Assets.Animations.HoldingGun)
         holdingGun:Play()
 
-        local pointingGun = animator:LoadAnimation(ReplicatedStorage.Client.Assets.Animations.PointingGun)
-        local lastPointedGun = 0
+        local shootingAnim = animator:LoadAnimation(ReplicatedStorage.Client.Assets.Animations.Shooting)
 
         local function handleAction(actionName, inputState)
             if actionName == "Shoot" then
                 if inputState == Enum.UserInputState.Begin then
-                    if not pointingGun.IsPlaying then
-                        pointingGun:Play(0.1)
-                        lastPointedGun = math.huge
-                    end
+                    shootingAnim:Play() 
                 elseif inputState == Enum.UserInputState.End then
-                    lastPointedGun = os.time()
                 end
             end
         end
@@ -37,9 +32,7 @@ function BreadGunController:KnitStart()
         ContextActionService:BindAction("Shoot", handleAction, true, Enum.UserInputType.MouseButton1)
 
         RunService.Heartbeat:Connect(function()
-            if os.time() > lastPointedGun + 1 then
-                pointingGun:Stop(0.3)
-            end
+          
         end)
     end)
 end
