@@ -18,23 +18,53 @@ function BreadGunController:KnitStart()
         local holdingGun = animator:LoadAnimation(ReplicatedStorage.Client.Assets.Animations.HoldingGun)
         holdingGun:Play()
 
-        local pointingGun = animator:LoadAnimation(ReplicatedStorage.Client.Assets.Animations.PointingGun)
+        --AIMING
+
+        self._aimJanitor = Janitor.new()
+
+        local function getLookAngle()
+            return workspace.CurrentCamera.CFrame.LookVector.Y * 1.1
+        end
+
+        local pointingGun
+
+        local function updateAim()
+            local lookAngle = getLookAngle()
+            local aimTimePos = (lookAngle + math.pi/2) * (pointingGun.Length / math.pi)
+            pointingGun.TimePosition = aimTimePos
+        end
+
+        pointingGun = animator:LoadAnimation(ReplicatedStorage.Client.Assets.Animations.PointingGun)
 
         local function handleAction(actionName, inputState)
             if actionName == "Shoot" then
                 if inputState == Enum.UserInputState.Begin then
-                    pointingGun:Play(0) 
+                    pointingGun:Play(0)
+                    pointingGun:AdjustSpeed(0)
+
+                    self._aimJanitor:Add(RunService.RenderStepped:Connect(updateAim))
+
+                    self._aimJanitor:Add(function()
+                        if hum.MoveDirection.Magnitude ~= 0 then
+                            pointingGun:Stop(0.2)
+                        end
+                    end)
                 elseif inputState == Enum.UserInputState.End then
-                    pointingGun:Stop()
+                    self._aimJanitor:Cleanup()
                 end
             end
         end
-
+        
         ContextActionService:BindAction("Shoot", handleAction, true, Enum.UserInputType.MouseButton1)
 
-        RunService.Heartbeat:Connect(function()
-          
+        self._janitor:Add(function()
+            ContextActionService:UnbindAction("Shoot")
         end)
+
+        self._janitor:Add(hum.Died:Connect(function()
+            self._janitor:Cleanup()
+        end))
+
     end)
 end
 
