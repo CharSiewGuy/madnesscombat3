@@ -9,12 +9,17 @@ local Promise = require(Packages.Promise)
 local Timer = require(Packages.Timer)
 local HumanoidAnimatorUtils = require(Packages.HumanoidAnimatorUtils)
 
+local Modules = ReplicatedStorage.Modules
+local Spring = require(Modules.Spring)
+
 local BreadGunController = Knit.CreateController { Name = "BreadGunController" }
 BreadGunController._janitor = Janitor.new()
 
 BreadGunController.Stats = {
-    ["FireRate"] = 0.15
+    ["FireRate"] = 0.13
 }
+
+BreadGunController._springs = {}
 
 function BreadGunController:KnitStart()
     Knit.Player.CharacterAdded:Connect(function(character)
@@ -22,6 +27,8 @@ function BreadGunController:KnitStart()
         local animator = HumanoidAnimatorUtils.getOrCreateAnimator(hum)
         local holdingGun = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.HoldingGun)
         holdingGun:Play()
+
+        self._springs.fire = Spring.create();
 
         --AIMING
 
@@ -70,9 +77,6 @@ function BreadGunController:KnitStart()
                         end))
                     end
 
-                    --[[self._janitor:AddPromise(Promise.delay(shooting.Length)):andThen(function()
-                        pointingGun:AdjustWeight(1, 0)
-                    end)]]--
                     self.isFiring = false
                 end
             end
@@ -80,7 +84,7 @@ function BreadGunController:KnitStart()
         
         ContextActionService:BindAction("Shoot", handleAction, true, Enum.UserInputType.MouseButton1)
 
-        self._janitor:Add(RunService.Heartbeat:Connect(function()
+        self._janitor:Add(RunService.RenderStepped:Connect(function(dt)
             if self.canFire then
                 if self.isFiring then
                     self.canFire = false
@@ -97,8 +101,24 @@ function BreadGunController:KnitStart()
                     self._janitor:AddPromise(Promise.delay(self.Stats["FireRate"]):andThen(function()
                         self.canFire = true
                     end))
+                    
+                    local sound = ReplicatedStorage.Assets.Sounds:FindFirstChild("Shoot" .. math.random(1, 3)):Clone()
+                    sound.Parent = workspace.CurrentCamera
+                    sound:Destroy()
+
+                    self._springs.fire:shove(Vector3.new(0.03,0,0) * dt * 60)
+                    print("target" .. self._springs.fire.Target.X)
+                    print("position" .. self._springs.fire.Position.X)
+                    print("velocity" .. self._springs.fire.Velocity.X)
+                    task.delay(0.24, function()
+                        self._springs.fire:shove(Vector3.new(-0.03,0,0) * dt * 60)
+                    end)
                 end
             end
+
+            local recoil = self._springs.fire:update(dt)
+
+            workspace.CurrentCamera.CFrame =  workspace.CurrentCamera.CFrame * CFrame.Angles(recoil.x, recoil.y, recoil.z)
         end))
 
         self._janitor:Add(function()
