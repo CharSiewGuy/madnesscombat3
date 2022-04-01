@@ -39,18 +39,26 @@ function BreadGunController:KnitStart()
         local function handleAction(actionName, inputState)
             if actionName == "Shoot" then
                 if inputState == Enum.UserInputState.Begin then
+                    self._aimJanitor:Cleanup()
+
                     pointingGun:Play(0)
                     pointingGun:AdjustSpeed(0)
 
                     self._aimJanitor:Add(RunService.RenderStepped:Connect(updateAim))
 
                     self._aimJanitor:Add(function()
-                        if hum.MoveDirection.Magnitude ~= 0 then
-                            pointingGun:Stop(0.2)
-                        end
+                        pointingGun:Stop(0.2)
                     end)
+
+                    self._janitor:Add(self._aimJanitor)
                 elseif inputState == Enum.UserInputState.End then
-                    self._aimJanitor:Cleanup()
+                    if hum.MoveDirection.Magnitude ~= 0 then
+                        self._aimJanitor:Cleanup()
+                    else
+                        self._aimJanitor:Add(hum:GetPropertyChangedSignal("MoveDirection"):Connect(function()
+                            self._aimJanitor:Cleanup()
+                        end))
+                    end
                 end
             end
         end
