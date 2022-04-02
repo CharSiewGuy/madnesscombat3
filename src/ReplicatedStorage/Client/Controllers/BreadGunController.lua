@@ -11,7 +11,6 @@ local HumanoidAnimatorUtils = require(Packages.HumanoidAnimatorUtils)
 
 local Modules = ReplicatedStorage.Modules
 local Spring = require(Modules.Spring)
-local OTS_CAMERA_SYSTEM = require(Modules.OtsCameraSystem)
 
 local BreadGunController = Knit.CreateController { Name = "BreadGunController" }
 BreadGunController._janitor = Janitor.new()
@@ -85,7 +84,7 @@ function BreadGunController:KnitStart()
         
         ContextActionService:BindAction("Shoot", handleAction, true, Enum.UserInputType.MouseButton1)
 
-        RunService:BindToRenderStep("after camera", Enum.RenderPriority.Camera.Value - 11, function(dt)
+        RunService:BindToRenderStep("after camera", Enum.RenderPriority.Last.Value, function(dt)
             if self.canFire then
                 if self.isFiring then
                     self.canFire = false
@@ -115,7 +114,7 @@ function BreadGunController:KnitStart()
             end
 
             local recoil = self._springs.fire:update(dt)
-            OTS_CAMERA_SYSTEM:SetAngleOffset(recoil)
+            workspace.CurrentCamera.CFrame = workspace.CurrentCamera.CFrame * CFrame.Angles(recoil.x, recoil.y, recoil.z)
         end)
 
         self._janitor:Add(function()
