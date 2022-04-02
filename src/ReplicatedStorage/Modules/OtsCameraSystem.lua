@@ -73,6 +73,7 @@ function CLASS.new()
 				DefaultShoulder = {
 					FieldOfView = 70,
 					Offset = Vector3.new(3, 2, 12),
+					AngleOffset = Vector3.new(0, 0, 0),
 					Sensitivity = 3,
 					LerpSpeed = 1
 				}
@@ -139,6 +140,14 @@ function CLASS:SetOffset(offset)
 		return
 	end
 	self.CameraSettings[self.ActiveCameraSettings].Offset = offset
+end
+
+function CLASS:SetAngleOffset(offset)
+	if (self.IsEnabled == false) then
+		warn("OTS Camera System Logic Warning: Attempt to change offset without enabling OTS camera system")
+		return
+	end
+	self.CameraSettings[self.ActiveCameraSettings].AngleOffset = offset
 end
 
 function CLASS:SetMouseStep(steppedIn)
@@ -224,10 +233,7 @@ function CLASS:Update()
 		local newCameraCFrame = CFrame.new(humanoidRootPart.Position) *
 			CFrame.Angles(0, self.HorizontalAngle, 0) *
 			CFrame.Angles(self.VerticalAngle, 0, 0) *
-			CFrame.new(offset)
-
-		newCameraCFrame = currentCamera.CFrame:Lerp(newCameraCFrame, activeCameraSettings.LerpSpeed)
-		----
+			CFrame.new(offset)		----
 
 		--// Raycast for obstructions //--
 		local raycastParams = RaycastParams.new()
@@ -256,8 +262,8 @@ function CLASS:Update()
 			humanoidRootPart.CFrame = humanoidRootPart.CFrame:Lerp(newHumanoidRootPartCFrame, activeCameraSettings.LerpSpeed/4)
 		end
 		----
-
-		currentCamera.CFrame = newCameraCFrame
+		local angleOffset = activeCameraSettings.AngleOffset
+		currentCamera.CFrame = newCameraCFrame * CFrame.Angles(angleOffset.x, angleOffset.y, angleOffset.z)
 
 	else
 		self:Disable()
