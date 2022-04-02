@@ -37,7 +37,7 @@ function BreadGunController:KnitStart()
         self.canFire = true
 
         local function getLookAngle()
-            return workspace.CurrentCamera.CFrame.LookVector.Y * 1.1
+            return workspace.CurrentCamera.CFrame.LookVector.Y * 1.5
         end
 
         local pointingGun = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.PointingGun)
@@ -49,7 +49,6 @@ function BreadGunController:KnitStart()
         end
 
         local shooting = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.Shooting)
-        shooting.Priority = Enum.AnimationPriority.Action3
 
         local function handleAction(actionName, inputState)
             if actionName == "Shoot" then
@@ -89,7 +88,7 @@ function BreadGunController:KnitStart()
                 if self.isFiring then
                     self.canFire = false
 
-                    shooting:Play(0)
+                    --shooting:Play(0)
                     
                     local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
                     flash.Parent = character.breadgun.Handle.Muzzle
