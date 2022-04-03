@@ -6,6 +6,7 @@ local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
 local Promise = require(Packages.Promise)
+local Tween = require(Packages.TweenPromise)
 local Timer = require(Packages.Timer)
 local HumanoidAnimatorUtils = require(Packages.HumanoidAnimatorUtils)
 
@@ -16,7 +17,7 @@ local BreadGunController = Knit.CreateController { Name = "BreadGunController" }
 BreadGunController._janitor = Janitor.new()
 
 BreadGunController.Stats = {
-    ["FireRate"] = 0.13
+    ["FireRate"] = 0.15
 }
 
 BreadGunController._springs = {}
@@ -37,7 +38,7 @@ function BreadGunController:KnitStart()
         self.canFire = true
 
         local function getLookAngle()
-            return workspace.CurrentCamera.CFrame.LookVector.Y * 1.5
+            return workspace.CurrentCamera.CFrame.LookVector.Y * 1.3
         end
 
         local pointingGun = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.PointingGun)
@@ -47,8 +48,6 @@ function BreadGunController:KnitStart()
             local aimTimePos = (lookAngle + math.pi/2) * (pointingGun.Length / math.pi)
             pointingGun.TimePosition = aimTimePos
         end
-
-        local shooting = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.Shooting)
 
         local function handleAction(actionName, inputState)
             if actionName == "Shoot" then
@@ -60,19 +59,19 @@ function BreadGunController:KnitStart()
 
                     self._aimJanitor:Add(RunService.RenderStepped:Connect(updateAim))
 
-                    self._aimJanitor:Add(function()
-                        pointingGun:Stop(0.2)
-                    end)
-
                     self._janitor:Add(self._aimJanitor)
                     
                     self.isFiring = true                   
                 elseif inputState == Enum.UserInputState.End then
                     if hum.MoveDirection.Magnitude ~= 0 then
-                        self._aimJanitor:Cleanup()
+                        self._aimJanitor:AddPromise(Promise.delay(0.4)):andThen(function()
+                            self._aimJanitor:Cleanup()
+                            pointingGun:Stop(0.3)
+                        end)
                     else
                         self._aimJanitor:Add(hum:GetPropertyChangedSignal("MoveDirection"):Connect(function()
                             self._aimJanitor:Cleanup()
+                            pointingGun:Stop(0.3)
                         end))
                     end
 
@@ -83,12 +82,20 @@ function BreadGunController:KnitStart()
         
         ContextActionService:BindAction("Shoot", handleAction, true, Enum.UserInputType.MouseButton1)
 
-        RunService:BindToRenderStep("after camera", Enum.RenderPriority.Last.Value, function(dt)
+        RunService.Heartbeat:Connect(function(dt)
             if self.canFire then
                 if self.isFiring then
                     self.canFire = false
 
-                    --shooting:Play(0)
+                    local newCFrame = character.Torso["Right Shoulder"].C0 *
+                    CFrame.Angles(0, 0, 0.2)
+
+                    character.Torso["Right Shoulder"].C0 = newCFrame
+                    
+                    newCFrame = character.Torso["Right Shoulder"].C0 *
+                    CFrame.Angles(0, 0, -0.2)
+
+                    Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.15, Enum.EasingStyle.Sine), {C0 = newCFrame})
                     
                     local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
                     flash.Parent = character.breadgun.Handle.Muzzle
@@ -105,15 +112,15 @@ function BreadGunController:KnitStart()
                     sound.Parent = workspace.CurrentCamera
                     sound:Destroy()
 
-                    self._springs.fire:shove(Vector3.new(0.03,0,0) * dt * 60)
-                    print("target" .. self._springs.fire.Target.X)
-                    print("position" .. self._springs.fire.Position.X)
-                    print("velocity" .. self._springs.fire.Velocity.X)  
+                    self._springs.fire:shove(Vector3.new(2, math.random(-1, 1), 5) * dt * 60)
+                    task.delay(0.2, function()
+                        self._springs.fire:shove(Vector3.new(-1, math.random(-0.5, 0.5), -5) * dt * 60)
+                    end)
                 end
             end
 
             local recoil = self._springs.fire:update(dt)
-            workspace.CurrentCamera.CFrame = workspace.CurrentCamera.CFrame * CFrame.Angles(recoil.x, recoil.y, recoil.z)
+            workspace.CurrentCamera.CFrame = workspace.CurrentCamera.CFrame * CFrame.Angles(math.rad(recoil.x), math.rad(recoil.y), math.rad(recoil.z))
         end)
 
         self._janitor:Add(function()
