@@ -13,6 +13,8 @@ local HumanoidAnimatorUtils = require(Packages.HumanoidAnimatorUtils)
 local Modules = ReplicatedStorage.Modules
 local Spring = require(Modules.Spring)
 
+local FastCastController
+
 local BreadGunController = Knit.CreateController { Name = "BreadGunController" }
 BreadGunController._janitor = Janitor.new()
 
@@ -21,6 +23,10 @@ BreadGunController.Stats = {
 }
 
 BreadGunController._springs = {}
+
+function BreadGunController:KnitInit()
+    FastCastController = Knit.GetController("FastCastController")
+end
 
 function BreadGunController:KnitStart()
     Knit.Player.CharacterAdded:Connect(function(character)
