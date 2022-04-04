@@ -19,22 +19,25 @@ function rayUpdated(_, lastPoint, direction, length, _, bullet)
 end
 
 function rayHit(cast, result, velocity, bullet)
-	bullet:Destroy()
+
+end
+
+function cleanUpBullet(activeCast)
+    local bullet = activeCast.RayInfo.CosmeticBulletObject
+    bullet:Destroy()
 end
 
 function FastCastController:KnitStart()
     mainCaster = FastCast.new()
     mainCaster.RayHit:Connect(rayHit)
     mainCaster.LengthChanged:Connect(rayUpdated)
+    mainCaster.CastTerminating:Connect(cleanUpBullet)
 end
 
-function FastCastController:fire(origin, direction, isReplicated, repCharacter)	
+function FastCastController:Fire(origin, direction, isReplicated, repCharacter)	
 	local rawOrigin	= origin
 	local rawDirection = direction
-		
-	local directionalCFrame = CFrame.new(Vector3.new(), direction.LookVector)			
-	direction = (directionalCFrame * CFrame.fromOrientation(0, 0, random:NextNumber(0, math.pi * 2)) * CFrame.fromOrientation(0, 0, 0)).LookVector			
-	
+			
 	if not isReplicated then 
 
 	end
@@ -46,16 +49,14 @@ function FastCastController:fire(origin, direction, isReplicated, repCharacter)
 
     local CastBehavior = FastCast.newBehavior()
     CastBehavior.RaycastParams = CastParams
-    CastBehavior.MaxDistance = 5000
+    CastBehavior.MaxDistance = 300
     CastBehavior.HighFidelityBehavior = FastCast.HighFidelityBehavior.Default
     CastBehavior.CosmeticBulletContainer = workspace.Projectiles
     CastBehavior.CosmeticBulletTemplate = ReplicatedStorage.Assets.Particles.Bullet
-    CastBehavior.Acceleration = Vector3.new(0, -workspace.Gravity, 0)
+    CastBehavior.Acceleration = Vector3.new(0, -3, 0)
     CastBehavior.AutoIgnoreContainer = true
 	
 	mainCaster:Fire(origin, direction, 100, CastBehavior)					
 end 
-
-
 
 return FastCastController

@@ -122,6 +122,8 @@ function BreadGunController:KnitStart()
                     task.delay(0.2, function()
                         self._springs.fire:shove(Vector3.new(-1, math.random(-0.5, 0.5), -5) * dt * 60)
                     end)
+
+                    FastCastController:Fire(character.breadgun.Handle.Muzzle.WorldPosition, (Knit.Player:GetMouse().Hit.Position - character.breadgun.Handle.Muzzle.WorldPosition).Unit, false, character)
                 end
             end
 
