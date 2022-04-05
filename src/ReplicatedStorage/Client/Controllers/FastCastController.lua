@@ -19,7 +19,12 @@ function rayUpdated(_, lastPoint, direction, length, _, bullet)
 end
 
 function rayHit(cast, result, velocity, bullet)
-
+    local hitEffect = ReplicatedStorage.Assets.Particles.ElectricHit:Clone()
+    hitEffect.Parent = workspace
+    hitEffect.Position = result.Position
+    for _, v in pairs(hitEffect:GetChildren()) do
+        v:Emit(tonumber(v.Name))
+    end
 end
 
 function cleanUpBullet(activeCast)
@@ -34,9 +39,9 @@ function FastCastController:KnitStart()
     mainCaster.CastTerminating:Connect(cleanUpBullet)
 end
 
-function FastCastController:Fire(origin, direction, isReplicated, repCharacter)	
+function FastCastController:Fire(origin, ray, isReplicated, repCharacter)	
 	local rawOrigin	= origin
-	local rawDirection = direction
+	local rawRay = ray
 			
 	if not isReplicated then 
 

@@ -29,6 +29,8 @@ function BreadGunController:KnitInit()
 end
 
 function BreadGunController:KnitStart()
+    local camera = workspace.CurrentCamera
+
     Knit.Player.CharacterAdded:Connect(function(character)
         local hum = character:WaitForChild("Humanoid")
         local animator = HumanoidAnimatorUtils.getOrCreateAnimator(hum)
@@ -44,7 +46,7 @@ function BreadGunController:KnitStart()
         self.canFire = true
 
         local function getLookAngle()
-            return workspace.CurrentCamera.CFrame.LookVector.Y * 1.3
+            return camera.CFrame.LookVector.Y * 1.3
         end
 
         local pointingGun = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.PointingGun)
@@ -97,11 +99,15 @@ function BreadGunController:KnitStart()
                     CFrame.Angles(0, 0, 0.2)
 
                     character.Torso["Right Shoulder"].C0 = newCFrame
+
+                    Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.05, Enum.EasingStyle.Back), {C0 = newCFrame})
                     
                     newCFrame = character.Torso["Right Shoulder"].C0 *
                     CFrame.Angles(0, 0, -0.2)
 
-                    Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.15, Enum.EasingStyle.Sine), {C0 = newCFrame})
+                    task.delay(0.05, function()
+                        Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.1, Enum.EasingStyle.Sine), {C0 = newCFrame})
+                    end)
                     
                     local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
                     flash.Parent = character.breadgun.Handle.Muzzle
@@ -115,7 +121,7 @@ function BreadGunController:KnitStart()
                     end))
                     
                     local sound = ReplicatedStorage.Assets.Sounds:FindFirstChild("Shoot" .. math.random(1, 3)):Clone()
-                    sound.Parent = workspace.CurrentCamera
+                    sound.Parent = camera
                     sound:Destroy()
 
                     self._springs.fire:shove(Vector3.new(2, math.random(-1, 1), 5) * dt * 60)
@@ -123,12 +129,13 @@ function BreadGunController:KnitStart()
                         self._springs.fire:shove(Vector3.new(-1, math.random(-0.5, 0.5), -5) * dt * 60)
                     end)
 
-                    FastCastController:Fire(character.breadgun.Handle.Muzzle.WorldPosition, (Knit.Player:GetMouse().Hit.Position - character.breadgun.Handle.Muzzle.WorldPosition).Unit, false, character)
+                    local viewportPoint = camera.ViewportSize / 2
+                    FastCastController:Fire(character.breadgun.Handle.Muzzle.WorldPosition, camera:ViewportPointToRay(viewportPoint.X, viewportPoint.Y), false, character)
                 end
             end
 
             local recoil = self._springs.fire:update(dt)
-            workspace.CurrentCamera.CFrame = workspace.CurrentCamera.CFrame * CFrame.Angles(math.rad(recoil.x), math.rad(recoil.y), math.rad(recoil.z))
+            camera.CFrame = camera.CFrame * CFrame.Angles(math.rad(recoil.x), math.rad(recoil.y), math.rad(recoil.z))
         end)
 
         self._janitor:Add(function()
