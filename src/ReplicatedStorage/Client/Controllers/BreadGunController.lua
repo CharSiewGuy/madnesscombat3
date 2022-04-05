@@ -19,7 +19,7 @@ local BreadGunController = Knit.CreateController { Name = "BreadGunController" }
 BreadGunController._janitor = Janitor.new()
 
 BreadGunController.Stats = {
-    ["FireRate"] = 0.15
+    ["FireRate"] = 0.12
 }
 
 BreadGunController._springs = {}
@@ -90,6 +90,17 @@ function BreadGunController:KnitStart()
         
         ContextActionService:BindAction("Shoot", handleAction, true, Enum.UserInputType.MouseButton1)
 
+        local CastParams = RaycastParams.new()
+        CastParams.IgnoreWater = true
+        CastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        CastParams.FilterDescendantsInstances = {character, workspace.CurrentCamera}
+
+        local function getMousePos(unitRay)
+            local ori, dir = unitRay.Origin, unitRay.Direction * 300
+            local result = workspace:Raycast(ori, dir, CastParams)
+            return result and result.Position or ori + dir
+        end
+
         RunService.Heartbeat:Connect(function(dt)
             if self.canFire then
                 if self.isFiring then
@@ -100,12 +111,12 @@ function BreadGunController:KnitStart()
 
                     character.Torso["Right Shoulder"].C0 = newCFrame
 
-                    Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.05, Enum.EasingStyle.Back), {C0 = newCFrame})
+                    Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.02, Enum.EasingStyle.Back), {C0 = newCFrame})
                     
                     newCFrame = character.Torso["Right Shoulder"].C0 *
                     CFrame.Angles(0, 0, -0.2)
 
-                    task.delay(0.05, function()
+                    task.delay(0.02, function()
                         Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.1, Enum.EasingStyle.Sine), {C0 = newCFrame})
                     end)
                     
@@ -130,7 +141,9 @@ function BreadGunController:KnitStart()
                     end)
 
                     local viewportPoint = camera.ViewportSize / 2
-                    FastCastController:Fire(character.breadgun.Handle.Muzzle.WorldPosition, camera:ViewportPointToRay(viewportPoint.X, viewportPoint.Y), false, character)
+                    local pos = getMousePos(camera:ViewportPointToRay(viewportPoint.X, viewportPoint.Y))
+                    local direction = (pos - character.breadgun.Handle.Muzzle.WorldPosition).Unit
+                    FastCastController:Fire(character.breadgun.Handle.Muzzle.WorldPosition, direction, false, character)
                 end
             end
 

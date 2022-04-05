@@ -6,8 +6,6 @@ local FastCast = require(Packages.FastCastRedux)
 
 local FastCastController = Knit.CreateController { Name = "FastCastController" }
 
-local random = Random.new()
-
 local mainCaster
 
 function rayUpdated(_, lastPoint, direction, length, _, bullet)
@@ -39,18 +37,18 @@ function FastCastController:KnitStart()
     mainCaster.CastTerminating:Connect(cleanUpBullet)
 end
 
-function FastCastController:Fire(origin, ray, isReplicated, repCharacter)	
+function FastCastController:Fire(origin, direction, isReplicated, repCharacter)	
 	local rawOrigin	= origin
-	local rawRay = ray
+	local rawDirection = direction
 			
 	if not isReplicated then 
 
 	end
-	
+
     local CastParams = RaycastParams.new()
     CastParams.IgnoreWater = true
     CastParams.FilterType = Enum.RaycastFilterType.Blacklist
-    CastParams.FilterDescendantsInstances = {repCharacter, workspace.Camera}
+    CastParams.FilterDescendantsInstances = {repCharacter, workspace.CurrentCamera}
 
     local CastBehavior = FastCast.newBehavior()
     CastBehavior.RaycastParams = CastParams
@@ -60,8 +58,12 @@ function FastCastController:Fire(origin, ray, isReplicated, repCharacter)
     CastBehavior.CosmeticBulletTemplate = ReplicatedStorage.Assets.Particles.Bullet
     CastBehavior.Acceleration = Vector3.new(0, -3, 0)
     CastBehavior.AutoIgnoreContainer = true
-	
-	mainCaster:Fire(origin, direction, 100, CastBehavior)					
+
+    local directionCF = CFrame.new(Vector3.new(), direction)
+    local spreadDirection = CFrame.fromOrientation(0, 0, math.random(0, math.pi * 2))
+    local spreadAngle = CFrame.fromOrientation(math.rad(math.random(1, 2)), 0, 0)
+    local finalDirection = (directionCF * spreadDirection * spreadAngle).LookVector
+	mainCaster:Fire(origin, finalDirection, 100, CastBehavior)					
 end 
 
 return FastCastController
