@@ -30,6 +30,12 @@ function cleanUpBullet(activeCast)
     bullet:Destroy()
 end
 
+local FastCastService
+
+function FastCastController:KnitInit()
+    FastCastService = Knit.GetService("FastCastService")
+end
+
 function FastCastController:KnitStart()
     mainCaster = FastCast.new()
     mainCaster.RayHit:Connect(rayHit)
@@ -42,7 +48,7 @@ function FastCastController:Fire(origin, direction, isReplicated, repCharacter)
 	local rawDirection = direction
 			
 	if not isReplicated then 
-
+        FastCastService:Fire(rawOrigin, rawDirection)
 	end
 
     local CastParams = RaycastParams.new()
