@@ -36,13 +36,6 @@ function FastCastController:KnitInit()
     FastCastService = Knit.GetService("FastCastService")
 end
 
-function FastCastController:KnitStart()
-    mainCaster = FastCast.new()
-    mainCaster.RayHit:Connect(rayHit)
-    mainCaster.LengthChanged:Connect(rayUpdated)
-    mainCaster.CastTerminating:Connect(cleanUpBullet)
-end
-
 function FastCastController:Fire(origin, direction, isReplicated, repCharacter)	
 	local rawOrigin	= origin
 	local rawDirection = direction
@@ -72,4 +65,14 @@ function FastCastController:Fire(origin, direction, isReplicated, repCharacter)
 	mainCaster:Fire(origin, finalDirection, 100, CastBehavior)					
 end 
 
+function FastCastController:KnitStart()
+    mainCaster = FastCast.new()
+    mainCaster.RayHit:Connect(rayHit)
+    mainCaster.LengthChanged:Connect(rayUpdated)
+    mainCaster.CastTerminating:Connect(cleanUpBullet)
+
+    FastCastService.FireSignal:Connect(function(origin, direction, isReplicated, repCharacter)
+        self:Fire(origin, direction, isReplicated, repCharacter)
+    end)
+end
 return FastCastController
