@@ -74,12 +74,12 @@ function BreadGunController:KnitStart()
                     if hum.MoveDirection.Magnitude ~= 0 then
                         self._aimJanitor:AddPromise(Promise.delay(0.4)):andThen(function()
                             self._aimJanitor:Cleanup()
-                            pointingGun:Stop(0.3)
+                            pointingGun:Stop(0)
                         end)
                     else
                         self._aimJanitor:Add(hum:GetPropertyChangedSignal("MoveDirection"):Connect(function()
                             self._aimJanitor:Cleanup()
-                            pointingGun:Stop(0.3)
+                            pointingGun:Stop(0)
                         end))
                     end
 
@@ -109,15 +109,13 @@ function BreadGunController:KnitStart()
                     local newCFrame = character.Torso["Right Shoulder"].C0 *
                     CFrame.Angles(0, 0, 0.2)
 
-                    character.Torso["Right Shoulder"].C0 = newCFrame
-
-                    Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.02, Enum.EasingStyle.Back), {C0 = newCFrame})
+                    Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.03, Enum.EasingStyle.Back), {C0 = newCFrame})
                     
-                    newCFrame = character.Torso["Right Shoulder"].C0 *
+                    newCFrame = newCFrame *
                     CFrame.Angles(0, 0, -0.2)
 
-                    task.delay(0.02, function()
-                        Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.1, Enum.EasingStyle.Sine), {C0 = newCFrame})
+                    self._janitor:AddPromise(Promise.delay(0.03)):andThen(function()
+                        Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.09, Enum.EasingStyle.Sine), {C0 = newCFrame})
                     end)
                     
                     local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
@@ -161,7 +159,6 @@ function BreadGunController:KnitStart()
         self._janitor:Add(hum.Died:Connect(function()
             self._janitor:Cleanup()
         end))
-
     end)
 end
 

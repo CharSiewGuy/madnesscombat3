@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 local FastCast = require(Packages.FastCastRedux)
+local Tween = require(Packages.TweenPromise)
 
 local FastCastController = Knit.CreateController { Name = "FastCastController" }
 
@@ -37,13 +38,6 @@ function FastCastController:KnitInit()
 end
 
 function FastCastController:Fire(origin, direction, isReplicated, repCharacter)	
-	local rawOrigin	= origin
-	local rawDirection = direction
-			
-	if not isReplicated then 
-        FastCastService:Fire(rawOrigin, rawDirection)
-	end
-
     local CastParams = RaycastParams.new()
     CastParams.IgnoreWater = true
     CastParams.FilterType = Enum.RaycastFilterType.Blacklist
@@ -58,11 +52,23 @@ function FastCastController:Fire(origin, direction, isReplicated, repCharacter)
     CastBehavior.Acceleration = Vector3.new(0, -3, 0)
     CastBehavior.AutoIgnoreContainer = true
 
-    local directionCF = CFrame.new(Vector3.new(), direction)
-    local spreadDirection = CFrame.fromOrientation(0, 0, math.random(0, math.pi * 2))
-    local spreadAngle = CFrame.fromOrientation(math.rad(math.random(1, 2)), 0, 0)
-    local finalDirection = (directionCF * spreadDirection * spreadAngle).LookVector
-	mainCaster:Fire(origin, finalDirection, 100, CastBehavior)					
+    if not isReplicated then
+        local directionCF = CFrame.new(Vector3.new(), direction)
+        local spreadDirection = CFrame.fromOrientation(0, 0, math.random(0, math.pi * 2))
+        local spreadAngle = CFrame.fromOrientation(math.rad(math.random(1, 2)), 0, 0)
+        local finalDirection = (directionCF * spreadDirection * spreadAngle).LookVector
+        mainCaster:Fire(origin, finalDirection, 100, CastBehavior)				
+        FastCastService:Fire(origin, finalDirection)
+	else
+        mainCaster:Fire(origin, direction, 100, CastBehavior)
+
+        local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
+        flash.Parent = repCharacter.breadgun.Handle.Muzzle
+        flash:Emit(1)
+        task.delay(0.5, function()
+            flash:Destroy()
+        end)
+    end
 end 
 
 function FastCastController:KnitStart()
