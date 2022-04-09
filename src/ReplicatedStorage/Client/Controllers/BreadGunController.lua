@@ -7,7 +7,6 @@ local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
 local Promise = require(Packages.Promise)
 local Tween = require(Packages.TweenPromise)
-local Timer = require(Packages.Timer)
 local HumanoidAnimatorUtils = require(Packages.HumanoidAnimatorUtils)
 
 local Modules = ReplicatedStorage.Modules
@@ -15,6 +14,7 @@ local Spring = require(Modules.Spring)
 
 local FastCastController
 local HudController
+local MovementController
 
 local BreadGunController = Knit.CreateController { Name = "BreadGunController" }
 BreadGunController._janitor = Janitor.new()
@@ -28,6 +28,7 @@ BreadGunController._springs = {}
 function BreadGunController:KnitInit()
     FastCastController = Knit.GetController("FastCastController")
     HudController = Knit.GetController("HudController")
+    MovementController = Knit.GetController("MovementController")
 end
 
 function BreadGunController:KnitStart()
@@ -62,28 +63,35 @@ function BreadGunController:KnitStart()
             pointingGun.TimePosition = aimTimePos
         end
 
+        self._reloadJanitor = Janitor.new()
+        local originalShoulderCFrame = character.Torso["Right Shoulder"].C0
         local reloadingAnim = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.Reloading)
 
         local function reload()
+            if MovementController.isSprinting then return end
             if not self.isReloading and self.bullets < self.maxBullets then
                 self.isFiring = false
                 self._aimJanitor:Cleanup()
                 self.isReloading = true
                 reloadingAnim:Play()
+                MovementController.canSprint = false
                 self._janitor:AddPromise(Promise.delay(reloadingAnim.Length)):andThen(function()
                     self.isReloading = false
                     self.bullets = self.maxBullets
+                    MovementController.canSprint = true
                 end)
-
-                                    
+   
                 local sound = ReplicatedStorage.Assets.Sounds.Reload:Clone()
                 sound.Parent = camera
                 sound:Destroy()
+
+                self._reloadJanitor:Cleanup()
+                character.Torso["Right Shoulder"].C0 = originalShoulderCFrame
             end
         end
 
         local function handleAction(actionName, inputState)
-            if self.bullets <= 0 or self.isReloading then return end
+            if self.bullets <= 0 or self.isReloading or MovementController.isSprinting then return end
             if actionName == "Shoot" then
                 if inputState == Enum.UserInputState.Begin then
                     self._aimJanitor:Cleanup()
@@ -135,6 +143,7 @@ function BreadGunController:KnitStart()
         end
 
         self._janitor:Add(RunService.Heartbeat:Connect(function()
+            if MovementController.isSprinting then self._aimJanitor:Cleanup() return end
             if not self.canFire or self.isReloading then return end
             if self.bullets > 0 then
                 if self.isFiring then
@@ -149,13 +158,10 @@ function BreadGunController:KnitStart()
                     local newCFrame = character.Torso["Right Shoulder"].C0 *
                     CFrame.Angles(0, 0, 0.15)
 
-                    Tween(character.Torso["Right Shoulder"], TweenInfo.new(self.Stats["FireRate"]/5, Enum.EasingStyle.Back), {C0 = newCFrame})
+                    Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.02, Enum.EasingStyle.Back), {C0 = newCFrame})
                     
-                    newCFrame = newCFrame *
-                    CFrame.Angles(0, 0, -0.15)
-
-                    self._janitor:AddPromise(Promise.delay(self.Stats["FireRate"]/5)):andThen(function()
-                        Tween(character.Torso["Right Shoulder"], TweenInfo.new(self.Stats["FireRate"]/5 * 4, Enum.EasingStyle.Sine), {C0 = newCFrame})
+                    self._janitor:AddPromise(Promise.delay(0.02)):andThen(function()
+                        Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.08, Enum.EasingStyle.Sine), {C0 = originalShoulderCFrame})
                     end)
                     
                     local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
