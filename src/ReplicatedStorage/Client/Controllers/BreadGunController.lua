@@ -20,7 +20,7 @@ local BreadGunController = Knit.CreateController { Name = "BreadGunController" }
 BreadGunController._janitor = Janitor.new()
 
 BreadGunController.Stats = {
-    ["FireRate"] = 0.12
+    ["FireRate"] = 0.1
 }
 
 BreadGunController._springs = {}
@@ -39,15 +39,15 @@ function BreadGunController:KnitStart()
         local holdingGun = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.HoldingGun)
         holdingGun:Play()
 
-        self._springs.fire = Spring.create();
+        self._springs.fire = Spring.new()
 
         --AIMING
 
         self._aimJanitor = Janitor.new()
         self.isFiring = false
         self.canFire = true
-        self.bullets = 30
-        self.maxBullets = 30
+        self.bullets = 25
+        self.maxBullets = 25
         self.isReloading = false
 
         local function getLookAngle()
@@ -114,7 +114,9 @@ function BreadGunController:KnitStart()
                     self.isFiring = false
                 end
             elseif actionName == "Reload" then
-                reload()
+                if inputState == Enum.UserInputState.Begin then
+                    reload()
+                end
             end
         end
         
@@ -132,7 +134,7 @@ function BreadGunController:KnitStart()
             return result and result.Position or ori + dir
         end
 
-        RunService.Heartbeat:Connect(function(dt)
+        self._janitor:Add(RunService.Heartbeat:Connect(function()
             if not self.canFire or self.isReloading then return end
             if self.bullets > 0 then
                 if self.isFiring then
@@ -145,15 +147,15 @@ function BreadGunController:KnitStart()
                     FastCastController:Fire(character.breadgun.Handle.Muzzle.WorldPosition, direction, false, character)
 
                     local newCFrame = character.Torso["Right Shoulder"].C0 *
-                    CFrame.Angles(0, 0, 0.2)
+                    CFrame.Angles(0, 0, 0.15)
 
-                    Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.03, Enum.EasingStyle.Back), {C0 = newCFrame})
+                    Tween(character.Torso["Right Shoulder"], TweenInfo.new(self.Stats["FireRate"]/5, Enum.EasingStyle.Back), {C0 = newCFrame})
                     
                     newCFrame = newCFrame *
-                    CFrame.Angles(0, 0, -0.2)
+                    CFrame.Angles(0, 0, -0.15)
 
-                    self._janitor:AddPromise(Promise.delay(0.03)):andThen(function()
-                        Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.09, Enum.EasingStyle.Sine), {C0 = newCFrame})
+                    self._janitor:AddPromise(Promise.delay(self.Stats["FireRate"]/5)):andThen(function()
+                        Tween(character.Torso["Right Shoulder"], TweenInfo.new(self.Stats["FireRate"]/5 * 4, Enum.EasingStyle.Sine), {C0 = newCFrame})
                     end)
                     
                     local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
@@ -171,9 +173,9 @@ function BreadGunController:KnitStart()
                     sound.Parent = camera
                     sound:Destroy()
 
-                    self._springs.fire:shove(Vector3.new(2, math.random(-1, 1), 5) * dt * 60)
+                    self._springs.fire:shove(Vector3.new(2, math.random(-0.8, 0.8), 4))
                     task.delay(0.2, function()
-                        self._springs.fire:shove(Vector3.new(-1, math.random(-0.5, 0.5), -5) * dt * 60)
+                        self._springs.fire:shove(Vector3.new(-1.5, math.random(-0.5, 0.5), -4))
                     end)
 
                     HudController:ExpandCrosshair()
@@ -181,16 +183,17 @@ function BreadGunController:KnitStart()
             else
                 reload()
             end
+        end))
 
+        self._janitor:Add(RunService.RenderStepped:Connect(function(dt)
             local recoil = self._springs.fire:update(dt)
             camera.CFrame = camera.CFrame * CFrame.Angles(math.rad(recoil.x), math.rad(recoil.y), math.rad(recoil.z))
-        end)
+        end))
 
         self._janitor:Add(function()
             ContextActionService:UnbindAction("Shoot")
             self.canFire = false
             self.isFiring = false
-            RunService:UnbindFromRenderStep("after camera")
         end)
 
         self._janitor:Add(hum.Died:Connect(function()
