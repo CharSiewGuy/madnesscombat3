@@ -26,4 +26,8 @@ function HudController:ExpandCrosshair()
     end)
 end
 
+function HudController:SetBullets(num)
+    if not self.ScreenGui then return end
+    self.ScreenGui.Bullets.Cur.Text = num
+end
 return HudController

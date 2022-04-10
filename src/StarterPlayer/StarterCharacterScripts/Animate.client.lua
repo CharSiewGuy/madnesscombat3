@@ -25,7 +25,7 @@ local animNames = {
 		{ id = "rbxassetid://7054485106", weight = 10 } 
 			}, 
 	run = 	{
-		{ id = "rbxassetid://7054485106", weight = 10 } 
+		{ id = "rbxassetid://6952507973", weight = 10 } 
 			}, 
 	runbackward = 	{
 		{ id = "rbxassetid://6784655614", weight = 10 } 
@@ -336,8 +336,12 @@ function playRunAnim()
 	elseif dir.Z > 0.5 then
 		playAnimation("runbackward", 0.2, Humanoid)
 	else
-		playAnimation("walk", 0.2, Humanoid)
-		setAnimationSpeed(1.1)
+		if Humanoid.WalkSpeed > 20 then
+			playAnimation("run", 0.2, Humanoid)
+		else
+			playAnimation("walk", 0.2, Humanoid)
+			setAnimationSpeed(1)
+		end
 	end
 end
 

@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local ContextActionService = game:GetService("ContextActionService")
 
 local Packages = ReplicatedStorage.Packages
@@ -6,6 +7,7 @@ local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
 local Shake = require(Packages.Shake)
 local Tween = require(Packages.TweenPromise)
+local SmoothValue = require(game.ReplicatedStorage.Modules.SmoothValue)
 
 local MovementController = Knit.CreateController { Name = "MovementController" }
 MovementController._janitor = Janitor.new()
@@ -65,27 +67,43 @@ function MovementController:KnitStart()
             self.isSprinting = false
         end)
 
+        local value = SmoothValue:create(0, 0, 5)
+
+        self._janitor:Add(RunService.Heartbeat:Connect(function(dt)
+            hum.WalkSpeed = value:update(dt)
+        end))
+
         self._janitor:Add(hum:GetPropertyChangedSignal("MoveDirection"):Connect(function()
             if humanoidRootPart.Anchored == true then return end
             
             if hum.MoveDirection.Magnitude > 0 then
                 if getMovingDir() == "forward" then
                     if self.isSprinting then
-
-                        hum.WalkSpeed = 24
+                        value:set(24)
                         shake.Amplitude = 0.3
+                        if hum.CameraOffset.Z <= 0 then
+                            self._janitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Sine), {CameraOffset = Vector3.new(3, 1, 1)}))
+                        end
                     else
-                        hum.WalkSpeed = 18
+                        value:set(18)
                         shake.Amplitude = 0.1
                     end
                 else
-                    if hum.WalkSpeed ~= 16 then
-                        hum.WalkSpeed = 16
+                    if value.target ~= 16 then
+                        value:set(16)
                         shake.Amplitude = 0.1
+                    end
+                end
+                if not self.isSprinting then
+                    if hum.CameraOffset.Z >= 1 then
+                        self._janitor:AddPromise(Tween(hum, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(3, 1, 0)}))
                     end
                 end
             else
                 shake.Amplitude = 0
+                if hum.CameraOffset.Z >= 1 then
+                    self._janitor:AddPromise(Tween(hum, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(3, 1, 0)}))
+                end
             end
         end))
         

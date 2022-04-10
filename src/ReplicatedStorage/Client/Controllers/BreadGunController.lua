@@ -47,8 +47,8 @@ function BreadGunController:KnitStart()
         self._aimJanitor = Janitor.new()
         self.isFiring = false
         self.canFire = true
-        self.bullets = 25
-        self.maxBullets = 25
+        self.bullets = 30
+        self.maxBullets = 30
         self.isReloading = false
 
         local function getLookAngle()
@@ -75,9 +75,10 @@ function BreadGunController:KnitStart()
                 self.isReloading = true
                 reloadingAnim:Play()
                 MovementController.canSprint = false
-                self._janitor:AddPromise(Promise.delay(reloadingAnim.Length)):andThen(function()
+                self._janitor:AddPromise(Promise.delay(reloadingAnim.Length - 0.4)):andThen(function()
                     self.isReloading = false
                     self.bullets = self.maxBullets
+                    HudController:SetBullets(self.bullets)
                     MovementController.canSprint = true
                 end)
    
@@ -185,6 +186,7 @@ function BreadGunController:KnitStart()
                     end)
 
                     HudController:ExpandCrosshair()
+                    HudController:SetBullets(self.bullets)
                 end
             else
                 reload()
