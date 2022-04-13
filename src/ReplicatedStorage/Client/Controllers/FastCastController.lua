@@ -24,6 +24,30 @@ function rayHit(cast, result, velocity, bullet)
     for _, v in pairs(hitEffect:GetChildren()) do
         v:Emit(tonumber(v.Name))
     end
+
+    local hitPart = result.Instance
+
+    local humanoid = hitPart:FindFirstChild("Humanoid")
+	local curParent = hitPart
+	local headshot = false	
+
+	repeat
+		if curParent.Name == "Head" then
+			headshot = true
+		end
+		
+		curParent = curParent.Parent
+		humanoid = curParent:FindFirstChild("Humanoid")
+		
+	until curParent == workspace or humanoid
+
+    if humanoid and humanoid.Parent ~= Knit.Player.Character then
+        if headshot then
+            local sound = ReplicatedStorage.Assets.Sounds.Hit:Clone()
+            sound.Parent = workspace.CurrentCamera
+            sound:Destroy()
+        end
+    end
 end
 
 function cleanUpBullet(activeCast)
@@ -57,10 +81,10 @@ function FastCastController:Fire(origin, direction, isReplicated, repCharacter)
         local spreadDirection = CFrame.fromOrientation(0, 0, math.random(0, math.pi * 2))
         local spreadAngle = CFrame.fromOrientation(math.rad(math.random(1, 2)), 0, 0)
         local finalDirection = (directionCF * spreadDirection * spreadAngle).LookVector
-        mainCaster:Fire(origin, finalDirection, 100, CastBehavior)				
+        mainCaster:Fire(origin, finalDirection, 300, CastBehavior)				
         FastCastService:Fire(origin, finalDirection)
 	else
-        mainCaster:Fire(origin, direction, 100, CastBehavior)
+        mainCaster:Fire(origin, direction, 300, CastBehavior)
 
         local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
         flash.Parent = repCharacter.breadgun.Handle.Muzzle
