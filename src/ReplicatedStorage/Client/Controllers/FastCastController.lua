@@ -7,6 +7,9 @@ local Tween = require(Packages.TweenPromise)
 
 local FastCastController = Knit.CreateController { Name = "FastCastController" }
 
+local HudController
+local FastCastService
+
 local mainCaster
 
 function rayUpdated(_, lastPoint, direction, length, _, bullet)
@@ -24,6 +27,8 @@ function rayHit(cast, result, velocity, bullet)
     for _, v in pairs(hitEffect:GetChildren()) do
         v:Emit(tonumber(v.Name))
     end
+    
+    task.delay(0.5, function() hitEffect:Destroy() end)
 
     local hitPart = result.Instance
 
@@ -42,23 +47,23 @@ function rayHit(cast, result, velocity, bullet)
 	until curParent == workspace or humanoid
 
     if humanoid and humanoid.Parent ~= Knit.Player.Character then
+        local sound
         if headshot then
-            local sound = ReplicatedStorage.Assets.Sounds.Hit:Clone()
-            sound.Parent = workspace.CurrentCamera
-            sound:Destroy()
+            sound = ReplicatedStorage.Assets.Sounds.CriticalHit:Clone()
+
+        else
+            sound = ReplicatedStorage.Assets.Sounds.Hit:Clone()
         end
+        sound.Parent = workspace.CurrentCamera
+        sound:Destroy()
+
+        HudController:ShowHitmarker(headshot)
     end
 end
 
 function cleanUpBullet(activeCast)
     local bullet = activeCast.RayInfo.CosmeticBulletObject
     bullet:Destroy()
-end
-
-local FastCastService
-
-function FastCastController:KnitInit()
-    FastCastService = Knit.GetService("FastCastService")
 end
 
 function FastCastController:Fire(origin, direction, isReplicated, repCharacter)	
@@ -94,6 +99,11 @@ function FastCastController:Fire(origin, direction, isReplicated, repCharacter)
         end)
     end
 end 
+
+function FastCastController:KnitInit()
+    FastCastService = Knit.GetService("FastCastService")
+    HudController = Knit.GetController("HudController")
+end
 
 function FastCastController:KnitStart()
     mainCaster = FastCast.new()

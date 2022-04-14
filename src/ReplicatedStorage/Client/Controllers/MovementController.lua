@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ContextActionService = game:GetService("ContextActionService")
+local UserInputService = game:GetService("UserInputService")
 
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
@@ -36,7 +37,7 @@ function MovementController:KnitStart()
         local shake = Shake.new()
         shake.FadeInTime = 0.5
         shake.FadeOutTime = 0.2
-        shake.Frequency = 0.2
+        shake.Frequency = 0.25
         shake.Amplitude = 0
         shake.Sustain = true
         shake.PositionInfluence = Vector3.new(0, 0, 0)
@@ -80,18 +81,18 @@ function MovementController:KnitStart()
                 if getMovingDir() == "forward" then
                     if self.isSprinting then
                         value:set(24)
-                        shake.Amplitude = 0.3
+                        shake.Amplitude = 0.2
                         if hum.CameraOffset.Z <= 0 then
                             self._janitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Sine), {CameraOffset = Vector3.new(3, 1, 1)}))
                         end
                     else
                         value:set(18)
-                        shake.Amplitude = 0.1
+                        shake.Amplitude = 0.05
                     end
                 else
                     if value.target ~= 16 then
                         value:set(16)
-                        shake.Amplitude = 0.1
+                        shake.Amplitude = 0.05
                     end
                 end
                 if not self.isSprinting then
@@ -106,6 +107,45 @@ function MovementController:KnitStart()
                 end
             end
         end))
+
+        local MAX_JUMPS = 3
+        local TIME_BETWEEN_JUMPS = 0.2
+        local numJumps = 0
+        local canJumpAgain = false
+
+        local function onStateChanged(_, newState)
+            if Enum.HumanoidStateType.Landed == newState then
+                numJumps = 0
+                canJumpAgain = false
+            elseif Enum.HumanoidStateType.Freefall == newState then
+                task.wait(TIME_BETWEEN_JUMPS)
+                canJumpAgain = true
+            elseif Enum.HumanoidStateType.Jumping == newState then
+                local sound = ReplicatedStorage.Assets.Sounds:FindFirstChild("Jump" .. math.clamp(numJumps, 0, 2) + 1):Clone()
+                sound.Parent = workspace.CurrentCamera
+                sound:Destroy()
+
+                if numJumps > 0 then
+                    local effect = ReplicatedStorage.Assets.Particles.Jump:Clone()
+                    effect.Parent = humanoidRootPart.Attachment
+                    effect:Emit(1)
+                    task.delay(1, function() effect:Destroy() end)
+                end
+
+                canJumpAgain = false
+                numJumps += 1
+            end
+
+        end
+
+        local function onJumpRequest()
+            if canJumpAgain and numJumps < MAX_JUMPS then
+                hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end
+
+        self._janitor:Add(hum.StateChanged:Connect(onStateChanged))
+        self._janitor:Add(UserInputService.JumpRequest:Connect(onJumpRequest))
         
         self._janitor:Add(hum.Died:Connect(function()
             self._janitor:Cleanup()

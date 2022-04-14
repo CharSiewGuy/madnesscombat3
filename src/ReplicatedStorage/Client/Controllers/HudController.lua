@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
+local Promise = require(Packages.Promise)
 local Tween = require(Packages.TweenPromise)
 
 local HudController = Knit.CreateController { Name = "HudController" }
@@ -29,5 +30,16 @@ end
 function HudController:SetBullets(num)
     if not self.ScreenGui then return end
     self.ScreenGui.Bullets.Cur.Text = num
+end
+
+HudController._hitmarkerJanitor = Janitor.new()
+
+function HudController:ShowHitmarker()
+    self._hitmarkerJanitor:Cleanup()
+    local hitmarker = self.ScreenGui.Crosshair.Hitmarker
+    Tween(hitmarker, TweenInfo.new(0.05, Enum.EasingStyle.Sine), {ImageTransparency = 0})
+    Promise.delay(0.2):andThen(function()
+        self._hitmarkerJanitor:AddPromise(Tween(hitmarker, TweenInfo.new(0.1, Enum.EasingStyle.Sine), {ImageTransparency = 1}))
+    end)
 end
 return HudController

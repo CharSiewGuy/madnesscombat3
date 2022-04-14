@@ -144,7 +144,7 @@ function BreadGunController:KnitStart()
         end
 
         self._janitor:Add(RunService.Heartbeat:Connect(function()
-            if MovementController.isSprinting then self._aimJanitor:Cleanup() return end
+            if MovementController.isSprinting then self._aimJanitor:Cleanup() self.isFiring = false return end
             if not self.canFire or self.isReloading then return end
             if self.bullets > 0 then
                 if self.isFiring then
