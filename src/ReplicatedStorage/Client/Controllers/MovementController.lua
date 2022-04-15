@@ -82,9 +82,6 @@ function MovementController:KnitStart()
                     if self.isSprinting then
                         value:set(24)
                         shake.Amplitude = 0.2
-                        if hum.CameraOffset.Z <= 0 then
-                            self._janitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Sine), {CameraOffset = Vector3.new(3, 1, 1)}))
-                        end
                     else
                         value:set(18)
                         shake.Amplitude = 0.05
@@ -95,16 +92,8 @@ function MovementController:KnitStart()
                         shake.Amplitude = 0.05
                     end
                 end
-                if not self.isSprinting then
-                    if hum.CameraOffset.Z >= 1 then
-                        self._janitor:AddPromise(Tween(hum, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(3, 1, 0)}))
-                    end
-                end
             else
                 shake.Amplitude = 0
-                if hum.CameraOffset.Z >= 1 then
-                    self._janitor:AddPromise(Tween(hum, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(3, 1, 0)}))
-                end
             end
         end))
 

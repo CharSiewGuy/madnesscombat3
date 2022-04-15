@@ -33,6 +33,7 @@ end
 
 function BreadGunController:KnitStart()
     local camera = workspace.CurrentCamera
+    camera.FieldOfView = 90
 
     Knit.Player.CharacterAdded:Connect(function(character)
         local hum = character:WaitForChild("Humanoid")
@@ -51,20 +52,10 @@ function BreadGunController:KnitStart()
         self.maxBullets = 30
         self.isReloading = false
 
-        local function getLookAngle()
-            return camera.CFrame.LookVector.Y * 1.3
-        end
-
-        local pointingGun = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.PointingGun)
-
-        local function updateAim()
-            local lookAngle = getLookAngle()
-            local aimTimePos = (lookAngle + math.pi/2) * (pointingGun.Length / math.pi)
-            pointingGun.TimePosition = aimTimePos
-        end
+        local viewmodel = ReplicatedStorage.viewmodel:Clone()
+        viewmodel.Parent = camera
 
         self._reloadJanitor = Janitor.new()
-        local originalShoulderCFrame = character.Torso["Right Shoulder"].C0
         local reloadingAnim = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.Reloading)
 
         local function reload()
@@ -87,7 +78,6 @@ function BreadGunController:KnitStart()
                 sound:Destroy()
 
                 self._reloadJanitor:Cleanup()
-                character.Torso["Right Shoulder"].C0 = originalShoulderCFrame
             end
         end
 
@@ -95,31 +85,8 @@ function BreadGunController:KnitStart()
             if self.bullets <= 0 or self.isReloading or MovementController.isSprinting then return end
             if actionName == "Shoot" then
                 if inputState == Enum.UserInputState.Begin then
-                    self._aimJanitor:Cleanup()
-
-                    pointingGun:Play(0)
-                    pointingGun:AdjustSpeed(0)
-
-                    self._aimJanitor:Add(RunService.RenderStepped:Connect(updateAim))
-
-                    self._aimJanitor:Add(function()
-                        pointingGun:Stop(0.35)
-                    end)
-
-                    self._janitor:Add(self._aimJanitor)
-
                     self.isFiring = true                   
                 elseif inputState == Enum.UserInputState.End then
-                    if hum.MoveDirection.Magnitude ~= 0 then
-                        self._aimJanitor:AddPromise(Promise.delay(0.4)):andThen(function()
-                            self._aimJanitor:Cleanup()
-                        end)
-                    else
-                        self._aimJanitor:Add(hum:GetPropertyChangedSignal("MoveDirection"):Connect(function()
-                            self._aimJanitor:Cleanup()
-                        end))
-                    end
-
                     self.isFiring = false
                 end
             elseif actionName == "Reload" then
@@ -155,22 +122,13 @@ function BreadGunController:KnitStart()
                     local pos = getMousePos(camera:ViewportPointToRay(viewportPoint.X, viewportPoint.Y))
                     local direction = (pos - character.breadgun.Handle.Muzzle.WorldPosition).Unit
                     FastCastController:Fire(character.breadgun.Handle.Muzzle.WorldPosition, direction, false, character)
-
-                    local newCFrame = character.Torso["Right Shoulder"].C0 *
-                    CFrame.Angles(0, 0, 0.15)
-
-                    Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.02, Enum.EasingStyle.Back), {C0 = newCFrame})
                     
-                    self._janitor:AddPromise(Promise.delay(0.02)):andThen(function()
-                        Tween(character.Torso["Right Shoulder"], TweenInfo.new(0.08, Enum.EasingStyle.Sine), {C0 = originalShoulderCFrame})
-                    end)
-                    
-                    local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
+                    --[[local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
                     flash.Parent = character.breadgun.Handle.Muzzle
                     flash:Emit(1)
                     task.delay(0.5, function()
                         flash:Destroy()
-                    end)
+                    end)]]--
 
                     self._janitor:AddPromise(Promise.delay(self.Stats["FireRate"]):andThen(function()
                         self.canFire = true
@@ -194,6 +152,8 @@ function BreadGunController:KnitStart()
         end))
 
         self._janitor:Add(RunService.RenderStepped:Connect(function(dt)
+            local finalOffset = ReplicatedStorage.Offsets.Idle.Value
+            viewmodel.HumanoidRootPart.CFrame = camera.CFrame:ToWorldSpace(finalOffset)
             local recoil = self._springs.fire:update(dt)
             camera.CFrame = camera.CFrame * CFrame.Angles(math.rad(recoil.x), math.rad(recoil.y), math.rad(recoil.z))
         end))
