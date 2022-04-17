@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContextActionService = game:GetService("ContextActionService")
+local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
 local Packages = ReplicatedStorage.Packages
@@ -24,11 +25,44 @@ BreadGunController.Stats = {
 }
 
 BreadGunController._springs = {}
+BreadGunController._loadedAnim = {}
+BreadGunController.lerpValues = {}
+BreadGunController.lerpValues.sprint = Instance.new("NumberValue")
+
+BreadGunController._camera = workspace.CurrentCamera
 
 function BreadGunController:KnitInit()
     FastCastController = Knit.GetController("FastCastController")
     HudController = Knit.GetController("HudController")
     MovementController = Knit.GetController("MovementController")
+end
+
+BreadGunController._reloadJanitor = Janitor.new()
+
+function BreadGunController:Reload()
+    if MovementController.isSprinting then return end
+    if not self.isReloading and self.bullets < self.maxBullets then
+        self.isFiring = false
+        self.isReloading = true
+        self._loadedAnim.reloadingAnim:Play()
+        MovementController.canSprint = false
+        self._janitor:AddPromise(Promise.delay(self._loadedAnim.reloadingAnim.Length - 0.4)):andThen(function()
+            self.isReloading = false
+            self.bullets = self.maxBullets
+            HudController:SetBullets(self.bullets)
+            MovementController.canSprint = true
+        end)
+
+        local sound = ReplicatedStorage.Assets.Sounds.Reload:Clone()
+        sound.Parent = self._camera
+        sound:Destroy()
+
+        self._reloadJanitor:Cleanup()
+    end
+end
+
+function BreadGunController:GetBobbing(addition,speed,modifier)
+    return math.sin(tick()*addition*speed)*modifier
 end
 
 function BreadGunController:KnitStart()
@@ -37,15 +71,17 @@ function BreadGunController:KnitStart()
 
     Knit.Player.CharacterAdded:Connect(function(character)
         local hum = character:WaitForChild("Humanoid")
+        local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
         local animator = HumanoidAnimatorUtils.getOrCreateAnimator(hum)
-        local holdingGun = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.HoldingGun)
-        holdingGun:Play()
 
-        self._springs.fire = Spring.new()
+        self._loadedAnim.reloadingAnim = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.Reloading)
 
-        --AIMING
+        self._springs.fire = Spring.create()
+        self._springs.walkCycle = Spring.create()
+        self._springs.sway = Spring.create()
 
-        self._aimJanitor = Janitor.new()
+        self.lerpValues.sprint.Value = 0
+
         self.isFiring = false
         self.canFire = true
         self.bullets = 30
@@ -54,32 +90,8 @@ function BreadGunController:KnitStart()
 
         local viewmodel = ReplicatedStorage.viewmodel:Clone()
         viewmodel.Parent = camera
-
-        self._reloadJanitor = Janitor.new()
-        local reloadingAnim = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.Reloading)
-
-        local function reload()
-            if MovementController.isSprinting then return end
-            if not self.isReloading and self.bullets < self.maxBullets then
-                self.isFiring = false
-                self._aimJanitor:Cleanup()
-                self.isReloading = true
-                reloadingAnim:Play()
-                MovementController.canSprint = false
-                self._janitor:AddPromise(Promise.delay(reloadingAnim.Length - 0.4)):andThen(function()
-                    self.isReloading = false
-                    self.bullets = self.maxBullets
-                    HudController:SetBullets(self.bullets)
-                    MovementController.canSprint = true
-                end)
-   
-                local sound = ReplicatedStorage.Assets.Sounds.Reload:Clone()
-                sound.Parent = camera
-                sound:Destroy()
-
-                self._reloadJanitor:Cleanup()
-            end
-        end
+        viewmodel.AnimationController:LoadAnimation(ReplicatedStorage.Assets.Animations.Idle):Play()
+        self._janitor:Add(viewmodel)
 
         local function handleAction(actionName, inputState)
             if self.bullets <= 0 or self.isReloading or MovementController.isSprinting then return end
@@ -91,7 +103,7 @@ function BreadGunController:KnitStart()
                 end
             elseif actionName == "Reload" then
                 if inputState == Enum.UserInputState.Begin then
-                    reload()
+                    self:Reload()
                 end
             end
         end
@@ -111,7 +123,7 @@ function BreadGunController:KnitStart()
         end
 
         self._janitor:Add(RunService.Heartbeat:Connect(function()
-            if MovementController.isSprinting then self._aimJanitor:Cleanup() self.isFiring = false return end
+            if MovementController.isSprinting then self.isFiring = false return end
             if not self.canFire or self.isReloading then return end
             if self.bullets > 0 then
                 if self.isFiring then
@@ -147,13 +159,34 @@ function BreadGunController:KnitStart()
                     HudController:SetBullets(self.bullets)
                 end
             else
-                reload()
+                self:Reload()
             end
         end))
 
         self._janitor:Add(RunService.RenderStepped:Connect(function(dt)
-            local finalOffset = ReplicatedStorage.Offsets.Idle.Value
+            local mouseDelta = UserInputService:GetMouseDelta()
+            self._springs.sway:shove(Vector3.new(mouseDelta.X / 400,mouseDelta.Y / 400))
+
+            local speed = 1.5
+            local modifier = 0.1
+            
+            local movementSway = Vector3.new(self:GetBobbing(10,speed,modifier),self:GetBobbing(5,speed,modifier),self:GetBobbing(5,speed,modifier))
+        
+            self._springs.walkCycle:shove((movementSway / 25) * dt * 60 * humanoidRootPart.Velocity.Magnitude)
+            
+            local sway = self._springs.sway:update(dt)
+            local walkCycle = self._springs.walkCycle:update(dt)
+
+            local idleOffset = ReplicatedStorage.Offsets.Idle.Value
+            local sprintOffset = idleOffset:lerp(ReplicatedStorage.Offsets.Sprint.Value, self.lerpValues.sprint.Value)
+            local finalOffset = sprintOffset
             viewmodel.HumanoidRootPart.CFrame = camera.CFrame:ToWorldSpace(finalOffset)
+
+            viewmodel.HumanoidRootPart.CFrame = viewmodel.HumanoidRootPart.CFrame:ToWorldSpace(CFrame.new(walkCycle.x / 2,walkCycle.y / 2,0))
+            
+            viewmodel.HumanoidRootPart.CFrame =  viewmodel.HumanoidRootPart.CFrame * CFrame.Angles(0,-sway.x,sway.y)
+            viewmodel.HumanoidRootPart.CFrame =  viewmodel.HumanoidRootPart.CFrame * CFrame.Angles(0,walkCycle.y,walkCycle.x/2)
+
             local recoil = self._springs.fire:update(dt)
             camera.CFrame = camera.CFrame * CFrame.Angles(math.rad(recoil.x), math.rad(recoil.y), math.rad(recoil.z))
         end))

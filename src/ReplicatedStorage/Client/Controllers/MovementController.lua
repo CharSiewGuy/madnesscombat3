@@ -83,7 +83,7 @@ function MovementController:KnitStart()
                         value:set(24)
                         shake.Amplitude = 0.2
                     else
-                        value:set(18)
+                        value:set(16)
                         shake.Amplitude = 0.05
                     end
                 else

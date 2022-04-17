@@ -110,9 +110,5 @@ function FastCastController:KnitStart()
     mainCaster.RayHit:Connect(rayHit)
     mainCaster.LengthChanged:Connect(rayUpdated)
     mainCaster.CastTerminating:Connect(cleanUpBullet)
-
-    FastCastService.FireSignal:Connect(function(origin, direction, isReplicated, repCharacter)
-        self:Fire(origin, direction, isReplicated, repCharacter)
-    end)
 end
 return FastCastController
