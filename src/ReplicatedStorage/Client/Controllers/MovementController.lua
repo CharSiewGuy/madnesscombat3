@@ -13,12 +13,17 @@ local SmoothValue = require(game.ReplicatedStorage.Modules.SmoothValue)
 local MovementController = Knit.CreateController { Name = "MovementController" }
 MovementController._janitor = Janitor.new()
 
+local BreadGunController
+
 function MovementController:KnitInit()
-    self.isSprinting = false
-    self.canSprint = true
+    BreadGunController = Knit.GetController("BreadGunController")
 end
 
 function MovementController:KnitStart()
+    self.isSprinting = false
+    self.canSprint = true
+    self.camera = workspace.CurrentCamera
+
     Knit.Player.CharacterAdded:Connect(function(character)
         local hum = character:WaitForChild("Humanoid")
         local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
@@ -34,30 +39,37 @@ function MovementController:KnitStart()
         self._sprintJanitor = Janitor.new()
         self._janitor:Add(self._sprintJanitor)
 
-        local shake = Shake.new()
-        shake.FadeInTime = 0.5
-        shake.FadeOutTime = 0.2
-        shake.Frequency = 0.25
-        shake.Amplitude = 0
-        shake.Sustain = true
-        shake.PositionInfluence = Vector3.new(0, 0, 0)
-        shake.RotationInfluence = Vector3.new(0.1, 0.1, 0.1)
+        local walkShake = Shake.new()
+        walkShake.FadeInTime = 0.5
+        walkShake.FadeOutTime = 0.2
+        walkShake.Frequency = 0.25
+        walkShake.Amplitude = 0
+        walkShake.Sustain = true
+        walkShake.PositionInfluence = Vector3.new(0, 0, 0)
+        walkShake.RotationInfluence = Vector3.new(0.1, 0.1, 0.1)
 
-        self._janitor:Add(shake)
+        self._janitor:Add(walkShake)
 
-        local camera = workspace.CurrentCamera
-        shake:Start()
-        shake:BindToRenderStep(Shake.NextRenderName(), Enum.RenderPriority.Last.Value, function(pos, rot)
-            camera.CFrame *= CFrame.new(pos) * CFrame.Angles(rot.X, rot.Y, rot.Z)
+        walkShake:Start()
+        walkShake:BindToRenderStep(Shake.NextRenderName(), Enum.RenderPriority.Last.Value, function(pos, rot)
+            self.camera.CFrame *= CFrame.new(pos) * CFrame.Angles(rot.X, rot.Y, rot.Z)
         end)
+
+        local value = SmoothValue:create(0, 0, 5)
 
         local function handleAction(actionName, inputState)
             if not self.canSprint then return end
             if actionName == "Sprint" then
                 if inputState == Enum.UserInputState.Begin then
-                    self.isSprinting = true
+                    if hum.MoveDirection.Magnitude > 0 and getMovingDir() == "forward" then
+                        self.isSprinting = true
+                        value:set(24)
+                        walkShake.Amplitude = 0.2
+                    end
                 elseif inputState == Enum.UserInputState.End then
                     self.isSprinting = false
+                    value:set(16)
+                    walkShake.Amplitude = 0
                 end
             end
         end
@@ -68,32 +80,22 @@ function MovementController:KnitStart()
             self.isSprinting = false
         end)
 
-        local value = SmoothValue:create(0, 0, 5)
-
         self._janitor:Add(RunService.Heartbeat:Connect(function(dt)
             hum.WalkSpeed = value:update(dt)
         end))
 
         self._janitor:Add(hum:GetPropertyChangedSignal("MoveDirection"):Connect(function()
             if humanoidRootPart.Anchored == true then return end
-            
             if hum.MoveDirection.Magnitude > 0 then
-                if getMovingDir() == "forward" then
-                    if self.isSprinting then
-                        value:set(24)
-                        shake.Amplitude = 0.2
-                    else
-                        value:set(16)
-                        shake.Amplitude = 0.05
-                    end
-                else
-                    if value.target ~= 16 then
-                        value:set(16)
-                        shake.Amplitude = 0.05
-                    end
+               if getMovingDir() ~= "forward" then
+                    self.isSprinting = false
+                    value:set(16)
+                    walkShake.Amplitude = 0
                 end
             else
-                shake.Amplitude = 0
+                self.isSprinting = false
+                value:set(16)
+                walkShake.Amplitude = 0
             end
         end))
 
@@ -110,19 +112,27 @@ function MovementController:KnitStart()
                 task.wait(TIME_BETWEEN_JUMPS)
                 canJumpAgain = true
             elseif Enum.HumanoidStateType.Jumping == newState then
+                canJumpAgain = false
+
                 local sound = ReplicatedStorage.Assets.Sounds:FindFirstChild("Jump" .. math.clamp(numJumps, 0, 2) + 1):Clone()
-                sound.Parent = workspace.CurrentCamera
+                sound.Parent = self.camera
                 sound:Destroy()
 
-                if numJumps > 0 then
-                    local effect = ReplicatedStorage.Assets.Particles.Jump:Clone()
-                    effect.Parent = humanoidRootPart.Attachment
-                    effect:Emit(1)
-                    task.delay(1, function() effect:Destroy() end)
-                end
+                if numJumps > 0 then   
+                    local jumpShake = Shake.new()
+                    jumpShake.FadeInTime = 0.05
+                    jumpShake.Frequency = 0.5
+                    jumpShake.Amplitude = 5
+                    jumpShake.PositionInfluence = Vector3.new(0, 0, 0)
+                    jumpShake.RotationInfluence = Vector3.new(0, 0, 0)
 
-                canJumpAgain = false
-                numJumps += 1
+                    jumpShake:Start()
+                    jumpShake:BindToRenderStep(Shake.NextRenderName(), Enum.RenderPriority.Last.Value, function(pos, rot)
+                        self.camera.CFrame *= CFrame.new(pos) * CFrame.Angles(rot.X, rot.Y, rot.Z)
+                    end)
+                 end
+
+                 numJumps += 1
             end
 
         end

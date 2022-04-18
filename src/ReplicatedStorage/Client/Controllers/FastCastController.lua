@@ -48,12 +48,7 @@ function rayHit(cast, result, velocity, bullet)
 
     if humanoid and humanoid.Parent ~= Knit.Player.Character then
         local sound
-        if headshot then
-            sound = ReplicatedStorage.Assets.Sounds.CriticalHit:Clone()
-
-        else
-            sound = ReplicatedStorage.Assets.Sounds.Hit:Clone()
-        end
+        sound = ReplicatedStorage.Assets.Sounds.Hit:Clone()
         sound.Parent = workspace.CurrentCamera
         sound:Destroy()
 

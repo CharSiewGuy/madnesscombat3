@@ -6,6 +6,8 @@ local Janitor = require(Packages.Janitor)
 local Promise = require(Packages.Promise)
 local Tween = require(Packages.TweenPromise)
 
+local SmoothValue = require(game.ReplicatedStorage.Modules.SmoothValue)
+
 local HudController = Knit.CreateController { Name = "HudController" }
 HudController._janitor = Janitor.new()
 
@@ -32,14 +34,16 @@ function HudController:SetBullets(num)
     self.ScreenGui.Bullets.Cur.Text = num
 end
 
-HudController._hitmarkerJanitor = Janitor.new()
+local lastShownHitmarker = os.clock()
 
 function HudController:ShowHitmarker()
-    self._hitmarkerJanitor:Cleanup()
+    lastShownHitmarker = os.clock()
     local hitmarker = self.ScreenGui.Crosshair.Hitmarker
     Tween(hitmarker, TweenInfo.new(0.05, Enum.EasingStyle.Sine), {ImageTransparency = 0})
     Promise.delay(0.2):andThen(function()
-        self._hitmarkerJanitor:AddPromise(Tween(hitmarker, TweenInfo.new(0.1, Enum.EasingStyle.Sine), {ImageTransparency = 1}))
+        if os.clock() - lastShownHitmarker > 0.2 then
+            Tween(hitmarker, TweenInfo.new(0.1, Enum.EasingStyle.Sine), {ImageTransparency = 1})
+        end
     end)
 end
 return HudController

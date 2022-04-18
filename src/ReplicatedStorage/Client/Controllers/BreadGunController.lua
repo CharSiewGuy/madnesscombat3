@@ -12,6 +12,7 @@ local HumanoidAnimatorUtils = require(Packages.HumanoidAnimatorUtils)
 
 local Modules = ReplicatedStorage.Modules
 local Spring = require(Modules.Spring)
+local SmoothValue = require(Modules.SmoothValue)
 
 local FastCastController
 local HudController
@@ -27,7 +28,7 @@ BreadGunController.Stats = {
 BreadGunController._springs = {}
 BreadGunController._loadedAnim = {}
 BreadGunController.lerpValues = {}
-BreadGunController.lerpValues.sprint = Instance.new("NumberValue")
+BreadGunController.lerpValues.sprint = SmoothValue:create(0, 0, 5)
 
 BreadGunController._camera = workspace.CurrentCamera
 
@@ -45,6 +46,7 @@ function BreadGunController:Reload()
         self.isFiring = false
         self.isReloading = true
         self._loadedAnim.reloadingAnim:Play()
+        self._loadedAnim.reloadingFpsAnim:Play()
         MovementController.canSprint = false
         self._janitor:AddPromise(Promise.delay(self._loadedAnim.reloadingAnim.Length - 0.4)):andThen(function()
             self.isReloading = false
@@ -80,8 +82,6 @@ function BreadGunController:KnitStart()
         self._springs.walkCycle = Spring.create()
         self._springs.sway = Spring.create()
 
-        self.lerpValues.sprint.Value = 0
-
         self.isFiring = false
         self.canFire = true
         self.bullets = 30
@@ -91,6 +91,7 @@ function BreadGunController:KnitStart()
         local viewmodel = ReplicatedStorage.viewmodel:Clone()
         viewmodel.Parent = camera
         viewmodel.AnimationController:LoadAnimation(ReplicatedStorage.Assets.Animations.Idle):Play()
+        self._loadedAnim.reloadingFpsAnim = viewmodel.AnimationController:LoadAnimation(ReplicatedStorage.Assets.Animations.ReloadingFps)
         self._janitor:Add(viewmodel)
 
         local function handleAction(actionName, inputState)
@@ -123,7 +124,13 @@ function BreadGunController:KnitStart()
         end
 
         self._janitor:Add(RunService.Heartbeat:Connect(function()
-            if MovementController.isSprinting then self.isFiring = false return end
+            if MovementController.isSprinting then 
+                self.isFiring = false
+                BreadGunController.lerpValues.sprint:set(1)
+                return
+            else
+                BreadGunController.lerpValues.sprint:set(0)
+            end
             if not self.canFire or self.isReloading then return end
             if self.bullets > 0 then
                 if self.isFiring then
@@ -132,15 +139,15 @@ function BreadGunController:KnitStart()
 
                     local viewportPoint = camera.ViewportSize / 2
                     local pos = getMousePos(camera:ViewportPointToRay(viewportPoint.X, viewportPoint.Y))
-                    local direction = (pos - character.breadgun.Handle.Muzzle.WorldPosition).Unit
-                    FastCastController:Fire(character.breadgun.Handle.Muzzle.WorldPosition, direction, false, character)
+                    local direction = (pos - viewmodel.xdgun.Handle.Muzzle.WorldPosition).Unit
+                    FastCastController:Fire(viewmodel.xdgun.Handle.Muzzle.WorldPosition, direction, false, character)
                     
-                    --[[local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
-                    flash.Parent = character.breadgun.Handle.Muzzle
+                    local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
+                    flash.Parent = viewmodel.xdgun.Handle.Muzzle
                     flash:Emit(1)
                     task.delay(0.5, function()
                         flash:Destroy()
-                    end)]]--
+                    end)
 
                     self._janitor:AddPromise(Promise.delay(self.Stats["FireRate"]):andThen(function()
                         self.canFire = true
@@ -178,7 +185,7 @@ function BreadGunController:KnitStart()
             local walkCycle = self._springs.walkCycle:update(dt)
 
             local idleOffset = ReplicatedStorage.Offsets.Idle.Value
-            local sprintOffset = idleOffset:lerp(ReplicatedStorage.Offsets.Sprint.Value, self.lerpValues.sprint.Value)
+            local sprintOffset = idleOffset:lerp(ReplicatedStorage.Offsets.Sprint.Value, self.lerpValues.sprint:update(dt))
             local finalOffset = sprintOffset
             viewmodel.HumanoidRootPart.CFrame = camera.CFrame:ToWorldSpace(finalOffset)
 
