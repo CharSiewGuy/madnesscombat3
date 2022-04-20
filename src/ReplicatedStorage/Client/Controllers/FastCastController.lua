@@ -61,7 +61,7 @@ function cleanUpBullet(activeCast)
     bullet:Destroy()
 end
 
-function FastCastController:Fire(origin, direction, isReplicated, repCharacter)	
+function FastCastController:Fire(origin, direction, isReplicated, repCharacter, spreadMagnitude)	
     local CastParams = RaycastParams.new()
     CastParams.IgnoreWater = true
     CastParams.FilterType = Enum.RaycastFilterType.Blacklist
@@ -79,7 +79,7 @@ function FastCastController:Fire(origin, direction, isReplicated, repCharacter)
     if not isReplicated then
         local directionCF = CFrame.new(Vector3.new(), direction)
         local spreadDirection = CFrame.fromOrientation(0, 0, math.random(0, math.pi * 2))
-        local spreadAngle = CFrame.fromOrientation(math.rad(math.random(1, 2)), 0, 0)
+        local spreadAngle = CFrame.fromOrientation(math.rad(math.random(1, spreadMagnitude)), 0, 0)
         local finalDirection = (directionCF * spreadDirection * spreadAngle).LookVector
         mainCaster:Fire(origin, finalDirection, 300, CastBehavior)				
         FastCastService:Fire(origin, finalDirection)

@@ -28,7 +28,7 @@ BreadGunController.Stats = {
 BreadGunController._springs = {}
 BreadGunController._loadedAnim = {}
 BreadGunController.lerpValues = {}
-BreadGunController.lerpValues.sprint = SmoothValue:create(0, 0, 5)
+BreadGunController.lerpValues.sprint = SmoothValue:create(0, 0, 10)
 
 BreadGunController._camera = workspace.CurrentCamera
 
@@ -38,13 +38,61 @@ function BreadGunController:KnitInit()
     MovementController = Knit.GetController("MovementController")
 end
 
-BreadGunController._reloadJanitor = Janitor.new()
+BreadGunController.firingJanitor = Janitor.new()
+BreadGunController.aimJanitor = Janitor.new()
+BreadGunController.isAiming = false
+BreadGunController._adsOutPromise = nil
+
+function BreadGunController:ToggleAim(inputState)
+    if inputState == Enum.UserInputState.Begin then
+        if self.isFiring or self.isReloading or self.isAiming then return end
+
+        self.firingJanitor:Cleanup()
+        self.canFire = false
+        self.isFiring = false
+        self.isAiming = true
+        self._loadedAnim.adsIn:Play()
+        self.aimJanitor:AddPromise(Promise.delay(self._loadedAnim.adsIn.Length - 0.05)):andThen(function()
+            self._loadedAnim.ads:Play()
+            self.canFire = true
+        end)
+
+        self.aimJanitor:Add(function()
+            self.isAiming = false
+            self._loadedAnim.adsIn:Stop()
+            self._loadedAnim.ads:Stop()
+        end)
+
+        if self._adsOutPromise then
+            self._adsOutPromise:cancel()
+        end
+
+        MovementController._sprintJanitor:Cleanup()        
+    elseif inputState == Enum.UserInputState.End then
+        if self.isAiming then
+            self.aimJanitor:Cleanup()
+            self.firingJanitor:Cleanup()
+            self.canFire = false
+            self.isFiring = false
+            self.isAiming = true
+            
+            self._loadedAnim.adsOut:Play()
+
+            self._adsOutPromise = Promise.delay(self._loadedAnim.adsOut.Length)
+            self._adsOutPromise:andThen(function()
+                self.isAiming = false
+                self.canFire = true
+            end)
+        end
+    end
+end
 
 function BreadGunController:Reload()
-    if MovementController.isSprinting then return end
     if not self.isReloading and self.bullets < self.maxBullets then
         self.isFiring = false
         self.isReloading = true
+        self.aimJanitor:Cleanup()
+
         self._loadedAnim.reloadingAnim:Play()
         self._loadedAnim.reloadingFpsAnim:Play()
         MovementController.canSprint = false
@@ -59,7 +107,7 @@ function BreadGunController:Reload()
         sound.Parent = self._camera
         sound:Destroy()
 
-        self._reloadJanitor:Cleanup()
+        MovementController._sprintJanitor:Cleanup()
     end
 end
 
@@ -90,18 +138,27 @@ function BreadGunController:KnitStart()
 
         local viewmodel = ReplicatedStorage.viewmodel:Clone()
         viewmodel.Parent = camera
-        viewmodel.AnimationController:LoadAnimation(ReplicatedStorage.Assets.Animations.Idle):Play()
-        self._loadedAnim.reloadingFpsAnim = viewmodel.AnimationController:LoadAnimation(ReplicatedStorage.Assets.Animations.ReloadingFps)
         self._janitor:Add(viewmodel)
 
+        viewmodel.AnimationController:LoadAnimation(ReplicatedStorage.Assets.Animations.Idle):Play()
+        self._loadedAnim.reloadingFpsAnim = viewmodel.AnimationController:LoadAnimation(ReplicatedStorage.Assets.Animations.ReloadingFps)
+        self._loadedAnim.shootingFps = viewmodel.AnimationController:LoadAnimation(ReplicatedStorage.Assets.Animations.ShootingFps)
+        self._loadedAnim.shootingAds = viewmodel.AnimationController:LoadAnimation(ReplicatedStorage.Assets.Animations.ShootingAds)
+        self._loadedAnim.adsIn = viewmodel.AnimationController:LoadAnimation(ReplicatedStorage.Assets.Animations.AdsIn)
+        self._loadedAnim.adsOut = viewmodel.AnimationController:LoadAnimation(ReplicatedStorage.Assets.Animations.AdsOut)
+        self._loadedAnim.ads = viewmodel.AnimationController:LoadAnimation(ReplicatedStorage.Assets.Animations.Ads)
+
         local function handleAction(actionName, inputState)
-            if self.bullets <= 0 or self.isReloading or MovementController.isSprinting then return end
+            if self.bullets <= 0 or self.isReloading then return end
             if actionName == "Shoot" then
                 if inputState == Enum.UserInputState.Begin then
-                    self.isFiring = true                   
+                    self.isFiring = true
+                    MovementController._sprintJanitor:Cleanup()        
                 elseif inputState == Enum.UserInputState.End then
                     self.isFiring = false
                 end
+            elseif actionName == "Aim" then
+                self:ToggleAim(inputState)
             elseif actionName == "Reload" then
                 if inputState == Enum.UserInputState.Begin then
                     self:Reload()
@@ -110,6 +167,7 @@ function BreadGunController:KnitStart()
         end
         
         ContextActionService:BindAction("Shoot", handleAction, true, Enum.UserInputType.MouseButton1)
+        ContextActionService:BindAction("Aim", handleAction, true, Enum.UserInputType.MouseButton2)
         ContextActionService:BindAction("Reload", handleAction, true, Enum.KeyCode.R)
 
         local CastParams = RaycastParams.new()
@@ -137,11 +195,29 @@ function BreadGunController:KnitStart()
                     self.canFire = false
                     self.bullets = self.bullets - 1
 
+                    self.firingJanitor:AddPromise(Promise.delay(self.Stats["FireRate"]):andThen(function()
+                        self.canFire = true
+                    end))
+
                     local viewportPoint = camera.ViewportSize / 2
                     local pos = getMousePos(camera:ViewportPointToRay(viewportPoint.X, viewportPoint.Y))
                     local direction = (pos - viewmodel.xdgun.Handle.Muzzle.WorldPosition).Unit
-                    FastCastController:Fire(viewmodel.xdgun.Handle.Muzzle.WorldPosition, direction, false, character)
-                    
+                    if not self.isAiming then
+                        FastCastController:Fire(viewmodel.xdgun.Handle.Muzzle.WorldPosition, direction, false, character, 2)
+                        self._loadedAnim.shootingFps:Play()
+                        self._springs.fire:shove(Vector3.new(2, math.random(-0.8, 0.8), 4))
+                        task.delay(0.2, function()
+                            self._springs.fire:shove(Vector3.new(-1.5, math.random(-0.5, 0.5), -4))
+                        end)
+                    else
+                        FastCastController:Fire(viewmodel.xdgun.Handle.Muzzle.WorldPosition, direction, false, character, 1.2)
+                        self._loadedAnim.shootingAds:Play()
+                        self._springs.fire:shove(Vector3.new(1, math.random(-0.4, 0.4), 2))
+                        task.delay(0.2, function()
+                            self._springs.fire:shove(Vector3.new(-1, math.random(-0.3, 0.3), -2))
+                        end)
+                    end
+                        
                     local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
                     flash.Parent = viewmodel.xdgun.Handle.Muzzle
                     flash:Emit(1)
@@ -149,18 +225,9 @@ function BreadGunController:KnitStart()
                         flash:Destroy()
                     end)
 
-                    self._janitor:AddPromise(Promise.delay(self.Stats["FireRate"]):andThen(function()
-                        self.canFire = true
-                    end))
-                    
                     local sound = ReplicatedStorage.Assets.Sounds:FindFirstChild("Shoot" .. math.random(1, 3)):Clone()
                     sound.Parent = camera
                     sound:Destroy()
-
-                    self._springs.fire:shove(Vector3.new(2, math.random(-0.8, 0.8), 4))
-                    task.delay(0.2, function()
-                        self._springs.fire:shove(Vector3.new(-1.5, math.random(-0.5, 0.5), -4))
-                    end)
 
                     HudController:ExpandCrosshair()
                     HudController:SetBullets(self.bullets)
@@ -189,10 +256,12 @@ function BreadGunController:KnitStart()
             local finalOffset = sprintOffset
             viewmodel.HumanoidRootPart.CFrame = camera.CFrame:ToWorldSpace(finalOffset)
 
-            viewmodel.HumanoidRootPart.CFrame = viewmodel.HumanoidRootPart.CFrame:ToWorldSpace(CFrame.new(walkCycle.x / 2,walkCycle.y / 2,0))
-            
+            if not self.isAiming then
+                viewmodel.HumanoidRootPart.CFrame = viewmodel.HumanoidRootPart.CFrame:ToWorldSpace(CFrame.new(walkCycle.x / 2,walkCycle.y / 2,0))
+                viewmodel.HumanoidRootPart.CFrame =  viewmodel.HumanoidRootPart.CFrame * CFrame.Angles(0,walkCycle.y,walkCycle.x/2)
+            end
+
             viewmodel.HumanoidRootPart.CFrame =  viewmodel.HumanoidRootPart.CFrame * CFrame.Angles(0,-sway.x,sway.y)
-            viewmodel.HumanoidRootPart.CFrame =  viewmodel.HumanoidRootPart.CFrame * CFrame.Angles(0,walkCycle.y,walkCycle.x/2)
 
             local recoil = self._springs.fire:update(dt)
             camera.CFrame = camera.CFrame * CFrame.Angles(math.rad(recoil.x), math.rad(recoil.y), math.rad(recoil.z))
@@ -200,6 +269,8 @@ function BreadGunController:KnitStart()
 
         self._janitor:Add(function()
             ContextActionService:UnbindAction("Shoot")
+            ContextActionService:UnbindAction("Reload")
+            ContextActionService:UnbindAction("Aim")
             self.canFire = false
             self.isFiring = false
         end)

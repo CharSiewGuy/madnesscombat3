@@ -65,11 +65,15 @@ function MovementController:KnitStart()
                         self.isSprinting = true
                         value:set(24)
                         walkShake.Amplitude = 0.2
+                        BreadGunController.aimJanitor:Cleanup()
+                        self._sprintJanitor:Add(function()
+                            self.isSprinting = false
+                            value:set(16)
+                            walkShake.Amplitude = 0
+                        end)
                     end
                 elseif inputState == Enum.UserInputState.End then
-                    self.isSprinting = false
-                    value:set(16)
-                    walkShake.Amplitude = 0
+                   self._sprintJanitor:Cleanup()
                 end
             end
         end
@@ -87,15 +91,11 @@ function MovementController:KnitStart()
         self._janitor:Add(hum:GetPropertyChangedSignal("MoveDirection"):Connect(function()
             if humanoidRootPart.Anchored == true then return end
             if hum.MoveDirection.Magnitude > 0 then
-               if getMovingDir() ~= "forward" then
-                    self.isSprinting = false
-                    value:set(16)
-                    walkShake.Amplitude = 0
+                if getMovingDir() ~= "forward" then
+                    self._sprintJanitor:Cleanup()
                 end
             else
-                self.isSprinting = false
-                value:set(16)
-                walkShake.Amplitude = 0
+                self._sprintJanitor:Cleanup()
             end
         end))
 
@@ -118,21 +118,7 @@ function MovementController:KnitStart()
                 sound.Parent = self.camera
                 sound:Destroy()
 
-                if numJumps > 0 then   
-                    local jumpShake = Shake.new()
-                    jumpShake.FadeInTime = 0.05
-                    jumpShake.Frequency = 0.5
-                    jumpShake.Amplitude = 5
-                    jumpShake.PositionInfluence = Vector3.new(0, 0, 0)
-                    jumpShake.RotationInfluence = Vector3.new(0, 0, 0)
-
-                    jumpShake:Start()
-                    jumpShake:BindToRenderStep(Shake.NextRenderName(), Enum.RenderPriority.Last.Value, function(pos, rot)
-                        self.camera.CFrame *= CFrame.new(pos) * CFrame.Angles(rot.X, rot.Y, rot.Z)
-                    end)
-                 end
-
-                 numJumps += 1
+                numJumps += 1
             end
 
         end
