@@ -13,12 +13,6 @@ local SmoothValue = require(game.ReplicatedStorage.Modules.SmoothValue)
 local MovementController = Knit.CreateController { Name = "MovementController" }
 MovementController._janitor = Janitor.new()
 
-local BreadGunController
-
-function MovementController:KnitInit()
-    BreadGunController = Knit.GetController("BreadGunController")
-end
-
 function MovementController:KnitStart()
     self.isSprinting = false
     self.canSprint = true
@@ -55,7 +49,7 @@ function MovementController:KnitStart()
             self.camera.CFrame *= CFrame.new(pos) * CFrame.Angles(rot.X, rot.Y, rot.Z)
         end)
 
-        local value = SmoothValue:create(0, 0, 5)
+        local value = SmoothValue:create(16, 16, 5)
 
         local function handleAction(actionName, inputState)
             if not self.canSprint then return end
@@ -65,7 +59,6 @@ function MovementController:KnitStart()
                         self.isSprinting = true
                         value:set(24)
                         walkShake.Amplitude = 0.2
-                        BreadGunController.aimJanitor:Cleanup()
                         self._sprintJanitor:Add(function()
                             self.isSprinting = false
                             value:set(16)
