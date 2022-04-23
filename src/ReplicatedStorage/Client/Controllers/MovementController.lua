@@ -113,7 +113,6 @@ function MovementController:KnitStart()
 
                 numJumps += 1
             end
-
         end
 
         local function onJumpRequest()
