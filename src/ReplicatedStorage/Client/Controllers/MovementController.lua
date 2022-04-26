@@ -13,6 +13,9 @@ local SmoothValue = require(game.ReplicatedStorage.Modules.SmoothValue)
 local MovementController = Knit.CreateController { Name = "MovementController" }
 MovementController._janitor = Janitor.new()
 
+MovementController.normalSpeed = 16
+MovementController.sprintSpeed = 24
+
 function MovementController:KnitStart()
     self.isSprinting = false
     self.canSprint = true
@@ -49,7 +52,7 @@ function MovementController:KnitStart()
             self.camera.CFrame *= CFrame.new(pos) * CFrame.Angles(rot.X, rot.Y, rot.Z)
         end)
 
-        local value = SmoothValue:create(16, 16, 5)
+        local value = SmoothValue:create(self.normalSpeed, self.normalSpeed, 5)
 
         local function handleAction(actionName, inputState)
             if not self.canSprint then return end
@@ -57,11 +60,11 @@ function MovementController:KnitStart()
                 if inputState == Enum.UserInputState.Begin then
                     if hum.MoveDirection.Magnitude > 0 and getMovingDir() == "forward" then
                         self.isSprinting = true
-                        value:set(24)
+                        value:set(self.sprintSpeed)
                         walkShake.Amplitude = 0.2
                         self._sprintJanitor:Add(function()
                             self.isSprinting = false
-                            value:set(16)
+                            value:set(self.normalSpeed)
                             walkShake.Amplitude = 0
                         end)
                     end
@@ -93,7 +96,7 @@ function MovementController:KnitStart()
         end))
 
         local MAX_JUMPS = 3
-        local TIME_BETWEEN_JUMPS = 0.2
+        local TIME_BETWEEN_JUMPS = 0.3
         local numJumps = 0
         local canJumpAgain = false
 
