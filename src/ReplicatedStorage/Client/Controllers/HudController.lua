@@ -36,7 +36,7 @@ end
 
 local lastShownHitmarker = os.clock()
 
-function HudController:ShowHitmarker()
+function HudController:ShowHitmarker(headshot)
     lastShownHitmarker = os.clock()
     local hitmarker = self.ScreenGui.Crosshair.Hitmarker
     Tween(hitmarker, TweenInfo.new(0.05, Enum.EasingStyle.Sine), {ImageTransparency = 0})
@@ -45,5 +45,11 @@ function HudController:ShowHitmarker()
             Tween(hitmarker, TweenInfo.new(0.1, Enum.EasingStyle.Sine), {ImageTransparency = 1})
         end
     end)
+
+    if headshot then
+        hitmarker.ImageColor3 = Color3.fromRGB(193, 6, 6)
+    else
+        hitmarker.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    end
 end
 return HudController
