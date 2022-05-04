@@ -13,6 +13,7 @@ HudController._janitor = Janitor.new()
 
 function HudController:KnitStart()
     self.ScreenGui = Knit.Player.PlayerGui:WaitForChild("ScreenGui")
+    self.ScreenGui.Crosshair.Visible = true
 end
 
 function HudController:ExpandCrosshair()

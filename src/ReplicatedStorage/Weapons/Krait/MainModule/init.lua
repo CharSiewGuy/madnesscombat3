@@ -24,7 +24,9 @@ module.camera = workspace.CurrentCamera
 module.loadedAnimations = {}
 module.springs = {}
 module.lerpValues = {}
-module.lerpValues.sprint = SmoothValue:create(0, 0, 10)
+module.lerpValues.sprint = SmoothValue:create(0, 0, 15)
+module.swayspeed = 3
+module.swaymodifier = 0.03
 
 module.firingJanitor = Janitor.new()
 module.fireRate = 0.12
@@ -33,39 +35,41 @@ module.maxBullets = 30
 module.isReloading = false
 module.isFiring = false
 
-function module:GetBobbing(addition,speed,modifier)
-    return math.sin(tick()*addition*speed)*modifier
-end
-
+local UtilModule = require(script.Util)
 
 function module:Reload()
     if not self.isReloading and self.bullets < self.maxBullets then
         self.isFiring = false
         self.isReloading = true
+        self.lerpValues.sprint:set(0)
+        self.swayspeed = 3
+        self.swaymodifier = 0.03
         --self.aimJanitor:Cleanup()
 
         self.loadedAnimations.Reload:Play()
         self.loadedAnimations.Reload:AdjustSpeed(1.2) 
-        MovementController.canSprint = false
         self.janitor:AddPromise(Promise.delay(self.loadedAnimations.Reload.Length - 0.5)):andThen(function()
             self.isReloading = false
             self.bullets = self.maxBullets
             HudController:SetBullets(self.bullets)
-            MovementController.canSprint = true
         end)
 
-        local sound = ReplicatedStorage.Assets.Sounds.Reload:Clone()
-        sound.Parent = self._camera
+        local sound = script.Parent.Sounds.Reload:Clone()
+        sound.Parent = self.camera
         sound:Destroy()
 
-        MovementController._sprintJanitor:Cleanup()
+        self.janitor:AddPromise(Promise.delay(0.3)):andThen(function()
+            UtilModule:SetGlow(self.camera.viewmodel.Krait, false)
+        end)
+
+        self.janitor:AddPromise(Promise.delay(1)):andThen(function()
+            UtilModule:SetGlow(self.camera.viewmodel.Krait, true)
+        end)
     end
 end
 
 function module:Equip(character, vm)
     MovementController = Knit.GetController("MovementController")
-
-    print(character.Name)
 
     self.camera.FieldOfView = 90
 
@@ -79,8 +83,7 @@ function module:Equip(character, vm)
 
     self.springs.sway = Spring.create()
     self.springs.walkCycle = Spring.create()
-    local speed = 3
-    local modifier = 0.03
+
     self.springs.jump = Spring.create(1, 10, 0, 1.8)
     self.springs.fire = Spring.create()
 
@@ -103,14 +106,19 @@ function module:Equip(character, vm)
         self.springs.sway:shove(Vector3.new(mouseDelta.X / 400,mouseDelta.Y / 400))
         local sway = self.springs.sway:update(dt)
 
-        local movementSway = Vector3.new(self:GetBobbing(10,speed,modifier),self:GetBobbing(5,speed,modifier),self:GetBobbing(5,speed,modifier))
+        local movementSway = Vector3.new(
+            UtilModule:GetBobbing(10,self.swayspeed,self.swaymodifier),
+            UtilModule:GetBobbing(5,self.swayspeed,self.swaymodifier),
+            UtilModule:GetBobbing(5,self.swayspeed,self.swaymodifier)
+        )
+
         self.springs.walkCycle:shove((movementSway / 25) * dt * 60 * character.HumanoidRootPart.Velocity.Magnitude)
         local walkCycle = self.springs.walkCycle:update(dt)
 
         local jump = self.springs.jump:update(dt)
 
-        local idleOffset = script.Parent.Offsets.Idle.Value
-        local sprintOffset = idleOffset:lerp(script.Parent.Offsets.Sprint.Value, self.lerpValues.sprint:update(dt))
+        local idleOffset = CFrame.new(0.5,-0.5,-0.5)
+        local sprintOffset = idleOffset:Lerp(CFrame.new(0.5,-1,-1) * CFrame.Angles(0.1, 1, 0.2), self.lerpValues.sprint:update(dt))
         local finalOffset = sprintOffset
         vm.HumanoidRootPart.CFrame = self.camera.CFrame:ToWorldSpace(finalOffset)
 
@@ -159,24 +167,17 @@ function module:Equip(character, vm)
     local CastParams = RaycastParams.new()
     CastParams.IgnoreWater = true
     CastParams.FilterType = Enum.RaycastFilterType.Blacklist
-    CastParams.FilterDescendantsInstances = {character, self.camera}
-
-    local function getMousePos(unitRay)
-        local ori, dir = unitRay.Origin, unitRay.Direction * 500
-        local result = workspace:Raycast(ori, dir, CastParams)
-        return result and result.Position or ori + dir
-    end
 
     self.janitor:Add(RunService.Heartbeat:Connect(function()
-        if MovementController.isSprinting then 
+        if MovementController.isSprinting and not self.isReloading then 
             self.isFiring = false
             self.lerpValues.sprint:set(1)
-            speed = 2
-            modifier = 0.06
+            self.swayspeed = 2
+            self.swaymodifier = 0.06
         else
             self.lerpValues.sprint:set(0)
-            speed = 3
-            modifier = 0.03
+            self.swayspeed = 3
+            self.swaymodifier = 0.03
         end
 
         if not self.canFire or self.isReloading then return end
@@ -189,8 +190,9 @@ function module:Equip(character, vm)
 
                 self.loadedAnimations.Shoot:Play()
 
+                CastParams.FilterDescendantsInstances = {character, self.camera}
                 local viewportPoint = self.camera.ViewportSize / 2
-                local pos = getMousePos(self.camera:ViewportPointToRay(viewportPoint.X, viewportPoint.Y))
+                local pos = UtilModule:GetMousePos(self.camera:ViewportPointToRay(viewportPoint.X, viewportPoint.Y), CastParams)
                 local direction = (pos - vm.Krait.Handle.MuzzleBack.WorldPosition).Unit
                 clientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, 1.8)
 
@@ -213,6 +215,8 @@ function module:Equip(character, vm)
                 HudController:ExpandCrosshair()
                 self.bullets = self.bullets - 1
                 HudController:SetBullets(self.bullets)
+
+                MovementController._sprintJanitor:Cleanup()
             end
         else
             self:Reload()
@@ -227,9 +231,8 @@ function module:Equip(character, vm)
     end)
 end
 
-function module:Unequip(character)
+function module:Unequip()
     self.janitor:Cleanup()
-    print(character.Name)
 end
 
 Knit.OnStart():andThen(function()
