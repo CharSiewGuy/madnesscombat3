@@ -18,7 +18,8 @@ local SmoothValue = require(Modules.SmoothValue)
 local HudController
 local MovementController
 
-local clientCaster = require(script.Parent.ClientCaster)
+local ClientCaster = require(script.Parent.ClientCaster)
+local UtilModule = require(script.Util)
 
 module.janitor = Janitor.new()
 module.camera = workspace.CurrentCamera
@@ -26,17 +27,9 @@ module.loadedAnimations = {}
 module.springs = {}
 module.lerpValues = {}
 module.lerpValues.sprint = SmoothValue:create(0, 0, 15)
+module.lerpValues.aim = SmoothValue:create(0, 0, 20)
 module.swayspeed = 3
 module.swaymodifier = 0.03
-
-module.firingJanitor = Janitor.new()
-module.fireRate = 0.12
-module.bullets = 30
-module.maxBullets = 30
-module.isReloading = false
-module.isFiring = false
-
-local UtilModule = require(script.Util)
 
 function module:SetupAnimations(character, vm)
     self.springs.sway = Spring.create()
@@ -77,15 +70,18 @@ function module:SetupAnimations(character, vm)
 
         local idleOffset = CFrame.new(0.5,-0.5,-0.5)
         local sprintOffset = idleOffset:Lerp(CFrame.new(0.5,-1,-1) * CFrame.Angles(0.1, 1, 0.2), self.lerpValues.sprint:update(dt))
-        local finalOffset = sprintOffset
+        local aimOffset = sprintOffset:Lerp(CFrame.new(0,0,0), self.lerpValues.aim:update(dt))
+        local finalOffset = aimOffset
         vm.HumanoidRootPart.CFrame = self.camera.CFrame:ToWorldSpace(finalOffset)
 
-        vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame:ToWorldSpace(CFrame.new(walkCycle.x, walkCycle.y * 3, 0))
+        if not self.isAiming then
+            vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame:ToWorldSpace(CFrame.new(walkCycle.x, walkCycle.y * 3, 0))
         
-        if MovementController.isSprinting then
-            vm.HumanoidRootPart.CFrame =  vm.HumanoidRootPart.CFrame * CFrame.Angles(jump.y,walkCycle.y, walkCycle.x/2)
-        else
-            vm.HumanoidRootPart.CFrame =  vm.HumanoidRootPart.CFrame * CFrame.Angles(0,walkCycle.y/2,walkCycle.y)
+            if MovementController.isSprinting then
+                vm.HumanoidRootPart.CFrame =  vm.HumanoidRootPart.CFrame * CFrame.Angles(jump.y,walkCycle.y, walkCycle.x/2)
+            else
+                vm.HumanoidRootPart.CFrame =  vm.HumanoidRootPart.CFrame * CFrame.Angles(0,walkCycle.y/2,walkCycle.y)
+            end    
         end
 
         vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame * CFrame.Angles(jump.y,-sway.x,sway.y)
@@ -95,6 +91,75 @@ function module:SetupAnimations(character, vm)
     end))
 end
 
+
+module.firingJanitor = Janitor.new()
+module.aimJanitor = Janitor.new()
+module.isAiming = false
+module.isFiring = false
+module.fireRate = 0.12
+module.scopeOutPromise = nil
+
+function module:ToggleAim(inputState)
+    if inputState == Enum.UserInputState.Begin then
+        if self.isFiring or self.isReloading or self.isAiming then return end
+
+        self.firingJanitor:Cleanup()
+        self.canFire = false
+        self.isFiring = false
+        self.isAiming = true
+        self.loadedAnimations.scopeIn:Play(0)
+        self.aimJanitor:AddPromise(Promise.delay(self.loadedAnimations.scopeIn.Length - 0.05)):andThen(function()
+            self.loadedAnimations.scopeIdle:Play(0)
+            self.canFire = true
+        end)
+
+        self.aimJanitor:Add(function()
+            self.isAiming = false
+            self.loadedAnimations.scopeIn:Stop()
+            self.loadedAnimations.scopeIdle:Stop()
+        end)
+
+        if self.scopeOutPromise then
+            self.scopeOutPromise:cancel()
+        end
+
+        MovementController._sprintJanitor:Cleanup()  
+        
+        self.lerpValues.aim:set(1)
+
+        local inSound = script.Parent.Sounds.ScopeIn:Clone()
+        inSound.Parent = self.camera
+        inSound:Destroy()
+        local outSound = script.Parent.Sounds.ScopeOut:Clone()
+        outSound.Parent = self.camera
+        self.aimJanitor:Add(outSound)
+
+        self.janitor:Add(self.aimJanitor)
+    elseif inputState == Enum.UserInputState.End then
+        if self.isAiming then
+            self.aimJanitor:Cleanup()
+            self.firingJanitor:Cleanup()
+            self.canFire = false
+            self.isFiring = false
+            self.isAiming = true
+            
+            self.loadedAnimations.scopeOut:Play(0)
+
+            self.scopeOutPromise = Promise.delay(self.loadedAnimations.scopeOut.Length)
+            self.scopeOutPromise:andThen(function()
+                self.isAiming = false
+                self.canFire = true
+            end)
+
+            self.lerpValues.aim:set(0)
+        end
+    end
+end
+
+module.bullets = 30
+module.maxBullets = 30
+module.isReloading = false
+
 function module:Reload()
     if not self.isReloading and self.bullets < self.maxBullets then
         self.isFiring = false
@@ -102,9 +167,9 @@ function module:Reload()
         self.lerpValues.sprint:set(0)
         self.swayspeed = 3
         self.swaymodifier = 0.03
-        --self.aimJanitor:Cleanup()
+        self.aimJanitor:Cleanup()
 
-        self.loadedAnimations.Reload:Play()
+        self.loadedAnimations.Reload:Play(0)
         self.loadedAnimations.Reload:AdjustSpeed(1.2) 
         self.janitor:AddPromise(Promise.delay(self.loadedAnimations.Reload.Length - 0.6)):andThen(function()
             self.isReloading = false
@@ -114,7 +179,7 @@ function module:Reload()
 
         local sound = script.Parent.Sounds.Reload:Clone()
         sound.Parent = self.camera
-        sound:Play()
+        sound:Play(0)
         self.janitor:Add(sound.Ended:Connect(function()
             sound:Destroy()
         end))
@@ -134,6 +199,8 @@ function module:Reload()
     end
 end
 
+
+
 function module:Equip(character, vm)
     MovementController = Knit.GetController("MovementController")
 
@@ -152,10 +219,15 @@ function module:Equip(character, vm)
     self.canFire = true
 
     self.loadedAnimations.Idle = vm.AnimationController:LoadAnimation(script.Parent.Animations.Idle)
-    self.loadedAnimations.Idle:Play()
-
     self.loadedAnimations.Shoot = vm.AnimationController:LoadAnimation(script.Parent.Animations.Shoot)
     self.loadedAnimations.Reload = vm.AnimationController:LoadAnimation(script.Parent.Animations.Reload)
+    self.loadedAnimations.scopeIn = vm.AnimationController:LoadAnimation(script.Parent.Animations.ScopeIn)
+    self.loadedAnimations.scopeIdle = vm.AnimationController:LoadAnimation(script.Parent.Animations.ScopeIdle)
+    self.loadedAnimations.scopeOut = vm.AnimationController:LoadAnimation(script.Parent.Animations.ScopeOut)
+    self.loadedAnimations.scopedShoot = vm.AnimationController:LoadAnimation(script.Parent.Animations.ScopeShoot)
+
+    self.loadedAnimations.Idle:Play(0)
+    self.loadedAnimations.scopeIdle.Looped = true
 
     local function handleAction(actionName, inputState)
         if self.bullets <= 0 or self.isReloading then return end
@@ -165,6 +237,8 @@ function module:Equip(character, vm)
             elseif inputState == Enum.UserInputState.End then
                 self.isFiring = false
             end 
+        elseif actionName == "KraitAim" then
+            self:ToggleAim(inputState)
         elseif actionName == "KraitReload" then
             if inputState == Enum.UserInputState.Begin then
                 self:Reload()
@@ -173,9 +247,10 @@ function module:Equip(character, vm)
     end
 
     ContextActionService:BindAction("KraitShoot", handleAction, true, Enum.UserInputType.MouseButton1)
+    ContextActionService:BindAction("KraitAim", handleAction, true, Enum.UserInputType.MouseButton2)
     ContextActionService:BindAction("KraitReload", handleAction, true, Enum.KeyCode.R)
 
-    clientCaster:Initialize()
+    ClientCaster:Initialize()
 
     local CastParams = RaycastParams.new()
     CastParams.IgnoreWater = true
@@ -207,7 +282,22 @@ function module:Equip(character, vm)
                 local viewportPoint = self.camera.ViewportSize / 2
                 local pos = UtilModule:GetMousePos(self.camera:ViewportPointToRay(viewportPoint.X, viewportPoint.Y), CastParams)
                 local direction = (pos - vm.Krait.Handle.MuzzleBack.WorldPosition).Unit
-                clientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, 1.8)
+
+                if not self.isAiming then
+                    ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, 1.8)
+                    self.loadedAnimations.Shoot:Play(0)
+                    self.springs.fire:shove(Vector3.new(2, math.random(-0.8, 0.8), 4))
+                    task.delay(0.2, function()
+                        self.springs.fire:shove(Vector3.new(-1.5, math.random(-0.5, 0.5), -4))
+                    end)
+                else
+                    ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, 1.2)
+                    self.loadedAnimations.scopedShoot:Play(0)
+                    self.springs.fire:shove(Vector3.new(1, math.random(-0.4, 0.4), 2))
+                    task.delay(0.2, function()
+                        self.springs.fire:shove(Vector3.new(-1, math.random(-0.3, 0.3), -2))
+                    end)
+                end
 
                 local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
                 flash.Parent = vm.Krait.Handle.Muzzle
@@ -218,12 +308,7 @@ function module:Equip(character, vm)
 				
 				local sound = script.Parent.Sounds:FindFirstChild("Shoot" .. math.random(1, 3)):Clone()
 				sound.Parent = self.camera
-				sound:Destroy()
-
-                self.springs.fire:shove(Vector3.new(2, math.random(-0.8, 0.8), 4))
-                task.delay(0.2, function()
-                    self.springs.fire:shove(Vector3.new(-1.5, math.random(-0.5, 0.5), -4))
-                end)
+				sound:Destroy()                    
 
                 HudController:ExpandCrosshair()
                 self.bullets = self.bullets - 1
@@ -242,7 +327,7 @@ function module:Equip(character, vm)
 
         ContextActionService:UnbindAction("KraitShoot")
         ContextActionService:UnbindAction("KraitReload")
-        clientCaster:Deinitialize()
+        ClientCaster:Deinitialize()
         self.canFire = false        
     end)
 end
