@@ -13,8 +13,14 @@ local SmoothValue = require(game.ReplicatedStorage.Modules.SmoothValue)
 local MovementController = Knit.CreateController { Name = "MovementController" }
 MovementController._janitor = Janitor.new()
 
+local HudController 
+
 MovementController.normalSpeed = 16
 MovementController.sprintSpeed = 24
+
+function MovementController:KnitInit()
+    HudController = Knit.GetController("HudController")
+end
 
 function MovementController:KnitStart()
     self.isSprinting = false
@@ -62,10 +68,12 @@ function MovementController:KnitStart()
                         self.isSprinting = true
                         value:set(self.sprintSpeed)
                         walkShake.Amplitude = 0.2
+                        HudController.crosshairOffset:set(40)
                         self._sprintJanitor:Add(function()
                             self.isSprinting = false
                             value:set(self.normalSpeed)
                             walkShake.Amplitude = 0
+                            HudController.crosshairOffset:set(20)
                         end)
                     end
                 elseif inputState == Enum.UserInputState.End then

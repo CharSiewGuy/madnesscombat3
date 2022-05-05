@@ -11,22 +11,28 @@ local SmoothValue = require(game.ReplicatedStorage.Modules.SmoothValue)
 local HudController = Knit.CreateController { Name = "HudController" }
 HudController._janitor = Janitor.new()
 
+function HudController:KnitInit()
+    HudController.crosshairOffset = SmoothValue:create(0, 0, 4)
+    HudController.crosshairOffset:set(20)
+end
+
 function HudController:KnitStart()
     self.ScreenGui = Knit.Player.PlayerGui:WaitForChild("ScreenGui")
     self.ScreenGui.Crosshair.Visible = true
+    game:GetService("RunService").Heartbeat:Connect(function(dt)
+        self.ScreenGui.Crosshair.Bottom.Position = UDim2.new(0.5, 0, 0.5, self.crosshairOffset:update(dt))
+        self.ScreenGui.Crosshair.Top.Position = UDim2.new(0.5, 0, 0.5, -self.crosshairOffset:update(dt))
+        self.ScreenGui.Crosshair.Right.Position = UDim2.new(0.5, self.crosshairOffset:update(dt), 0.5, 0)
+        self.ScreenGui.Crosshair.Left.Position = UDim2.new(0.5, -self.crosshairOffset:update(dt), 0.5, 0)
+    end)
 end
 
 function HudController:ExpandCrosshair()
-    if not self.ScreenGui then return end
-    Tween(self.ScreenGui.Crosshair.Bottom, TweenInfo.new(0.05, Enum.EasingStyle.Back), {Position = UDim2.new(0.5, 0, 0.5, 20)})
-    Tween(self.ScreenGui.Crosshair.Top, TweenInfo.new(0.05, Enum.EasingStyle.Back), {Position = UDim2.new(0.5, 0, 0.5, -20)})
-    Tween(self.ScreenGui.Crosshair.Right, TweenInfo.new(0.05, Enum.EasingStyle.Back), {Position = UDim2.new(0.5, 20, 0.5, 0)})
-    Tween(self.ScreenGui.Crosshair.Left, TweenInfo.new(0.05, Enum.EasingStyle.Back), {Position = UDim2.new(0.5, -20, 0.5, 0)})
+    self.crosshairOffset.speed = 20
+    self.crosshairOffset:set(self.crosshairOffset.target + 8)
     task.delay(0.05, function()
-        Tween(self.ScreenGui.Crosshair.Bottom, TweenInfo.new(0.1, Enum.EasingStyle.Sine), {Position = UDim2.new(0.5, 0, 0.5, 15)})
-        Tween(self.ScreenGui.Crosshair.Top, TweenInfo.new(0.1, Enum.EasingStyle.Sine), {Position = UDim2.new(0.5, 0, 0.5, -15)})
-        Tween(self.ScreenGui.Crosshair.Right, TweenInfo.new(0.1, Enum.EasingStyle.Sine), {Position = UDim2.new(0.5, 15, 0.5, 0)})
-        Tween(self.ScreenGui.Crosshair.Left, TweenInfo.new(0.1, Enum.EasingStyle.Sine), {Position = UDim2.new(0.5, -15, 0.5, 0)})
+        self.crosshairOffset.speed = 4
+        self.crosshairOffset:set(self.crosshairOffset.target - 8)
     end)
 end
 
@@ -53,4 +59,25 @@ function HudController:ShowHitmarker(headshot)
         hitmarker.ImageColor3 = Color3.fromRGB(255, 255, 255)
     end
 end
+
+function HudController:ShowVignette(val, time)
+    if val then
+        Tween(self.ScreenGui.Overlay, TweenInfo.new(time), {ImageTransparency = 0.1})
+    else
+        Tween(self.ScreenGui.Overlay, TweenInfo.new(time), {ImageTransparency = 0.5})
+    end
+end
+
+function HudController:ShowCrosshair(val, time)
+    for _, v in pairs(self.ScreenGui.Crosshair:GetChildren()) do
+        if v:IsA("Frame") then
+            if val then
+                Tween(v, TweenInfo.new(time), {BackgroundTransparency = 0})
+            else
+                Tween(v, TweenInfo.new(time, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1})
+            end
+        end
+    end
+end
+
 return HudController

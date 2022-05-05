@@ -24,7 +24,7 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
 
     local CastBehavior = FastCast.newBehavior()
     CastBehavior.RaycastParams = CastParams
-    CastBehavior.MaxDistance = 500
+    CastBehavior.MaxDistance = 600
     CastBehavior.HighFidelityBehavior = FastCast.HighFidelityBehavior.Default
     CastBehavior.CosmeticBulletContainer = workspace.Projectiles
     CastBehavior.CosmeticBulletTemplate = script.Parent.BulletPart
@@ -35,7 +35,7 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
     local spreadDirection = CFrame.fromOrientation(0, 0, math.random(0, math.pi * 2))
     local spreadAngle = CFrame.fromOrientation(math.rad(math.random(1, spreadMagnitude)), 0, 0)
     local finalDirection = (directionCF * spreadDirection * spreadAngle).LookVector
-    self.mainCaster:Fire(origin, finalDirection, 500, CastBehavior)				
+    self.mainCaster:Fire(origin, finalDirection, 800, CastBehavior)				
 end
 
 function module:Initialize()
@@ -75,17 +75,17 @@ function module:Initialize()
                 if distance < 30 then
                     WeaponService:Damage(humanoid, 45)
                 elseif distance < 50 then
-                    WeaponService:Damage(humanoid, 28)
+                    WeaponService:Damage(humanoid, 34)
                 else
-                    WeaponService:Damage(humanoid, 18)
+                    WeaponService:Damage(humanoid, 28)
                 end
             else
                 if distance < 30 then
-                    WeaponService:Damage(humanoid, 14)
+                    WeaponService:Damage(humanoid, 20)
                 elseif distance < 50 then
-                    WeaponService:Damage(humanoid, 10)
+                    WeaponService:Damage(humanoid, 18)
                 else
-                    WeaponService:Damage(humanoid, 8)
+                    WeaponService:Damage(humanoid, 15)
                 end            
             end
 

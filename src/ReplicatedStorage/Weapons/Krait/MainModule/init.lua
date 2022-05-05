@@ -10,6 +10,7 @@ local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
 local Promise = require(Packages.Promise)
 local HumanoidAnimatorUtils = require(Packages.HumanoidAnimatorUtils)
+local Tween = require(Packages.TweenPromise)
 
 local Modules = ReplicatedStorage.Modules
 local Spring = require(Modules.Spring)
@@ -27,7 +28,7 @@ module.loadedAnimations = {}
 module.springs = {}
 module.lerpValues = {}
 module.lerpValues.sprint = SmoothValue:create(0, 0, 15)
-module.lerpValues.aim = SmoothValue:create(0, 0, 20)
+module.lerpValues.aim = SmoothValue:create(0, 0, 10)
 module.swayspeed = 3
 module.swaymodifier = 0.03
 
@@ -69,8 +70,8 @@ function module:SetupAnimations(character, vm)
         local jump = self.springs.jump:update(dt)
 
         local idleOffset = CFrame.new(0.5,-0.5,-0.5)
-        local sprintOffset = idleOffset:Lerp(CFrame.new(0.5,-1,-1) * CFrame.Angles(0.1, 1, 0.2), self.lerpValues.sprint:update(dt))
-        local aimOffset = sprintOffset:Lerp(CFrame.new(0,0,0), self.lerpValues.aim:update(dt))
+        local sprintOffset = idleOffset:Lerp(CFrame.new(0.5,-1,-1) * CFrame.Angles(0.1,1,0.2), self.lerpValues.sprint:update(dt))
+        local aimOffset = sprintOffset:Lerp(CFrame.new(0,0.03,0) * CFrame.Angles(0.01,0,0), self.lerpValues.aim:update(dt))
         local finalOffset = aimOffset
         vm.HumanoidRootPart.CFrame = self.camera.CFrame:ToWorldSpace(finalOffset)
 
@@ -82,9 +83,13 @@ function module:SetupAnimations(character, vm)
             else
                 vm.HumanoidRootPart.CFrame =  vm.HumanoidRootPart.CFrame * CFrame.Angles(0,walkCycle.y/2,walkCycle.y)
             end    
-        end
 
-        vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame * CFrame.Angles(jump.y,-sway.x,sway.y)
+            vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame * CFrame.Angles(jump.y,-sway.x,sway.y)
+        else
+            vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame:ToWorldSpace(CFrame.new(0,walkCycle.y,0))
+            vm.HumanoidRootPart.CFrame =  vm.HumanoidRootPart.CFrame * CFrame.Angles(0,walkCycle.y/3,0)
+            vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame * CFrame.Angles(jump.y/8,-sway.x,sway.y)
+        end
 
         local recoil = self.springs.fire:update(dt)
         self.camera.CFrame = self.camera.CFrame * CFrame.Angles(math.rad(recoil.x), math.rad(recoil.y), math.rad(recoil.z))
@@ -96,10 +101,10 @@ module.firingJanitor = Janitor.new()
 module.aimJanitor = Janitor.new()
 module.isAiming = false
 module.isFiring = false
-module.fireRate = 0.12
+module.fireRate = 0.135
 module.scopeOutPromise = nil
 
-function module:ToggleAim(inputState)
+function module:ToggleAim(inputState, vm)
     if inputState == Enum.UserInputState.Begin then
         if self.isFiring or self.isReloading or self.isAiming then return end
 
@@ -107,16 +112,29 @@ function module:ToggleAim(inputState)
         self.canFire = false
         self.isFiring = false
         self.isAiming = true
+        MovementController.canSprint = false
+        if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.Reload) then self.loadedAnimations.Reload:Stop(0) end
         self.loadedAnimations.scopeIn:Play(0)
-        self.aimJanitor:AddPromise(Promise.delay(self.loadedAnimations.scopeIn.Length - 0.05)):andThen(function()
+        self.loadedAnimations.scopeIn:AdjustSpeed(1.25)
+        self.aimJanitor:AddPromise(Promise.delay(self.loadedAnimations.scopeIn.Length/1.25 - 0.05)):andThen(function()
             self.loadedAnimations.scopeIdle:Play(0)
             self.canFire = true
         end)
 
+        Tween(self.camera, TweenInfo.new(0.3), {FieldOfView = 60})
+        HudController:ShowVignette(true, 0.3)
+        HudController:ShowCrosshair(false, 0.3)
+
         self.aimJanitor:Add(function()
             self.isAiming = false
-            self.loadedAnimations.scopeIn:Stop()
-            self.loadedAnimations.scopeIdle:Stop()
+            self.isFiring = false
+            MovementController.canSprint = true
+            if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController,self.loadedAnimations.scopeIn) then self.loadedAnimations.scopeIn:Stop() end
+            if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController,self.loadedAnimations.scopeIdle) then self.loadedAnimations.scopeIdle:Stop() end
+            self.lerpValues.aim:set(0)
+            Tween(self.camera, TweenInfo.new(0.3), {FieldOfView = 90})
+            HudController:ShowVignette(false, 0.3)
+            HudController:ShowCrosshair(true, 0.3)
         end)
 
         if self.scopeOutPromise then
@@ -133,25 +151,21 @@ function module:ToggleAim(inputState)
         local outSound = script.Parent.Sounds.ScopeOut:Clone()
         outSound.Parent = self.camera
         self.aimJanitor:Add(outSound)
-
-        self.janitor:Add(self.aimJanitor)
     elseif inputState == Enum.UserInputState.End then
         if self.isAiming then
             self.aimJanitor:Cleanup()
             self.firingJanitor:Cleanup()
             self.canFire = false
-            self.isFiring = false
             self.isAiming = true
             
             self.loadedAnimations.scopeOut:Play(0)
+            self.loadedAnimations.scopeOut:AdjustSpeed(1.25)
 
             self.scopeOutPromise = Promise.delay(self.loadedAnimations.scopeOut.Length)
             self.scopeOutPromise:andThen(function()
                 self.isAiming = false
                 self.canFire = true
             end)
-
-            self.lerpValues.aim:set(0)
         end
     end
 end
@@ -171,7 +185,7 @@ function module:Reload()
 
         self.loadedAnimations.Reload:Play(0)
         self.loadedAnimations.Reload:AdjustSpeed(1.2) 
-        self.janitor:AddPromise(Promise.delay(self.loadedAnimations.Reload.Length - 0.6)):andThen(function()
+        self.janitor:AddPromise(Promise.delay(self.loadedAnimations.Reload.Length - 0.7)):andThen(function()
             self.isReloading = false
             self.bullets = self.maxBullets
             HudController:SetBullets(self.bullets)
@@ -238,7 +252,7 @@ function module:Equip(character, vm)
                 self.isFiring = false
             end 
         elseif actionName == "KraitAim" then
-            self:ToggleAim(inputState)
+            self:ToggleAim(inputState, vm)
         elseif actionName == "KraitReload" then
             if inputState == Enum.UserInputState.Begin then
                 self:Reload()
@@ -276,22 +290,22 @@ function module:Equip(character, vm)
                     self.canFire = true
                 end)
 
-                self.loadedAnimations.Shoot:Play(0)
-
                 CastParams.FilterDescendantsInstances = {character, self.camera}
                 local viewportPoint = self.camera.ViewportSize / 2
                 local pos = UtilModule:GetMousePos(self.camera:ViewportPointToRay(viewportPoint.X, viewportPoint.Y), CastParams)
                 local direction = (pos - vm.Krait.Handle.MuzzleBack.WorldPosition).Unit
 
+                if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.Reload) then self.loadedAnimations.Reload:Stop(0) end
+
                 if not self.isAiming then
-                    ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, 1.8)
+                    ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, 4)
                     self.loadedAnimations.Shoot:Play(0)
                     self.springs.fire:shove(Vector3.new(2, math.random(-0.8, 0.8), 4))
                     task.delay(0.2, function()
                         self.springs.fire:shove(Vector3.new(-1.5, math.random(-0.5, 0.5), -4))
                     end)
                 else
-                    ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, 1.2)
+                    ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, 1.1)
                     self.loadedAnimations.scopedShoot:Play(0)
                     self.springs.fire:shove(Vector3.new(1, math.random(-0.4, 0.4), 2))
                     task.delay(0.2, function()
@@ -326,14 +340,17 @@ function module:Equip(character, vm)
         HumanoidAnimatorUtils.stopAnimations(vm.AnimationController, 0)
 
         ContextActionService:UnbindAction("KraitShoot")
+        ContextActionService:UnbindAction("KraitAim")
         ContextActionService:UnbindAction("KraitReload")
         ClientCaster:Deinitialize()
-        self.canFire = false        
+        self.canFire = false
+        self.isFiring = false
     end)
 end
 
 function module:Unequip()
     self.janitor:Cleanup()
+    self.aimJanitor:Cleanup()
 end
 
 Knit.OnStart():andThen(function()
