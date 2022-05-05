@@ -9,6 +9,7 @@ local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
 local Promise = require(Packages.Promise)
+local HumanoidAnimatorUtils = require(Packages.HumanoidAnimatorUtils)
 
 local Modules = ReplicatedStorage.Modules
 local Spring = require(Modules.Spring)
@@ -37,50 +38,7 @@ module.isFiring = false
 
 local UtilModule = require(script.Util)
 
-function module:Reload()
-    if not self.isReloading and self.bullets < self.maxBullets then
-        self.isFiring = false
-        self.isReloading = true
-        self.lerpValues.sprint:set(0)
-        self.swayspeed = 3
-        self.swaymodifier = 0.03
-        --self.aimJanitor:Cleanup()
-
-        self.loadedAnimations.Reload:Play()
-        self.loadedAnimations.Reload:AdjustSpeed(1.2) 
-        self.janitor:AddPromise(Promise.delay(self.loadedAnimations.Reload.Length - 0.5)):andThen(function()
-            self.isReloading = false
-            self.bullets = self.maxBullets
-            HudController:SetBullets(self.bullets)
-        end)
-
-        local sound = script.Parent.Sounds.Reload:Clone()
-        sound.Parent = self.camera
-        sound:Destroy()
-
-        self.janitor:AddPromise(Promise.delay(0.3)):andThen(function()
-            UtilModule:SetGlow(self.camera.viewmodel.Krait, false)
-        end)
-
-        self.janitor:AddPromise(Promise.delay(1)):andThen(function()
-            UtilModule:SetGlow(self.camera.viewmodel.Krait, true)
-        end)
-    end
-end
-
-function module:Equip(character, vm)
-    MovementController = Knit.GetController("MovementController")
-
-    self.camera.FieldOfView = 90
-
-    local Krait = script.Parent.Krait:Clone()
-    Krait.Parent = vm
-
-    local weaponMotor6D = script.Parent.Handle:Clone()
-    weaponMotor6D.Part0 = vm.HumanoidRootPart
-    weaponMotor6D.Part1 = Krait.Handle
-    weaponMotor6D.Parent = vm.HumanoidRootPart
-
+function module:SetupAnimations(character, vm)
     self.springs.sway = Spring.create()
     self.springs.walkCycle = Spring.create()
 
@@ -112,7 +70,7 @@ function module:Equip(character, vm)
             UtilModule:GetBobbing(5,self.swayspeed,self.swaymodifier)
         )
 
-        self.springs.walkCycle:shove((movementSway / 25) * dt * 60 * character.HumanoidRootPart.Velocity.Magnitude)
+        self.springs.walkCycle:shove((movementSway / 25) * dt * 60 * math.clamp(character.HumanoidRootPart.Velocity.Magnitude, 0, 50))
         local walkCycle = self.springs.walkCycle:update(dt)
 
         local jump = self.springs.jump:update(dt)
@@ -127,7 +85,7 @@ function module:Equip(character, vm)
         if MovementController.isSprinting then
             vm.HumanoidRootPart.CFrame =  vm.HumanoidRootPart.CFrame * CFrame.Angles(jump.y,walkCycle.y, walkCycle.x/2)
         else
-            vm.HumanoidRootPart.CFrame =  vm.HumanoidRootPart.CFrame * CFrame.Angles(0,walkCycle.y,walkCycle.x/4)
+            vm.HumanoidRootPart.CFrame =  vm.HumanoidRootPart.CFrame * CFrame.Angles(0,walkCycle.y/2,walkCycle.y)
         end
 
         vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame * CFrame.Angles(jump.y,-sway.x,sway.y)
@@ -135,6 +93,61 @@ function module:Equip(character, vm)
         local recoil = self.springs.fire:update(dt)
         self.camera.CFrame = self.camera.CFrame * CFrame.Angles(math.rad(recoil.x), math.rad(recoil.y), math.rad(recoil.z))
     end))
+end
+
+function module:Reload()
+    if not self.isReloading and self.bullets < self.maxBullets then
+        self.isFiring = false
+        self.isReloading = true
+        self.lerpValues.sprint:set(0)
+        self.swayspeed = 3
+        self.swaymodifier = 0.03
+        --self.aimJanitor:Cleanup()
+
+        self.loadedAnimations.Reload:Play()
+        self.loadedAnimations.Reload:AdjustSpeed(1.2) 
+        self.janitor:AddPromise(Promise.delay(self.loadedAnimations.Reload.Length - 0.6)):andThen(function()
+            self.isReloading = false
+            self.bullets = self.maxBullets
+            HudController:SetBullets(self.bullets)
+        end)
+
+        local sound = script.Parent.Sounds.Reload:Clone()
+        sound.Parent = self.camera
+        sound:Play()
+        self.janitor:Add(sound.Ended:Connect(function()
+            sound:Destroy()
+        end))
+
+        self.janitor:AddPromise(Promise.delay(0.3)):andThen(function()
+            UtilModule:SetGlow(self.camera.viewmodel.Krait, false)
+        end)
+
+        self.janitor:AddPromise(Promise.delay(0.9)):andThen(function()
+            UtilModule:SetGlow(self.camera.viewmodel.Krait, true)
+        end)
+
+        self.janitor:Add(function()
+            self.isReloading = false
+            sound:Destroy()
+        end)
+    end
+end
+
+function module:Equip(character, vm)
+    MovementController = Knit.GetController("MovementController")
+
+    self.camera.FieldOfView = 90
+
+    local Krait = script.Parent.Krait:Clone()
+    Krait.Parent = vm
+
+    local weaponMotor6D = script.Parent.Handle:Clone()
+    weaponMotor6D.Part0 = vm.HumanoidRootPart
+    weaponMotor6D.Part1 = Krait.Handle
+    weaponMotor6D.Parent = vm.HumanoidRootPart
+
+    self:SetupAnimations(character, vm)
 
     self.canFire = true
 
@@ -152,7 +165,7 @@ function module:Equip(character, vm)
             elseif inputState == Enum.UserInputState.End then
                 self.isFiring = false
             end 
-        elseif actionName == "Reload" then
+        elseif actionName == "KraitReload" then
             if inputState == Enum.UserInputState.Begin then
                 self:Reload()
             end
@@ -160,7 +173,7 @@ function module:Equip(character, vm)
     end
 
     ContextActionService:BindAction("KraitShoot", handleAction, true, Enum.UserInputType.MouseButton1)
-    ContextActionService:BindAction("Reload", handleAction, true, Enum.KeyCode.R)
+    ContextActionService:BindAction("KraitReload", handleAction, true, Enum.KeyCode.R)
 
     clientCaster:Initialize()
 
@@ -188,7 +201,7 @@ function module:Equip(character, vm)
                     self.canFire = true
                 end)
 
-                self.loadedAnimations.Shoot:Play()
+                self.loadedAnimations.Shoot:Play(0)
 
                 CastParams.FilterDescendantsInstances = {character, self.camera}
                 local viewportPoint = self.camera.ViewportSize / 2
@@ -225,9 +238,12 @@ function module:Equip(character, vm)
 
     self.janitor:Add(function()
         self.loadedAnimations = {}
+        HumanoidAnimatorUtils.stopAnimations(vm.AnimationController, 0)
+
         ContextActionService:UnbindAction("KraitShoot")
+        ContextActionService:UnbindAction("KraitReload")
         clientCaster:Deinitialize()
-        self.canFire = false
+        self.canFire = false        
     end)
 end
 

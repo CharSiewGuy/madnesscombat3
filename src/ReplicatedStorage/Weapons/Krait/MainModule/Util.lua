@@ -22,7 +22,7 @@ function module:SetGlow(gun, enabled)
             if enabled then
                 Tween(v, TweenInfo.new(0.2), {Transparency = 0.2})
             else
-                Tween(v, TweenInfo.new(0.2), {Transparency = 0.8})
+                Tween(v, TweenInfo.new(0.15), {Transparency = 0.8})
             end
         end
     end
