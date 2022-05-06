@@ -24,7 +24,7 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
 
     local CastBehavior = FastCast.newBehavior()
     CastBehavior.RaycastParams = CastParams
-    CastBehavior.MaxDistance = 600
+    CastBehavior.MaxDistance = 500
     CastBehavior.HighFidelityBehavior = FastCast.HighFidelityBehavior.Default
     CastBehavior.CosmeticBulletContainer = workspace.Projectiles
     CastBehavior.CosmeticBulletTemplate = script.Parent.BulletPart
@@ -35,7 +35,7 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
     local spreadDirection = CFrame.fromOrientation(0, 0, math.random(0, math.pi * 2))
     local spreadAngle = CFrame.fromOrientation(math.rad(math.random(1, spreadMagnitude)), 0, 0)
     local finalDirection = (directionCF * spreadDirection * spreadAngle).LookVector
-    self.mainCaster:Fire(origin, finalDirection, 800, CastBehavior)				
+    self.mainCaster:Fire(origin, finalDirection, 600, CastBehavior)
 end
 
 function module:Initialize()
@@ -70,14 +70,13 @@ function module:Initialize()
     
         if humanoid and humanoid.Parent ~= Knit.Player.Character then
             local distance = (Knit.Player.Character.HumanoidRootPart.Position - result.Position).Magnitude
-            print(distance)
             if headshot then
                 if distance < 30 then
                     WeaponService:Damage(humanoid, 45)
                 elseif distance < 50 then
-                    WeaponService:Damage(humanoid, 34)
+                    WeaponService:Damage(humanoid, 38)
                 else
-                    WeaponService:Damage(humanoid, 28)
+                    WeaponService:Damage(humanoid, 30)
                 end
             else
                 if distance < 30 then

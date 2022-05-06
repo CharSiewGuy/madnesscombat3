@@ -68,12 +68,12 @@ function MovementController:KnitStart()
                         self.isSprinting = true
                         value:set(self.sprintSpeed)
                         walkShake.Amplitude = 0.2
-                        HudController.crosshairOffset:set(40)
+                        HudController.crosshairOffset:set(80)
                         self._sprintJanitor:Add(function()
                             self.isSprinting = false
                             value:set(self.normalSpeed)
                             walkShake.Amplitude = 0
-                            HudController.crosshairOffset:set(20)
+                            HudController.crosshairOffset:set(40)
                         end)
                     end
                 elseif inputState == Enum.UserInputState.End then
