@@ -28,6 +28,7 @@ module.loadedAnimations = {}
 module.springs = {}
 module.lerpValues = {}
 module.lerpValues.sprint = SmoothValue:create(0, 0, 15)
+module.lerpValues.slide = SmoothValue:create(0, 0, 7)
 module.lerpValues.aim = SmoothValue:create(0, 0, 10)
 module.swayspeed = 3
 module.swaymodifier = 0.03
@@ -54,6 +55,8 @@ function module:SetupAnimations(character, vm)
     end))
 
     self.janitor:Add(RunService.RenderStepped:Connect(function(dt)
+        if not vm.HumanoidRootPart then return end
+
         local mouseDelta = UserInputService:GetMouseDelta()
         self.springs.sway:shove(Vector3.new(mouseDelta.X / 400,mouseDelta.Y / 400))
         local sway = self.springs.sway:update(dt)
@@ -71,7 +74,8 @@ function module:SetupAnimations(character, vm)
 
         local idleOffset = CFrame.new(0.5,-0.5,-0.5)
         local sprintOffset = idleOffset:Lerp(CFrame.new(0.5,-1,-1) * CFrame.Angles(0.1,1,0.2), self.lerpValues.sprint:update(dt))
-        local aimOffset = sprintOffset:Lerp(CFrame.new(0,0.03,0) * CFrame.Angles(0.01,0,0), self.lerpValues.aim:update(dt))
+        local slideOffset = sprintOffset:Lerp(CFrame.new(-0.3,-0.7,-0.8) * CFrame.Angles(0, 0, 0.2), self.lerpValues.slide:update(dt))
+        local aimOffset = slideOffset:Lerp(CFrame.new(0,0.03,0) * CFrame.Angles(0.01,0,0), self.lerpValues.aim:update(dt))
         local finalOffset = aimOffset
         vm.HumanoidRootPart.CFrame = self.camera.CFrame:ToWorldSpace(finalOffset)
 
@@ -101,7 +105,7 @@ module.aimJanitor = Janitor.new()
 module.isAiming = false
 module.scopedIn = false
 module.isFiring = false
-module.fireRate = 0.125
+module.fireRate = 0.11
 module.scopeOutPromise = nil
 
 function module:ToggleAim(inputState, vm)
@@ -130,7 +134,7 @@ function module:ToggleAim(inputState, vm)
             if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController,self.loadedAnimations.scopeIn) then self.loadedAnimations.scopeIn:Stop() end
             if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController,self.loadedAnimations.scopeIdle) then self.loadedAnimations.scopeIdle:Stop() end
             self.lerpValues.aim:set(0)
-            self.janitor:Add(Tween(self.camera, TweenInfo.new(0.3), {FieldOfView = 90}))
+            self.janitor:AddPromise(Tween(self.camera, TweenInfo.new(0.3), {FieldOfView = 90}))
             HudController:ShowVignette(false, 0.3)
             HudController:ShowCrosshair(true, 0.2)
             HudController.crosshairOffset:set(40)
@@ -140,7 +144,7 @@ function module:ToggleAim(inputState, vm)
             self.scopeOutPromise:cancel()
         end
 
-        MovementController._sprintJanitor:Cleanup()
+        MovementController.sprintJanitor:Cleanup()
         
         self.lerpValues.aim:set(1)
 
@@ -175,12 +179,13 @@ function module:Reload()
         self.isFiring = false
         self.isReloading = true
         self.lerpValues.sprint:set(0)
+        self.lerpValues.slide:set(0)
         self.swayspeed = 3
         self.swaymodifier = 0.03
         self.aimJanitor:Cleanup()
 
         self.loadedAnimations.Reload:Play(0)
-        self.loadedAnimations.Reload:AdjustSpeed(1.2) 
+        self.loadedAnimations.Reload:AdjustSpeed(1.25) 
         self.janitor:AddPromise(Promise.delay(self.loadedAnimations.Reload.Length - 0.7)):andThen(function()
             self.isReloading = false
             self.bullets = self.maxBullets
@@ -190,15 +195,16 @@ function module:Reload()
         local sound = script.Parent.Sounds.Reload:Clone()
         sound.Parent = self.camera
         sound:Play(0)
+        
         self.janitor:Add(sound.Ended:Connect(function()
             sound:Destroy()
         end))
 
-        self.janitor:AddPromise(Promise.delay(0.3)):andThen(function()
+        self.janitor:AddPromise(Promise.delay(0.25)):andThen(function()
             UtilModule:SetGlow(self.camera.viewmodel.Krait, false)
         end)
 
-        self.janitor:AddPromise(Promise.delay(0.9)):andThen(function()
+        self.janitor:AddPromise(Promise.delay(0.85)):andThen(function()
             UtilModule:SetGlow(self.camera.viewmodel.Krait, true)
         end)
 
@@ -212,8 +218,6 @@ end
 
 
 function module:Equip(character, vm)
-    MovementController = Knit.GetController("MovementController")
-
     self.camera.FieldOfView = 90
 
     local Krait = script.Parent.Krait:Clone()
@@ -272,9 +276,16 @@ function module:Equip(character, vm)
         if MovementController.isSprinting and not self.isReloading then 
             self.isFiring = false
             self.lerpValues.sprint:set(1)
+            self.lerpValues.slide:set(0)
+            self.swayspeed = 2
+            self.swaymodifier = 0.06
+        elseif MovementController.isSliding and not self.isReloading then
+            self.lerpValues.sprint:set(0)
+            self.lerpValues.slide:set(1)
             self.swayspeed = 2
             self.swaymodifier = 0.06
         else
+            self.lerpValues.slide:set(0)
             self.lerpValues.sprint:set(0)
             self.swayspeed = 3
             self.swaymodifier = 0.03
@@ -296,9 +307,9 @@ function module:Equip(character, vm)
                 if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.Reload) then self.loadedAnimations.Reload:Stop(0) end
 
                 if not self.scopedIn then
-                    ClientCaster:Fire(vm.Krait.Handle.Muzzle.WorldPosition, direction, character, 4)
+                    ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, 4)
                     self.loadedAnimations.Shoot:Play(0)
-                    self.springs.fire:shove(Vector3.new(2, math.random(-0.8, 0.8), 4))
+                    self.springs.fire:shove(Vector3.new(2, math.random(-0.8, 0.8), 3))
                     task.delay(0.2, function()
                         self.springs.fire:shove(Vector3.new(-1.5, math.random(-0.5, 0.5), -4))
                     end)
@@ -326,7 +337,7 @@ function module:Equip(character, vm)
                 self.bullets = self.bullets - 1
                 HudController:SetBullets(self.bullets)
 
-                MovementController._sprintJanitor:Cleanup()
+                MovementController.sprintJanitor:Cleanup()
             end
         else
             self:Reload()
@@ -353,6 +364,7 @@ end
 
 Knit.OnStart():andThen(function()
     HudController = Knit.GetController("HudController")
+    MovementController = Knit.GetController("MovementController")
 end)
 
 

@@ -8,10 +8,11 @@ local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
 local Shake = require(Packages.Shake)
 local Tween = require(Packages.TweenPromise)
+local Promise = require(Packages.Promise)
 local SmoothValue = require(game.ReplicatedStorage.Modules.SmoothValue)
 
 local MovementController = Knit.CreateController { Name = "MovementController" }
-MovementController._janitor = Janitor.new()
+MovementController.janitor = Janitor.new()
 
 local HudController 
 
@@ -24,7 +25,9 @@ end
 
 function MovementController:KnitStart()
     self.isSprinting = false
+    self.isSliding = false
     self.canSprint = true
+    self.canSlide = true
     self.camera = workspace.CurrentCamera
 
     Knit.Player.CharacterAdded:Connect(function(character)
@@ -39,8 +42,13 @@ function MovementController:KnitStart()
             if dir.Z > 0 then return "backward" end
         end
 
-        self._sprintJanitor = Janitor.new()
-        self._janitor:Add(self._sprintJanitor)
+        self.sprintJanitor = Janitor.new()
+        self.slideJanitor = Janitor.new()
+        self.janitor:Add(self.sprintJanitor)
+        self.janitor:Add(self.slideJanitor)
+
+        self.canSprint = true
+        self.canSlide = true
 
         local walkShake = Shake.new()
         walkShake.FadeInTime = 0.5
@@ -51,14 +59,14 @@ function MovementController:KnitStart()
         walkShake.PositionInfluence = Vector3.new(0, 0, 0)
         walkShake.RotationInfluence = Vector3.new(0.1, 0.1, 0.1)
 
-        self._janitor:Add(walkShake)
+        self.janitor:Add(walkShake)
 
         walkShake:Start()
         walkShake:BindToRenderStep(Shake.NextRenderName(), Enum.RenderPriority.Last.Value, function(pos, rot)
             self.camera.CFrame *= CFrame.new(pos) * CFrame.Angles(rot.X, rot.Y, rot.Z)
         end)
 
-        local value = SmoothValue:create(self.normalSpeed, self.normalSpeed, 5)
+        local value = SmoothValue:create(self.normalSpeed, self.normalSpeed, 10)
 
         local function handleAction(actionName, inputState)
             if not self.canSprint then return end
@@ -69,37 +77,83 @@ function MovementController:KnitStart()
                         value:set(self.sprintSpeed)
                         walkShake.Amplitude = 0.2
                         HudController.crosshairOffset:set(80)
-                        self._sprintJanitor:Add(function()
+                        self.sprintJanitor:Add(function()
                             self.isSprinting = false
                             value:set(self.normalSpeed)
                             walkShake.Amplitude = 0
                             HudController.crosshairOffset:set(40)
                         end)
+                        self.slideJanitor:Cleanup()
                     end
                 elseif inputState == Enum.UserInputState.End then
-                   self._sprintJanitor:Cleanup()
+                   self.sprintJanitor:Cleanup()
                 end
+            elseif actionName == "Slide" then
+                local cantSlide = self.isSliding or not self.isSprinting or not self.canSlide or hum.FloorMaterial == Enum.Material.Air 
+                if cantSlide then return end
+
+                self.isSliding = true
+                self.canSlide = false
+
+                local slideV = Instance.new("BodyVelocity")
+                slideV.MaxForce = Vector3.new(1,0,1) * 20000
+                slideV.Velocity = humanoidRootPart.CFrame.LookVector * 50
+                slideV.Parent = humanoidRootPart
+
+                self.slideJanitor:Add(slideV)
+                self.slideJanitor:Add(function()
+                    self.isSliding = false
+                    slideV:Destroy()
+                    Tween(hum, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(0, 0, 0)})
+                end)
+                self.sprintJanitor:Cleanup()
+
+                local sound = ReplicatedStorage.Assets.Sounds.Slide:Clone()
+                sound.Parent = self.camera
+                sound:Play()
+                self.slideJanitor:Add(function()
+                    self.slideJanitor:AddPromise(Tween(sound, TweenInfo.new(0.2), {Volume = 0}))
+                    task.delay(0.2, function()
+                        sound:Destroy()
+                    end)
+                    self.janitor:AddPromise(Promise.delay(1)):andThen(function()
+                        self.canSlide = true
+                    end)
+                end)
+
+                self.slideJanitor:AddPromise(Tween(hum, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.5, 0)}))
+                self.slideJanitor:AddPromise(Tween(slideV, TweenInfo.new(.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Velocity = humanoidRootPart.CFrame.LookVector * 20}))
+                self.slideJanitor:AddPromise(Promise.delay(.5)):andThen(function()
+                    self.slideJanitor:Cleanup()
+                end)
             end
         end
 
         ContextActionService:BindAction("Sprint", handleAction, true, Enum.KeyCode.LeftShift)
-        self._janitor:Add(function()
+        ContextActionService:BindAction("Slide", handleAction, true, Enum.KeyCode.C, Enum.KeyCode.LeftControl)
+        self.janitor:Add(function()
             ContextActionService:UnbindAction("Sprint")
+            ContextActionService:UnbindAction("Slide")
             self.isSprinting = false
         end)
 
-        self._janitor:Add(RunService.Heartbeat:Connect(function(dt)
-            hum.WalkSpeed = value:update(dt)
+        self.janitor:Add(RunService.Heartbeat:Connect(function(dt)
+            if self.isSliding then
+                hum.WalkSpeed = 0
+                humanoidRootPart.Running.Volume = 0
+            else
+                hum.WalkSpeed = value:update(dt)
+            end
         end))
 
-        self._janitor:Add(hum:GetPropertyChangedSignal("MoveDirection"):Connect(function()
+        self.janitor:Add(hum:GetPropertyChangedSignal("MoveDirection"):Connect(function()
             if humanoidRootPart.Anchored == true then return end
             if hum.MoveDirection.Magnitude > 0 then
                 if getMovingDir() ~= "forward" then
-                    self._sprintJanitor:Cleanup()
+                    self.sprintJanitor:Cleanup()
                 end
             else
-                self._sprintJanitor:Cleanup()
+                self.sprintJanitor:Cleanup()
             end
         end))
 
@@ -123,6 +177,8 @@ function MovementController:KnitStart()
                 sound:Destroy()
 
                 numJumps += 1
+
+                self.slideJanitor:Cleanup()
             end
         end
 
@@ -132,11 +188,11 @@ function MovementController:KnitStart()
             end
         end
 
-        self._janitor:Add(hum.StateChanged:Connect(onStateChanged))
-        self._janitor:Add(UserInputService.JumpRequest:Connect(onJumpRequest))
+        self.janitor:Add(hum.StateChanged:Connect(onStateChanged))
+        self.janitor:Add(UserInputService.JumpRequest:Connect(onJumpRequest))
         
-        self._janitor:Add(hum.Died:Connect(function()
-            self._janitor:Cleanup()
+        self.janitor:Add(hum.Died:Connect(function()
+            self.janitor:Cleanup()
         end))
     end)
 end

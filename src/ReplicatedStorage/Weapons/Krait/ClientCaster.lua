@@ -35,7 +35,7 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
     local spreadDirection = CFrame.fromOrientation(0, 0, math.random(0, math.pi * 2))
     local spreadAngle = CFrame.fromOrientation(math.rad(math.random(1, spreadMagnitude)), 0, 0)
     local finalDirection = (directionCF * spreadDirection * spreadAngle).LookVector
-    self.mainCaster:Fire(origin, finalDirection, 600, CastBehavior)
+    self.mainCaster:Fire(origin, finalDirection, 500, CastBehavior)
 end
 
 function module:Initialize()
@@ -65,7 +65,6 @@ function module:Initialize()
             
             curParent = curParent.Parent
             humanoid = curParent:FindFirstChild("Humanoid")
-            
         until curParent == workspace or humanoid
     
         if humanoid and humanoid.Parent ~= Knit.Player.Character then

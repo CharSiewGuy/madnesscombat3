@@ -20,9 +20,9 @@ function module:SetGlow(gun, enabled)
     for _, v in pairs(gun:GetChildren()) do
         if v.Material == Enum.Material.Neon then
             if enabled then
-                Tween(v, TweenInfo.new(0.2), {Transparency = 0.2})
+                Tween(v, TweenInfo.new(0.15), {Transparency = 0.2})
             else
-                Tween(v, TweenInfo.new(0.15), {Transparency = 0.8})
+                Tween(v, TweenInfo.new(0.1), {Transparency = 0.8})
             end
         end
     end
