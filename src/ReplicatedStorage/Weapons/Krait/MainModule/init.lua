@@ -144,7 +144,7 @@ function module:ToggleAim(inputState, vm)
             self.scopeOutPromise:cancel()
         end
 
-        MovementController.sprintJanitor:Cleanup()
+        pcall(function()MovementController.sprintJanitor:Cleanup()end)
         
         self.lerpValues.aim:set(1)
 
@@ -222,11 +222,14 @@ function module:Equip(character, vm)
 
     local Krait = script.Parent.Krait:Clone()
     Krait.Parent = vm
+    self.janitor:Add(Krait)
+
+    local vmRoot = vm:WaitForChild("HumanoidRootPart")
 
     local weaponMotor6D = script.Parent.Handle:Clone()
-    weaponMotor6D.Part0 = vm.HumanoidRootPart
+    weaponMotor6D.Part0 = vmRoot
     weaponMotor6D.Part1 = Krait.Handle
-    weaponMotor6D.Parent = vm.HumanoidRootPart
+    weaponMotor6D.Parent = vmRoot
 
     self:SetupAnimations(character, vm)
 
@@ -325,9 +328,15 @@ function module:Equip(character, vm)
                 local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
                 flash.Parent = vm.Krait.Handle.Muzzle
                 flash:Emit(1)
-                task.delay(0.5, function()
+                task.delay(0.08, function()
                     flash:Destroy()
-				 end)
+			    end)
+
+                vm.Krait.Handle.Muzzle.PointLight.Enabled = true
+
+                self.janitor:AddPromise(Promise.delay(.05)):andThen(function()
+                    vm.Krait.Handle.Muzzle.PointLight.Enabled = false
+                end)
 				
 				local sound = script.Parent.Sounds:FindFirstChild("Shoot" .. math.random(1, 3)):Clone()
 				sound.Parent = self.camera
@@ -337,7 +346,7 @@ function module:Equip(character, vm)
                 self.bullets = self.bullets - 1
                 HudController:SetBullets(self.bullets)
 
-                MovementController.sprintJanitor:Cleanup()
+                pcall(function()MovementController.sprintJanitor:Cleanup()end)
             end
         else
             self:Reload()

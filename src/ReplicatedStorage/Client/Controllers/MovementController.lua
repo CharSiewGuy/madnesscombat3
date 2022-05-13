@@ -17,7 +17,7 @@ MovementController.janitor = Janitor.new()
 local HudController 
 
 MovementController.normalSpeed = 16
-MovementController.sprintSpeed = 24
+MovementController.sprintSpeed = 22
 
 function MovementController:KnitInit()
     HudController = Knit.GetController("HudController")

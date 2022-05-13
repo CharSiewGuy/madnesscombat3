@@ -8,6 +8,12 @@ local Janitor = require(Packages.Janitor)
 local WeaponController = Knit.CreateController { Name = "WeaponController" }
 WeaponController._janitor = Janitor.new()
 
+local WeaponService
+
+function WeaponController:KnitInit()
+    WeaponService = Knit.GetService("WeaponService")
+end
+
 function WeaponController:KnitStart()
     local weaponModule = require(ReplicatedStorage.Weapons.Krait.MainModule)
 
@@ -60,6 +66,17 @@ function WeaponController:KnitStart()
             weaponModule:Unequip(character)
             self._janitor:Cleanup()
         end))
+    end)
+
+    WeaponService.PlaySignal:Connect(function(character, name, playOnRemove)
+        if not character.HumanoidRootPart then return end
+        local sound = ReplicatedStorage.Weapons.Krait:FindFirstChild(name)
+        
+    end)
+
+    WeaponService.PlaySignal:Connect(function(character)
+        if not character.HumanoidRootPart then return end
+
     end)
 end
 
