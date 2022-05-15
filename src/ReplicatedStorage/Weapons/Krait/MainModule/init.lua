@@ -16,6 +16,8 @@ local Modules = ReplicatedStorage.Modules
 local Spring = require(Modules.Spring)
 local SmoothValue = require(Modules.SmoothValue)
 
+local WeaponService
+
 local HudController
 local MovementController
 
@@ -138,6 +140,7 @@ function module:ToggleAim(inputState, vm)
             HudController:ShowVignette(false, 0.3)
             HudController:ShowCrosshair(true, 0.2)
             HudController.crosshairOffset:set(40)
+            self.loadedAnimations.scopedShoot:Stop(0)
         end)
 
         if self.scopeOutPromise then
@@ -157,15 +160,8 @@ function module:ToggleAim(inputState, vm)
     elseif inputState == Enum.UserInputState.End then
         if self.isAiming then
             self.aimJanitor:Cleanup()
-            self.isAiming = true
-            
             self.loadedAnimations.scopeOut:Play(0)
             self.loadedAnimations.scopeOut:AdjustSpeed(1.25)
-
-            self.scopeOutPromise = Promise.delay(self.loadedAnimations.scopeOut.Length)
-            self.scopeOutPromise:andThen(function()
-                self.isAiming = false
-            end)
         end
     end
 end
@@ -195,6 +191,9 @@ function module:Reload()
         local sound = script.Parent.Sounds.Reload:Clone()
         sound.Parent = self.camera
         sound:Play(0)
+        if WeaponService then
+            WeaponService:PlaySound("Reload", false)
+        end
         
         self.janitor:Add(sound.Ended:Connect(function()
             sound:Destroy()
@@ -211,6 +210,7 @@ function module:Reload()
         self.janitor:Add(function()
             self.isReloading = false
             sound:Destroy()
+            WeaponService:StopSound("Reload")
         end)
     end
 end
@@ -338,9 +338,11 @@ function module:Equip(character, vm)
                     vm.Krait.Handle.Muzzle.PointLight.Enabled = false
                 end)
 				
-				local sound = script.Parent.Sounds:FindFirstChild("Shoot" .. math.random(1, 3)):Clone()
+                local randSound = "Shoot" .. math.random(1, 3)
+				local sound = script.Parent.Sounds[randSound]:Clone()
 				sound.Parent = self.camera
-				sound:Destroy()                    
+				sound:Destroy()       
+                WeaponService:PlaySound(randSound, true)             
 
                 HudController:ExpandCrosshair()
                 self.bullets = self.bullets - 1
@@ -374,6 +376,7 @@ end
 Knit.OnStart():andThen(function()
     HudController = Knit.GetController("HudController")
     MovementController = Knit.GetController("MovementController")
+    WeaponService = Knit.GetService("WeaponService")
 end)
 
 

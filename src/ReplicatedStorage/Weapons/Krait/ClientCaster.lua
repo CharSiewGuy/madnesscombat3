@@ -36,6 +36,7 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
     local spreadAngle = CFrame.fromOrientation(math.rad(math.random(1, spreadMagnitude)), 0, 0)
     local finalDirection = (directionCF * spreadDirection * spreadAngle).LookVector
     self.mainCaster:Fire(origin, finalDirection, 500, CastBehavior)
+    WeaponService:CastProjectile(finalDirection)
 end
 
 function module:Initialize()

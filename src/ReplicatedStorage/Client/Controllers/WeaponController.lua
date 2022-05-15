@@ -69,14 +69,42 @@ function WeaponController:KnitStart()
     end)
 
     WeaponService.PlaySignal:Connect(function(character, name, playOnRemove)
+        print(character.Name .. " " .. name .. " play")
         if not character.HumanoidRootPart then return end
-        local sound = ReplicatedStorage.Weapons.Krait:FindFirstChild(name)
-        
+        local sound = ReplicatedStorage.Weapons.Krait.Sounds:FindFirstChild(name)
+        if sound then
+            print("sucess")
+            local soundClone = sound:Clone()
+            soundClone.Parent = character.HumanoidRootPart
+            if playOnRemove then
+                soundClone:Destroy()
+            else
+                soundClone:Play()
+                task.delay(soundClone.TimeLength, function()
+                    if soundClone then
+                        soundClone:Destroy()
+                    end
+                end)
+            end
+        end
     end)
 
-    WeaponService.PlaySignal:Connect(function(character)
+    WeaponService.StopSignal:Connect(function(character, name)
+        print(character.Name .. " " .. name .. " stop")
         if not character.HumanoidRootPart then return end
+        local sound = character.HumanoidRootPart:FindFirstChild(name)
+        if sound then
+            print("sucess")
+            sound:Destroy()
+        end
+    end)
 
+    local casters = {
+        ["Krait"] = require(ReplicatedStorage.Weapons.Krait.ReplicatedCaster)
+    }
+
+    WeaponService.FireSignal:Connect(function(character, direction)
+        casters["Krait"]:Fire(character, character.Krait.Handle.MuzzleBack.WorldPosition, direction)
     end)
 end
 
