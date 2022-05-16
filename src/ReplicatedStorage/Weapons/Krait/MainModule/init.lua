@@ -32,12 +32,11 @@ module.lerpValues = {}
 module.lerpValues.sprint = SmoothValue:create(0, 0, 15)
 module.lerpValues.slide = SmoothValue:create(0, 0, 7)
 module.lerpValues.aim = SmoothValue:create(0, 0, 10)
-module.swayspeed = 3
-module.swaymodifier = 0.03
+module.charspeed = 0
+module.running = false
 
 function module:SetupAnimations(character, vm)
     self.springs.sway = Spring.create()
-    self.springs.walkCycle = Spring.create()
 
     self.springs.jump = Spring.create(1, 10, 0, 1.8)
     self.springs.fire = Spring.create()
@@ -54,6 +53,33 @@ function module:SetupAnimations(character, vm)
                 self.springs.jump:shove(Vector3.new(0, 0.5))
             end)
         end
+        
+        if newState == Enum.HumanoidStateType.Swimming then
+            self.Swimming = true
+        else
+            self.Swimming = false
+        end
+    end))
+
+    
+    self.janitor:Add(character.Humanoid.Running:Connect(function(speed)
+        self.charspeed = speed
+        if speed > 0.1 then
+            self.running = true
+        else
+            self.running = false
+        end
+    end))
+
+    self.janitor:Add(character.Humanoid.Swimming:Connect(function(speed)
+        if self.Swimming then
+            self.charspeed = speed
+            if speed > 0.1 then
+                self.running = true
+            else
+                self.running = false
+            end
+        end
     end))
 
     self.janitor:Add(RunService.RenderStepped:Connect(function(dt)
@@ -63,15 +89,7 @@ function module:SetupAnimations(character, vm)
         self.springs.sway:shove(Vector3.new(mouseDelta.X / 400,mouseDelta.Y / 400))
         local sway = self.springs.sway:update(dt)
 
-        local movementSway = Vector3.new(
-            UtilModule:GetBobbing(10,self.swayspeed,self.swaymodifier),
-            UtilModule:GetBobbing(5,self.swayspeed,self.swaymodifier),
-            UtilModule:GetBobbing(5,self.swayspeed,self.swaymodifier)
-        )
-
-        self.springs.walkCycle:shove((movementSway / 25) * dt * 60 * math.clamp(character.HumanoidRootPart.Velocity.Magnitude, 0, 50))
-        local walkCycle = self.springs.walkCycle:update(dt)
-
+        local gunbobcf = CFrame.new(0,0,0)
         local jump = self.springs.jump:update(dt)
 
         local idleOffset = CFrame.new(0.5,-0.5,-0.5)
@@ -81,21 +99,47 @@ function module:SetupAnimations(character, vm)
         local finalOffset = aimOffset
         vm.HumanoidRootPart.CFrame = self.camera.CFrame:ToWorldSpace(finalOffset)
 
-        if not self.isAiming then
-            vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame:ToWorldSpace(CFrame.new(walkCycle.x, walkCycle.y * 3, 0))
-        
-            if MovementController.isSprinting then
-                vm.HumanoidRootPart.CFrame =  vm.HumanoidRootPart.CFrame * CFrame.Angles(jump.y,walkCycle.y, walkCycle.x/2)
-            else
-                vm.HumanoidRootPart.CFrame =  vm.HumanoidRootPart.CFrame * CFrame.Angles(0,walkCycle.y/2,walkCycle.y)
-            end    
-
+        if not self.isAiming then   
             vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame * CFrame.Angles(jump.y,-sway.x,sway.y)
         else
-            vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame:ToWorldSpace(CFrame.new(0,walkCycle.y/2,0))
-            vm.HumanoidRootPart.CFrame =  vm.HumanoidRootPart.CFrame * CFrame.Angles(0,walkCycle.y/6,0)
             vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame * CFrame.Angles(jump.y/8,-sway.x,sway.y)
         end
+
+        if self.running then
+            if not MovementController.isSprinting then
+                local multiplier = .15
+                if self.isAiming then
+                    multiplier = .01
+                end
+                gunbobcf = gunbobcf:Lerp(CFrame.new(
+                    multiplier * (self.charspeed/4) * math.sin(tick() * 8),
+                    multiplier * (self.charspeed/4) * math.cos(tick() * 16),
+                    0
+                    ) * CFrame.Angles(
+                        math.rad( 1 * (self.charspeed/4) * math.sin(tick() * 8) ), 
+                        math.rad( 1 * (self.charspeed/4) * math.cos(tick() * 16) ), 
+                        math.rad(0)
+                    ), 0.1)
+            else
+                gunbobcf = gunbobcf:Lerp(CFrame.new(
+                    .2 * (self.charspeed/4) * math.sin(tick() * 10),
+                    .2 * (self.charspeed/4) * math.cos(tick() * 20),
+                    0
+                    ) * CFrame.Angles(
+                        math.rad( 1 * (self.charspeed/4) * math.sin(tick() * 20) ), 
+                        math.rad( 1 * (self.charspeed/4) * math.cos(tick() * 10) ), 
+                        math.rad(0)
+                    ), 0.1)
+            end
+        else
+            gunbobcf = gunbobcf:Lerp(CFrame.new(
+                0.005 * math.sin(tick() * 1.5),
+                0.005 * math.cos(tick() * 2.5),
+                0 
+                ), 0.1)
+        end
+
+        vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame * gunbobcf
 
         local recoil = self.springs.fire:update(dt)
         self.camera.CFrame = self.camera.CFrame * CFrame.Angles(math.rad(recoil.x), math.rad(recoil.y), math.rad(recoil.z))
@@ -107,7 +151,7 @@ module.aimJanitor = Janitor.new()
 module.isAiming = false
 module.scopedIn = false
 module.isFiring = false
-module.fireRate = 0.11
+module.fireRate = 0.115
 module.scopeOutPromise = nil
 
 function module:ToggleAim(inputState, vm)
@@ -119,13 +163,13 @@ function module:ToggleAim(inputState, vm)
         if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.Reload) then self.loadedAnimations.Reload:Stop(0) end
         self.loadedAnimations.scopeIn:Play(0)
         self.loadedAnimations.scopeIn:AdjustSpeed(1.25)
-        self.aimJanitor:AddPromise(Promise.delay(self.loadedAnimations.scopeIn.Length/1.25 - 0.2)):andThen(function()
+        self.aimJanitor:AddPromise(Promise.delay(self.loadedAnimations.scopeIn.Length/1.25 - 0.05)):andThen(function()
             self.scopedIn = true 
             self.loadedAnimations.scopeIdle:Play(0)
         end)
 
-        self.aimJanitor:AddPromise(Tween(self.camera, TweenInfo.new(0.3), {FieldOfView = 70}))
-        HudController:ShowVignette(true, 0.3)
+        self.aimJanitor:AddPromise(Tween(self.camera, TweenInfo.new(0.2), {FieldOfView = 65}))
+        HudController:ShowVignette(true, 0.2)
         HudController:ShowCrosshair(false, 0.2)
         HudController.crosshairOffset:set(5)
 
@@ -136,11 +180,11 @@ function module:ToggleAim(inputState, vm)
             if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController,self.loadedAnimations.scopeIn) then self.loadedAnimations.scopeIn:Stop() end
             if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController,self.loadedAnimations.scopeIdle) then self.loadedAnimations.scopeIdle:Stop() end
             self.lerpValues.aim:set(0)
-            self.janitor:AddPromise(Tween(self.camera, TweenInfo.new(0.3), {FieldOfView = 90}))
-            HudController:ShowVignette(false, 0.3)
+            self.janitor:AddPromise(Tween(self.camera, TweenInfo.new(0.2), {FieldOfView = 90}))
+            HudController:ShowVignette(false, 0.2)
             HudController:ShowCrosshair(true, 0.2)
-            HudController.crosshairOffset:set(40)
-            self.loadedAnimations.scopedShoot:Stop(0)
+            HudController.crosshairOffset:set(50)
+            pcall(function() self.loadedAnimations.scopedShoot:Stop(0) end)
         end)
 
         if self.scopeOutPromise then
@@ -176,8 +220,6 @@ function module:Reload()
         self.isReloading = true
         self.lerpValues.sprint:set(0)
         self.lerpValues.slide:set(0)
-        self.swayspeed = 3
-        self.swaymodifier = 0.03
         self.aimJanitor:Cleanup()
 
         self.loadedAnimations.Reload:Play(0)
@@ -280,18 +322,12 @@ function module:Equip(character, vm)
             self.isFiring = false
             self.lerpValues.sprint:set(1)
             self.lerpValues.slide:set(0)
-            self.swayspeed = 2
-            self.swaymodifier = 0.06
         elseif MovementController.isSliding and not self.isReloading then
             self.lerpValues.sprint:set(0)
             self.lerpValues.slide:set(1)
-            self.swayspeed = 2
-            self.swaymodifier = 0.06
         else
             self.lerpValues.slide:set(0)
             self.lerpValues.sprint:set(0)
-            self.swayspeed = 3
-            self.swaymodifier = 0.03
         end
 
         if not self.canFire or self.isReloading then return end
@@ -303,32 +339,30 @@ function module:Equip(character, vm)
                 end)
 
                 CastParams.FilterDescendantsInstances = {character, self.camera}
-                local viewportPoint = self.camera.ViewportSize / 2
-                local pos = UtilModule:GetMousePos(self.camera:ViewportPointToRay(viewportPoint.X, viewportPoint.Y), CastParams)
-                local direction = (pos - vm.Krait.Handle.Muzzle.WorldPosition).Unit
+                local direction = self.camera.CFrame.LookVector * 500
 
                 if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.Reload) then self.loadedAnimations.Reload:Stop(0) end
 
                 if not self.scopedIn then
-                    ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, 4)
+                    ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, 3)
                     self.loadedAnimations.Shoot:Play(0)
-                    self.springs.fire:shove(Vector3.new(2, math.random(-0.8, 0.8), 3))
-                    task.delay(0.2, function()
-                        self.springs.fire:shove(Vector3.new(-1.5, math.random(-0.5, 0.5), -4))
+                    self.springs.fire:shove(Vector3.new(3, math.random(-2, 2), 2))
+                    task.delay(0.3, function()
+                        self.springs.fire:shove(Vector3.new(-2.5, math.random(-1, 1), -4))
                     end)
                 else
                     ClientCaster:Fire(vm.Krait.Handle.Muzzle.WorldPosition, direction, character, 1.1)
                     self.loadedAnimations.scopedShoot:Play(0)
-                    self.springs.fire:shove(Vector3.new(1, math.random(-0.4, 0.4), 2))
+                    self.springs.fire:shove(Vector3.new(1, math.random(-0.4, 0.4), 1))
                     task.delay(0.2, function()
-                        self.springs.fire:shove(Vector3.new(-1, math.random(-0.3, 0.3), -2))
+                        self.springs.fire:shove(Vector3.new(-0.5, math.random(-0.3, 0.3), -1))
                     end)
                 end
 
                 local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
                 flash.Parent = vm.Krait.Handle.Muzzle
                 flash:Emit(1)
-                task.delay(0.08, function()
+                task.delay(0.15, function()
                     flash:Destroy()
 			    end)
 

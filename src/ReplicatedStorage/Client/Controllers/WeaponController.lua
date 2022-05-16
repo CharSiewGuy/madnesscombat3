@@ -108,4 +108,52 @@ function WeaponController:KnitStart()
     end)
 end
 
+function WeaponController:CreateImpactEffect(raycastResult, human)
+    local attachment = Instance.new("Attachment")
+    attachment.CFrame = CFrame.new(raycastResult.Position, raycastResult.Position + raycastResult.Normal)
+    attachment.Parent = workspace.Terrain
+
+    local fxFolder
+
+    if human then
+        fxFolder = ReplicatedStorage.Assets.Particles.ImpactEffects.Blood
+    else
+        fxFolder = ReplicatedStorage.Assets.Particles.ImpactEffects:FindFirstChild(raycastResult.Instance.Material.Name)
+    end
+
+    if not fxFolder then return end
+
+    for _, v in pairs(fxFolder:GetChildren()) do
+        local fxClone = v:Clone()
+        fxClone.Parent = attachment
+        fxClone:Emit(10)
+        task.delay(1, function()
+            attachment:Destroy()
+        end)
+    end
+end
+
+function WeaponController:CreateBulletHole(raycastResult)
+    local part = Instance.new("Part")
+    part.Size = Vector3.new(1, 1, 0.1)
+    part.Transparency = 1
+    part.CastShadow = false
+    part.Anchored = true
+    part.CFrame = CFrame.new(raycastResult.Position, raycastResult.Position + raycastResult.Normal)
+    part.Name = "bullethole"
+    part.Parent = workspace.Projectiles
+
+    local bulletHoleFolder = ReplicatedStorage.Assets.BulletHoles:FindFirstChild(raycastResult.Instance.Material.Name)
+    if not bulletHoleFolder then bulletHoleFolder = ReplicatedStorage.Assets.BulletHoles.Concrete end
+
+    local bulletHole = bulletHoleFolder:FindFirstChild(math.random(1, #bulletHoleFolder:GetChildren()))
+    if not bulletHole then return end
+
+    local fxClone = bulletHole:Clone()
+    fxClone.Parent = part
+    task.delay(8, function()
+        part:Destroy()
+    end)
+end
+
 return WeaponController

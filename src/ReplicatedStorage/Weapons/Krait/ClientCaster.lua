@@ -9,10 +9,12 @@ local module = {}
 module.janitor = Janitor.new()
 
 local HudController
+local WeaponController
 local WeaponService
 
 Knit.OnStart():andThen(function()
     HudController = Knit.GetController("HudController")
+    WeaponController = Knit.GetController("WeaponController")
     WeaponService = Knit.GetService("WeaponService")
 end)
 
@@ -94,6 +96,10 @@ function module:Initialize()
             sound:Destroy()
     
             HudController:ShowHitmarker(headshot)
+            WeaponController:CreateImpactEffect(result, true)
+        else
+            WeaponController:CreateImpactEffect(result, false)
+            WeaponController:CreateBulletHole(result)
         end
     end
     
