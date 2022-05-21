@@ -29,9 +29,9 @@ module.camera = workspace.CurrentCamera
 module.loadedAnimations = {}
 module.springs = {}
 module.lerpValues = {}
-module.lerpValues.sprint = SmoothValue:create(0, 0, 15)
-module.lerpValues.slide = SmoothValue:create(0, 0, 7)
-module.lerpValues.aim = SmoothValue:create(0, 0, 10)
+module.lerpValues.sprint = SmoothValue:create(0, 0, 12)
+module.lerpValues.slide = SmoothValue:create(0, 0, 10)
+module.lerpValues.aim = SmoothValue:create(0, 0, 18)
 module.charspeed = 0
 module.running = false
 
@@ -82,6 +82,8 @@ function module:SetupAnimations(character, vm)
         end
     end))
 
+    local waistC0 = CFrame.new(0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0)
+
     self.janitor:Add(RunService.RenderStepped:Connect(function(dt)
         if not vm.HumanoidRootPart then return end
 
@@ -123,7 +125,7 @@ function module:SetupAnimations(character, vm)
             else
                 gunbobcf = gunbobcf:Lerp(CFrame.new(
                     .2 * (self.charspeed/4) * math.sin(tick() * 10),
-                    .2 * (self.charspeed/4) * math.cos(tick() * 20),
+                    .2 * (self.charspeed    /4) * math.cos(tick() * 20),
                     0
                     ) * CFrame.Angles(
                         math.rad( 1 * (self.charspeed/4) * math.sin(tick() * 20) ), 
@@ -131,18 +133,17 @@ function module:SetupAnimations(character, vm)
                         math.rad(0)
                     ), 0.1)
             end
-        else
-            gunbobcf = gunbobcf:Lerp(CFrame.new(
-                0.005 * math.sin(tick() * 1.5),
-                0.005 * math.cos(tick() * 2.5),
-                0 
-                ), 0.1)
         end
 
         vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame * gunbobcf
 
         local recoil = self.springs.fire:update(dt)
         self.camera.CFrame = self.camera.CFrame * CFrame.Angles(math.rad(recoil.x), math.rad(recoil.y), math.rad(recoil.z))
+
+        local waist = character.HumanoidRootPart.RootJoint
+		waist.C0 = waistC0 * CFrame.fromEulerAnglesYXZ(math.asin(self.camera.CFrame.LookVector.y) * -0.8, 0, 0)
+
+        WeaponService:Tilt(waist.C0)
     end))
 end
 
@@ -322,7 +323,7 @@ function module:Equip(character, vm)
             self.isFiring = false
             self.lerpValues.sprint:set(1)
             self.lerpValues.slide:set(0)
-        elseif MovementController.isSliding and not self.isReloading then
+        elseif MovementController.isSliding or MovementController.isCrouching and not self.isReloading then
             self.lerpValues.sprint:set(0)
             self.lerpValues.slide:set(1)
         else

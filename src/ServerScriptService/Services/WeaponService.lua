@@ -31,4 +31,11 @@ function WeaponService.Client:CastProjectile(player, direction)
     self.FireSignal:FireExcept(player, player.Character, direction)
 end
 
+function WeaponService.Client:Tilt(player, c0)
+	local hrp = player.Character:FindFirstChild("HumanoidRootPart");
+	if (hrp) then
+		hrp.RootJoint.C0 = c0
+	end
+end
+
 return WeaponService

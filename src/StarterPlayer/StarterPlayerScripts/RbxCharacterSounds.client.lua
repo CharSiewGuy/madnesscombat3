@@ -22,7 +22,12 @@ local SOUND_DATA = {
 		SoundId = "rbxasset://sounds/action_get_up.mp3",
 	},
 	Jumping = {
-		SoundId = "",
+		SoundId = "rbxassetid://9363614714",
+		Volume = 0.1
+	},
+	DoubleJump = {
+		SoundId = "rbxassetid://9363614953",
+		Volume = 0.1
 	},
 	Landing = {
 		SoundId = "rbxasset://sounds/action_jump_land.mp3",
@@ -124,7 +129,11 @@ local function initializeSoundSystem(player, humanoid, rootPart)
 
 		[Enum.HumanoidStateType.Jumping] = function()
 			stopPlayingLoopedSounds()
-			playSound(sounds.Jumping)
+			if humanoid.FloorMaterial ~= Enum.Material.Air then
+				playSound(sounds.Jumping)
+			else
+				playSound(sounds.DoubleJump)
+			end
 		end,
 
 		[Enum.HumanoidStateType.Swimming] = function()

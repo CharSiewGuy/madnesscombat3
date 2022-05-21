@@ -19,15 +19,74 @@ local HudController
 MovementController.normalSpeed = 16
 MovementController.sprintSpeed = 22
 
+function MovementController:Slide(hum, humanoidRootPart)
+    self.isSliding = true
+    self.canSlide = false
+
+    local slideV = Instance.new("BodyVelocity")
+    slideV.MaxForce = Vector3.new(1,0,1) * 20000
+    slideV.Velocity = humanoidRootPart.CFrame.LookVector * 80
+    slideV.Parent = humanoidRootPart
+
+    self.slideJanitor:Add(slideV)
+    self.slideJanitor:Add(function()
+        self.isSliding = false
+        slideV:Destroy()
+        Tween(hum, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(0, 0, 0)})
+    end)
+    self.sprintJanitor:Cleanup()
+
+    local sound = ReplicatedStorage.Assets.Sounds.Slide:Clone()
+    sound.Parent = self.camera
+    sound:Play()
+    self.slideJanitor:Add(function()
+        self.slideJanitor:AddPromise(Tween(sound, TweenInfo.new(0.2), {Volume = 0}))
+        task.delay(0.2, function()
+            sound:Destroy()
+        end)
+        self.janitor:AddPromise(Promise.delay(1)):andThen(function()
+            self.canSlide = true
+        end)
+    end)
+
+    self.slideJanitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.5, 0)}))
+    self.slideJanitor:AddPromise(Tween(slideV, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.CFrame.LookVector * 20}))
+    self.slideJanitor:AddPromise(Promise.delay(0.7)):andThen(function()
+        self.isSliding = false
+        slideV:Destroy()
+        self.slideJanitor:AddPromise(Tween(sound, TweenInfo.new(0.2), {Volume = 0}))
+        self.slideJanitor:AddPromise(Promise.delay(0.2)):andThen(function()
+            sound:Destroy()
+        end)
+
+        self:Crouch(hum)
+    end)
+
+    self.janitor:Add(self.slideJanitor)
+end
+
+function MovementController:Crouch(hum)
+    self.isCrouching = true
+    self.canSlide = false
+    self.crouchJanitor:Add(function()
+        Tween(hum, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(0, 0, 0)})
+        self.isCrouching = false
+        self.canSlide = true
+    end)
+    self.crouchJanitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.5, 0)}))
+end
+
 function MovementController:KnitInit()
     HudController = Knit.GetController("HudController")
 end
 
 function MovementController:KnitStart()
     self.isSprinting = false
-    self.isSliding = false
     self.canSprint = true
+    self.isSliding = false
     self.canSlide = true
+    self.isCrouching = false
+    self.canCrouch = true
     self.camera = workspace.CurrentCamera
 
     Knit.Player.CharacterAdded:Connect(function(character)
@@ -44,9 +103,12 @@ function MovementController:KnitStart()
 
         self.sprintJanitor = Janitor.new()
         self.slideJanitor = Janitor.new()
+        self.crouchJanitor = Janitor.new()
         self.janitor:Add(self.sprintJanitor)
         self.janitor:Add(self.slideJanitor)
+        self.janitor:Add(self.crouchJanitor)
 
+        self.isSliding = false
         self.canSprint = true
         self.canSlide = true
 
@@ -69,8 +131,8 @@ function MovementController:KnitStart()
         local value = SmoothValue:create(self.normalSpeed, self.normalSpeed, 10)
 
         local function handleAction(actionName, inputState)
-            if not self.canSprint then return end
             if actionName == "Sprint" then
+                if not self.canSprint then return end
                 if inputState == Enum.UserInputState.Begin then
                     if hum.MoveDirection.Magnitude > 0 and getMovingDir() == "forward" then
                         self.isSprinting = true
@@ -84,67 +146,36 @@ function MovementController:KnitStart()
                             HudController.crosshairOffset:set(50)
                         end)
                         self.slideJanitor:Cleanup()
+                        self.crouchJanitor:Cleanup()
                     end
                 elseif inputState == Enum.UserInputState.End then
                    self.sprintJanitor:Cleanup()
                 end
-            elseif actionName == "Slide" then
-                local cantSlide = self.isSliding or not self.isSprinting or not self.canSlide or hum.FloorMaterial == Enum.Material.Air 
-                if cantSlide then return end
-
-                self.isSliding = true
-                self.canSlide = false
-
-                local slideV = Instance.new("BodyVelocity")
-                slideV.MaxForce = Vector3.new(1,0,1) * 20000
-                slideV.Velocity = humanoidRootPart.CFrame.LookVector * 50
-                slideV.Parent = humanoidRootPart
-
-                self.slideJanitor:Add(slideV)
-                self.slideJanitor:Add(function()
-                    self.isSliding = false
-                    slideV:Destroy()
-                    Tween(hum, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(0, 0, 0)})
-                end)
-                self.sprintJanitor:Cleanup()
-
-                local sound = ReplicatedStorage.Assets.Sounds.Slide:Clone()
-                sound.Parent = self.camera
-                sound:Play()
-                self.slideJanitor:Add(function()
-                    self.slideJanitor:AddPromise(Tween(sound, TweenInfo.new(0.2), {Volume = 0}))
-                    task.delay(0.2, function()
-                        sound:Destroy()
-                    end)
-                    self.janitor:AddPromise(Promise.delay(1)):andThen(function()
-                        self.canSlide = true
-                    end)
-                end)
-
-                self.slideJanitor:AddPromise(Tween(hum, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.5, 0)}))
-                self.slideJanitor:AddPromise(Tween(slideV, TweenInfo.new(.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Velocity = humanoidRootPart.CFrame.LookVector * 20}))
-                self.slideJanitor:AddPromise(Promise.delay(.5)):andThen(function()
-                    self.slideJanitor:Cleanup()
-                end)
+            elseif actionName == "Crouch" and inputState == Enum.UserInputState.Begin then
+                if hum.FloorMaterial == Enum.Material.Air then return end
+                if self.isSprinting then
+                    if self.canSlide and not self.isSliding then
+                        self:Slide(hum, humanoidRootPart)
+                    end
+                else
+                    if self.canCrouch and not self.isSliding then
+                        if self.isCrouching then
+                            self.crouchJanitor:Cleanup()
+                        else
+                            self:Crouch(hum, humanoidRootPart)
+                        end
+                    end
+                end
             end
         end
 
         ContextActionService:BindAction("Sprint", handleAction, true, Enum.KeyCode.LeftShift)
-        ContextActionService:BindAction("Slide", handleAction, true, Enum.KeyCode.C, Enum.KeyCode.LeftControl)
+        ContextActionService:BindAction("Crouch", handleAction, true, Enum.KeyCode.C, Enum.KeyCode.LeftControl)
         self.janitor:Add(function()
             ContextActionService:UnbindAction("Sprint")
-            ContextActionService:UnbindAction("Slide")
+            ContextActionService:UnbindAction("Crouch")
             self.isSprinting = false
         end)
-
-        self.janitor:Add(RunService.Heartbeat:Connect(function(dt)
-            if self.isSliding then
-                hum.WalkSpeed = 0
-                humanoidRootPart.Running.Volume = 0
-            else
-                hum.WalkSpeed = value:update(dt)
-            end
-        end))
 
         self.janitor:Add(hum:GetPropertyChangedSignal("MoveDirection"):Connect(function()
             if humanoidRootPart.Anchored == true then return end
@@ -157,39 +188,74 @@ function MovementController:KnitStart()
             end
         end))
 
-        local MAX_JUMPS = 3
-        local TIME_BETWEEN_JUMPS = 0.3
-        local numJumps = 0
-        local canJumpAgain = false
-
-        local function onStateChanged(_, newState)
-            if Enum.HumanoidStateType.Landed == newState then
-                numJumps = 0
-                canJumpAgain = false
-            elseif Enum.HumanoidStateType.Freefall == newState then
-                task.wait(TIME_BETWEEN_JUMPS)
-                canJumpAgain = true
-            elseif Enum.HumanoidStateType.Jumping == newState then
-                canJumpAgain = false
-
-                local sound = ReplicatedStorage.Assets.Sounds:FindFirstChild("Jump" .. math.clamp(numJumps, 0, 2) + 1):Clone()
-                sound.Parent = self.camera
-                sound:Destroy()
-
-                numJumps += 1
-
-                self.slideJanitor:Cleanup()
-            end
-        end
-
+        local canDoubleJump = false
+        local hasDoubleJumped = false
+        local oldPower = hum.JumpPower
+        local TIME_BETWEEN_JUMPS = 0.2
+        local DOUBLE_JUMP_POWER_MULTIPLIER = 1
+        
         local function onJumpRequest()
-            if canJumpAgain and numJumps < MAX_JUMPS then
+            if not character or not hum or not character:IsDescendantOf(workspace) or
+            hum:GetState() == Enum.HumanoidStateType.Dead then
+                return
+            end
+            if canDoubleJump and not hasDoubleJumped then
+                hasDoubleJumped = true
+                hum.JumpPower = oldPower * DOUBLE_JUMP_POWER_MULTIPLIER
                 hum:ChangeState(Enum.HumanoidStateType.Jumping)
             end
         end
+        
+        local canClimb = true    
 
-        self.janitor:Add(hum.StateChanged:Connect(onStateChanged))
+        self.janitor:Add(hum.StateChanged:Connect(function(_, new)
+            if new == Enum.HumanoidStateType.Landed then
+                canDoubleJump = false
+                hasDoubleJumped = false
+                canClimb = true
+                hum.JumpPower = oldPower
+            elseif new == Enum.HumanoidStateType.Freefall then
+                task.wait(TIME_BETWEEN_JUMPS)
+                canDoubleJump = true
+            elseif new == Enum.HumanoidStateType.Jumping then
+                self.crouchJanitor:Cleanup()
+                self.slideJanitor:Cleanup()
+            end
+        end))
+        
         self.janitor:Add(UserInputService.JumpRequest:Connect(onJumpRequest))
+        
+        self.janitor:Add(RunService.Heartbeat:Connect(function(dt)
+            if self.isSliding then
+                hum.WalkSpeed = 0
+                humanoidRootPart.Running.Volume = 0
+            elseif self.isCrouching then
+                hum.WalkSpeed = 12
+            else
+                hum.WalkSpeed = value:update(dt)
+            end
+
+            if hum.FloorMaterial == Enum.Material.Air and canClimb then
+                local raycastParams = RaycastParams.new()
+                raycastParams.FilterDescendantsInstances = {character, self.camera}
+                raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+                for i = 0, 0.5, 0.1 do
+                    local raycastResult = workspace:Raycast(character.Head.Position - Vector3.new(0,i,0), (character.Head.CFrame.LookVector - Vector3.new(0,i,0)).Unit * 2, raycastParams)
+                    if raycastResult then
+                        if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) - 1 and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 1 then 
+                            local climbV = Instance.new("BodyVelocity")
+                            climbV.MaxForce = Vector3.new(1,1,1) * 30000
+                            climbV.Velocity = humanoidRootPart.CFrame.LookVector * 15 + Vector3.new(0,30,0)
+                            climbV.Parent = humanoidRootPart
+                            task.delay(0.05, function()climbV:Destroy()end)
+                            canClimb = false
+                            break
+                        end
+                    end
+                end
+            end
+        end))
+
         
         self.janitor:Add(hum.Died:Connect(function()
             self.janitor:Cleanup()

@@ -13,7 +13,7 @@ HudController._janitor = Janitor.new()
 
 function HudController:KnitInit()
     HudController.crosshairOffset = SmoothValue:create(0, 0, 4)
-    HudController.crosshairOffset:set(40)
+    HudController.crosshairOffset:set(50)
 end
 
 function HudController:KnitStart()

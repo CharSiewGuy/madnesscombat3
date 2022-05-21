@@ -332,15 +332,16 @@ function playRunAnim()
 	local dir = HumanoidRootPart.CFrame:VectorToObjectSpace(Humanoid.MoveDirection)
 	if dir.X < -0.9 or dir.X > 0.9 then
 		playAnimation("walk", 0.2, Humanoid)
-		setAnimationSpeed(0.9)
+		setAnimationSpeed(0.65)
 	elseif dir.Z > 0.5 then
 		playAnimation("runbackward", 0.2, Humanoid)
+		setAnimationSpeed(0.7)
 	else
 		if Humanoid.WalkSpeed > 20 then
 			playAnimation("run", 0.2, Humanoid)
 		else
 			playAnimation("walk", 0.2, Humanoid)
-			setAnimationSpeed(1)
+			setAnimationSpeed(0.75)
 		end
 	end
 end
