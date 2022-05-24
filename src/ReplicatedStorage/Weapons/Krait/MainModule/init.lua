@@ -35,7 +35,7 @@ module.lerpValues.sprint = SmoothValue:create(0, 0, 12)
 module.lerpValues.slide = SmoothValue:create(0, 0, 10)
 module.lerpValues.aim = SmoothValue:create(0, 0, 18)
 module.lerpValues.climb = SmoothValue:create(0, 0, 20)
-module.lerpValues.unequip = SmoothValue:create(0, 0, 3)
+module.lerpValues.unequip = SmoothValue:create(0, 0, 4)
 module.charspeed = 0
 module.running = false
 module.OldCamCF = nil
@@ -114,7 +114,7 @@ function module:SetupAnimations(character, vm)
         local slideOffset = sprintOffset:Lerp(CFrame.new(-0.3,-0.7,-0.8) * CFrame.Angles(0, 0, 0.2), self.lerpValues.slide:update(dt))
         local aimOffset = slideOffset:Lerp(CFrame.new(0,0.03,0) * CFrame.Angles(0.01,0,0), self.lerpValues.aim:update(dt))
         local climbOffset = aimOffset:Lerp(CFrame.new(0,0,0), self.lerpValues.climb:update(dt))
-        local unequipOffset = climbOffset:Lerp(CFrame.new(0,-2,0) * CFrame.Angles(4,0,0), self.lerpValues.unequip:update(dt))
+        local unequipOffset = climbOffset:Lerp(CFrame.new(0,-3,0) * CFrame.Angles(4,0,0), self.lerpValues.unequip:update(dt))
         local finalOffset = unequipOffset
 
         vm.HumanoidRootPart.CFrame *= finalOffset
@@ -244,7 +244,7 @@ function module:ToggleAim(inputState, vm)
             if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController,self.loadedAnimations.scopeIdle) then self.loadedAnimations.scopeIdle:Stop() end
             self.loaded3PAnimations.scoped:Stop()
             self.lerpValues.aim:set(0)
-            self.janitor:AddPromise(Tween(self.camera, TweenInfo.new(0.2), {FieldOfView = 85}))
+            self.janitor:AddPromise(Tween(self.camera, TweenInfo.new(0.2), {FieldOfView = 90}))
             HudController:ShowVignette(false, 0.2)
             HudController:ShowCrosshair(true, 0.2)
             HudController.crosshairOffset:set(50)
@@ -329,7 +329,7 @@ end
 
 
 function module:Equip(character, vm)
-    self.camera.FieldOfView = 85
+    self.camera.FieldOfView = 90
 
     local Krait = script.Parent.Krait:Clone()
     Krait.Parent = vm
