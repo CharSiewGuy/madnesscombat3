@@ -14,6 +14,7 @@ local Tween = require(Packages.TweenPromise)
 
 local Modules = ReplicatedStorage.Modules
 local Spring = require(Modules.Spring)
+local Spring2 = require(Modules.Spring2)
 local SmoothValue = require(Modules.SmoothValue)
 
 local WeaponService
@@ -27,19 +28,29 @@ local UtilModule = require(script.Util)
 module.janitor = Janitor.new()
 module.camera = workspace.CurrentCamera
 module.loadedAnimations = {}
+module.loaded3PAnimations = {}
 module.springs = {}
 module.lerpValues = {}
 module.lerpValues.sprint = SmoothValue:create(0, 0, 12)
 module.lerpValues.slide = SmoothValue:create(0, 0, 10)
 module.lerpValues.aim = SmoothValue:create(0, 0, 18)
+module.lerpValues.climb = SmoothValue:create(0, 0, 20)
 module.charspeed = 0
 module.running = false
+module.OldCamCF = nil
 
 function module:SetupAnimations(character, vm)
     self.springs.sway = Spring.create()
 
     self.springs.jump = Spring.create(1, 10, 0, 1.8)
+    self.springs.jumpCam = Spring.create()
     self.springs.fire = Spring.create()
+    self.springs.speed = Spring2.spring.new()
+    self.springs.speed.s = 16
+    self.springs.velocity = Spring2.spring.new(Vector3.new())
+    self.springs.velocity.s = 16
+    self.springs.velocity.t = Vector3.new()
+    self.springs.velocity.p = Vector3.new()
 
     self.janitor:Add(character.Humanoid.StateChanged:Connect(function(_, newState)
         if newState == Enum.HumanoidStateType.Jumping then
@@ -47,11 +58,13 @@ function module:SetupAnimations(character, vm)
             task.delay(0.2, function()
                 self.springs.jump:shove(Vector3.new(0, -0.5))
             end)
+            self.springs.jumpCam:shove(Vector3.new(0, 0.1))
         elseif newState == Enum.HumanoidStateType.Landed then
             self.springs.jump:shove(Vector3.new(0, -0.5))
             task.delay(0.15, function()
                 self.springs.jump:shove(Vector3.new(0, 0.5))
             end)
+            self.springs.jumpCam:shove(Vector3.new(0, -0.1))
         end
         
         if newState == Enum.HumanoidStateType.Swimming then
@@ -86,6 +99,7 @@ function module:SetupAnimations(character, vm)
 
     self.janitor:Add(RunService.RenderStepped:Connect(function(dt)
         if not vm.HumanoidRootPart then return end
+        vm.HumanoidRootPart.CFrame = self.camera.CoordinateFrame
 
         local mouseDelta = UserInputService:GetMouseDelta()
         self.springs.sway:shove(Vector3.new(mouseDelta.X / 400,mouseDelta.Y / 400))
@@ -98,30 +112,20 @@ function module:SetupAnimations(character, vm)
         local sprintOffset = idleOffset:Lerp(CFrame.new(0.5,-1,-1) * CFrame.Angles(0.1,1,0.2), self.lerpValues.sprint:update(dt))
         local slideOffset = sprintOffset:Lerp(CFrame.new(-0.3,-0.7,-0.8) * CFrame.Angles(0, 0, 0.2), self.lerpValues.slide:update(dt))
         local aimOffset = slideOffset:Lerp(CFrame.new(0,0.03,0) * CFrame.Angles(0.01,0,0), self.lerpValues.aim:update(dt))
-        local finalOffset = aimOffset
-        vm.HumanoidRootPart.CFrame = self.camera.CFrame:ToWorldSpace(finalOffset)
+        local climbOffset = aimOffset:Lerp(CFrame.new(0,0,0), self.lerpValues.climb:update(dt))
+        local finalOffset = climbOffset
+
+        vm.HumanoidRootPart.CFrame *= finalOffset
 
         if not self.isAiming then   
-            vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame * CFrame.Angles(jump.y,-sway.x,sway.y)
+            vm.HumanoidRootPart.CFrame *= CFrame.Angles(jump.y,-sway.x,sway.y)
         else
-            vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame * CFrame.Angles(jump.y/8,-sway.x,sway.y)
+            vm.HumanoidRootPart.CFrame *= CFrame.Angles(jump.y/8,-sway.x,sway.y)
         end
 
         if self.running then
             if not MovementController.isSprinting then
-                local multiplier = .15
-                if self.isAiming then
-                    multiplier = .01
-                end
-                gunbobcf = gunbobcf:Lerp(CFrame.new(
-                    multiplier * (self.charspeed/4) * math.sin(tick() * 8),
-                    multiplier * (self.charspeed/4) * math.cos(tick() * 16),
-                    0
-                    ) * CFrame.Angles(
-                        math.rad( 1 * (self.charspeed/4) * math.sin(tick() * 8) ), 
-                        math.rad( 1 * (self.charspeed/4) * math.cos(tick() * 16) ), 
-                        math.rad(0)
-                    ), 0.1)
+                gunbobcf = CFrame.new(0,0,0)
             else
                 gunbobcf = gunbobcf:Lerp(CFrame.new(
                     .2 * (self.charspeed/4) * math.sin(tick() * 10),
@@ -135,16 +139,69 @@ function module:SetupAnimations(character, vm)
             end
         end
 
-        vm.HumanoidRootPart.CFrame = vm.HumanoidRootPart.CFrame * gunbobcf
+        local RelativeVelocity
+        if MovementController.isSliding then
+            RelativeVelocity = CFrame.new().VectorToObjectSpace(character.HumanoidRootPart.CFrame, character.HumanoidRootPart.Velocity/3)
+        else
+            RelativeVelocity = CFrame.new().VectorToObjectSpace(character.HumanoidRootPart.CFrame, character.HumanoidRootPart.Velocity)
+        end
+        self.springs.speed.t = (Vector3.new(1, 0, 1) * RelativeVelocity).Magnitude
+		self.springs.velocity.t = RelativeVelocity
+		UtilModule.speed = self.springs.speed.p
+		UtilModule.distance = UtilModule.distance + dt * self.springs.speed.p
+		UtilModule.velocity = self.springs.velocity.p
+
+        if not MovementController.isSprinting then
+            if self.isAiming then
+                vm.HumanoidRootPart.CFrame *= UtilModule:viewmodelBob(0.3, 0.15, character.Humanoid.WalkSpeed)
+            else
+                vm.HumanoidRootPart.CFrame *= UtilModule:viewmodelBob(0.8, 0.4, character.Humanoid.WalkSpeed)
+            end
+        end
+
+        vm.HumanoidRootPart.CFrame *= gunbobcf
 
         local recoil = self.springs.fire:update(dt)
-        self.camera.CFrame = self.camera.CFrame * CFrame.Angles(math.rad(recoil.x), math.rad(recoil.y), math.rad(recoil.z))
+        self.camera.CFrame *= CFrame.Angles(math.rad(recoil.x), math.rad(recoil.y), math.rad(recoil.z) * 2)
+
+        local jumpCam = self.springs.jumpCam:update(dt)
+        self.camera.CFrame *= CFrame.Angles(jumpCam.y, 0, 0)
 
         local waist = character.HumanoidRootPart.RootJoint
 		waist.C0 = waistC0 * CFrame.fromEulerAnglesYXZ(math.asin(self.camera.CFrame.LookVector.y) * -0.8, 0, 0)
 
         WeaponService:Tilt(waist.C0)
+
+        
+        local NewCamCF = vm.FakeCamera.CFrame:ToObjectSpace(vm.HumanoidRootPart.CFrame)
+        if self.OldCamCF then
+            local _, _, Z = NewCamCF:ToOrientation()
+            local X, Y, _ = NewCamCF:ToObjectSpace(self.OldCamCF):ToEulerAnglesXYZ()
+            self.camera.CFrame = self.camera.CFrame * CFrame.Angles(X, Y, -Z)
+        end
+        self.OldCamCF = NewCamCF
     end))
+
+    
+    self.loadedAnimations.Idle = vm.AnimationController:LoadAnimation(script.Parent.Animations.Idle)
+    self.loadedAnimations.Shoot = vm.AnimationController:LoadAnimation(script.Parent.Animations.Shoot)
+    self.loadedAnimations.Reload = vm.AnimationController:LoadAnimation(script.Parent.Animations.Reload)
+    self.loadedAnimations.scopeIn = vm.AnimationController:LoadAnimation(script.Parent.Animations.ScopeIn)
+    self.loadedAnimations.scopeIdle = vm.AnimationController:LoadAnimation(script.Parent.Animations.ScopeIdle)
+    self.loadedAnimations.scopeOut = vm.AnimationController:LoadAnimation(script.Parent.Animations.ScopeOut)
+    self.loadedAnimations.scopedShoot = vm.AnimationController:LoadAnimation(script.Parent.Animations.ScopeShoot)
+    self.loadedAnimations.hide = vm.AnimationController:LoadAnimation(script.Parent.Animations.Hide)
+
+    self.loadedAnimations.Idle:Play(0)
+    self.loadedAnimations.scopeIdle.Looped = true
+
+    local animator = HumanoidAnimatorUtils.getOrCreateAnimator(character.Humanoid)
+    self.loaded3PAnimations.idle = animator:LoadAnimation(script.Parent["3PAnimations"].Idle)
+    self.loaded3PAnimations.idle:Play(0)
+    self.loaded3PAnimations.scoped = animator:LoadAnimation(script.Parent["3PAnimations"].Scoped)
+    self.loaded3PAnimations.shoot = animator:LoadAnimation(script.Parent["3PAnimations"].Shoot)
+    self.loaded3PAnimations.scopedShoot = animator:LoadAnimation(script.Parent["3PAnimations"].ScopedShoot)
+    self.loaded3PAnimations.reload = animator:LoadAnimation(script.Parent["3PAnimations"].Reload)
 end
 
 
@@ -152,7 +209,7 @@ module.aimJanitor = Janitor.new()
 module.isAiming = false
 module.scopedIn = false
 module.isFiring = false
-module.fireRate = 0.115
+module.fireRate = 0.1
 module.scopeOutPromise = nil
 
 function module:ToggleAim(inputState, vm)
@@ -161,9 +218,11 @@ function module:ToggleAim(inputState, vm)
 
         self.isAiming = true
         MovementController.canSprint = false
+        MovementController.canClimb = false
         if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.Reload) then self.loadedAnimations.Reload:Stop(0) end
         self.loadedAnimations.scopeIn:Play(0)
         self.loadedAnimations.scopeIn:AdjustSpeed(1.25)
+        self.loaded3PAnimations.scoped:Play()
         self.aimJanitor:AddPromise(Promise.delay(self.loadedAnimations.scopeIn.Length/1.25 - 0.05)):andThen(function()
             self.scopedIn = true 
             self.loadedAnimations.scopeIdle:Play(0)
@@ -178,10 +237,12 @@ function module:ToggleAim(inputState, vm)
             self.isAiming = false
             self.scopedIn = false
             MovementController.canSprint = true
+            MovementController.canClimb = true
             if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController,self.loadedAnimations.scopeIn) then self.loadedAnimations.scopeIn:Stop() end
             if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController,self.loadedAnimations.scopeIdle) then self.loadedAnimations.scopeIdle:Stop() end
+            self.loaded3PAnimations.scoped:Stop()
             self.lerpValues.aim:set(0)
-            self.janitor:AddPromise(Tween(self.camera, TweenInfo.new(0.2), {FieldOfView = 90}))
+            self.janitor:AddPromise(Tween(self.camera, TweenInfo.new(0.2), {FieldOfView = 85}))
             HudController:ShowVignette(false, 0.2)
             HudController:ShowCrosshair(true, 0.2)
             HudController.crosshairOffset:set(50)
@@ -206,6 +267,7 @@ function module:ToggleAim(inputState, vm)
         if self.isAiming then
             self.aimJanitor:Cleanup()
             self.loadedAnimations.scopeOut:Play(0)
+            self.loaded3PAnimations.scoped:Stop()
             self.loadedAnimations.scopeOut:AdjustSpeed(1.25)
         end
     end
@@ -219,14 +281,17 @@ function module:Reload()
     if not self.isReloading and self.bullets < self.maxBullets then
         self.isFiring = false
         self.isReloading = true
+        MovementController.canClimb = false
         self.lerpValues.sprint:set(0)
         self.lerpValues.slide:set(0)
         self.aimJanitor:Cleanup()
 
         self.loadedAnimations.Reload:Play(0)
+        self.loaded3PAnimations.reload:Play(0)
         self.loadedAnimations.Reload:AdjustSpeed(1.25) 
         self.janitor:AddPromise(Promise.delay(self.loadedAnimations.Reload.Length - 0.7)):andThen(function()
             self.isReloading = false
+            MovementController.canClimb = true
             self.bullets = self.maxBullets
             HudController:SetBullets(self.bullets)
         end)
@@ -252,6 +317,7 @@ function module:Reload()
 
         self.janitor:Add(function()
             self.isReloading = false
+            MovementController.canClimb = true
             sound:Destroy()
             WeaponService:StopSound("Reload")
         end)
@@ -261,7 +327,7 @@ end
 
 
 function module:Equip(character, vm)
-    self.camera.FieldOfView = 90
+    self.camera.FieldOfView = 85
 
     local Krait = script.Parent.Krait:Clone()
     Krait.Parent = vm
@@ -278,18 +344,8 @@ function module:Equip(character, vm)
 
     self.canFire = true
     self.bullets = 30
+    HudController:SetBullets(self.bullets)
     self.isReloading = false
-
-    self.loadedAnimations.Idle = vm.AnimationController:LoadAnimation(script.Parent.Animations.Idle)
-    self.loadedAnimations.Shoot = vm.AnimationController:LoadAnimation(script.Parent.Animations.Shoot)
-    self.loadedAnimations.Reload = vm.AnimationController:LoadAnimation(script.Parent.Animations.Reload)
-    self.loadedAnimations.scopeIn = vm.AnimationController:LoadAnimation(script.Parent.Animations.ScopeIn)
-    self.loadedAnimations.scopeIdle = vm.AnimationController:LoadAnimation(script.Parent.Animations.ScopeIdle)
-    self.loadedAnimations.scopeOut = vm.AnimationController:LoadAnimation(script.Parent.Animations.ScopeOut)
-    self.loadedAnimations.scopedShoot = vm.AnimationController:LoadAnimation(script.Parent.Animations.ScopeShoot)
-
-    self.loadedAnimations.Idle:Play(0)
-    self.loadedAnimations.scopeIdle.Looped = true
 
     local function handleAction(actionName, inputState)
         if self.bullets <= 0 or self.isReloading then return end
@@ -342,21 +398,28 @@ function module:Equip(character, vm)
                 CastParams.FilterDescendantsInstances = {character, self.camera}
                 local direction = self.camera.CFrame.LookVector * 500
 
-                if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.Reload) then self.loadedAnimations.Reload:Stop(0) end
+                if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.Reload) then 
+                    self.loadedAnimations.Reload:Stop(0)
+                end
+                if HumanoidAnimatorUtils.isPlayingAnimationTrack(HumanoidAnimatorUtils.getOrCreateAnimator(character.Humanoid), self.loaded3PAnimations.Reload) then 
+                    self.loaded3PAnimations.Reload:Stop(0)
+                end
 
                 if not self.scopedIn then
                     ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, 3)
                     self.loadedAnimations.Shoot:Play(0)
-                    self.springs.fire:shove(Vector3.new(3, math.random(-2, 2), 2))
-                    task.delay(0.3, function()
-                        self.springs.fire:shove(Vector3.new(-2.5, math.random(-1, 1), -4))
+                    self.loaded3PAnimations.shoot:Play()
+                    self.springs.fire:shove(Vector3.new(4, math.random(-2, 2), 4))
+                    task.delay(0.1, function()
+                        self.springs.fire:shove(Vector3.new(-3, math.random(-1, 1), -4))
                     end)
                 else
                     ClientCaster:Fire(vm.Krait.Handle.Muzzle.WorldPosition, direction, character, 1.1)
                     self.loadedAnimations.scopedShoot:Play(0)
-                    self.springs.fire:shove(Vector3.new(1, math.random(-0.4, 0.4), 1))
-                    task.delay(0.2, function()
-                        self.springs.fire:shove(Vector3.new(-0.5, math.random(-0.3, 0.3), -1))
+                    self.loaded3PAnimations.scopedShoot:Play(0)
+                    self.springs.fire:shove(Vector3.new(2, math.random(-1.5, 1.5), 4))
+                    task.delay(0.1, function()
+                        self.springs.fire:shove(Vector3.new(-1.5, math.random(-1, 1), -4))
                     end)
                 end
 
@@ -376,7 +439,11 @@ function module:Equip(character, vm)
                 local randSound = "Shoot" .. math.random(1, 3)
 				local sound = script.Parent.Sounds[randSound]:Clone()
 				sound.Parent = self.camera
-				sound:Destroy()       
+                sound.PlayOnRemove = false
+				sound:Play() 
+                task.delay(sound.TimeLength, function()
+                    sound:Destroy()
+                end)   
                 WeaponService:PlaySound(randSound, true)             
 
                 HudController:ExpandCrosshair()

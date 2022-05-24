@@ -196,7 +196,7 @@ local function initializeSoundSystem(player, humanoid, rootPart)
 		end,
 
 		[sounds.FreeFalling] = function(dt, sound, vel)
-			if vel.Magnitude > 75 then
+			if vel.Magnitude > 1 then
 				sound.Volume = math.clamp(sound.Volume + 0.9*dt, 0, 1)
 			else
 				sound.Volume = 0

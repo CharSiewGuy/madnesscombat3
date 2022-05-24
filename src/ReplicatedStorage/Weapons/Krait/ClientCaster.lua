@@ -91,7 +91,11 @@ function module:Initialize()
             end
 
             local sound
-            sound = ReplicatedStorage.Assets.Sounds.Hit:Clone()
+            if headshot then
+                sound = ReplicatedStorage.Assets.Sounds.Headshot:Clone()
+            else
+                sound = ReplicatedStorage.Assets.Sounds.Hit:Clone()
+            end
             sound.Parent = workspace.CurrentCamera
             sound:Destroy()
     

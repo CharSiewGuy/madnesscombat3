@@ -24,7 +24,8 @@ end
 
 module.mainCaster.CastTerminating:Connect(castTerminating)
 
-function module:Fire(character, origin, direction)	
+function module:Fire(character, direction)
+    if not character.Krait or not character.Krait.Handle or not character.Krait.Handle.Muzzle then return end
     local CastParams = RaycastParams.new()
     CastParams.IgnoreWater = true
     CastParams.FilterType = Enum.RaycastFilterType.Blacklist
@@ -39,7 +40,7 @@ function module:Fire(character, origin, direction)
     CastBehavior.Acceleration = Vector3.new(0, -5, 0)
     CastBehavior.AutoIgnoreContainer = true
 
-    self.mainCaster:Fire(origin, direction, 250, CastBehavior)
+    self.mainCaster:Fire(character.Krait.Handle.Muzzle.WorldPosition, direction, 250, CastBehavior)
 end
 
 return module

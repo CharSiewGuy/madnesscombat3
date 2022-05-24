@@ -9,15 +9,20 @@ local Janitor = require(Packages.Janitor)
 local Shake = require(Packages.Shake)
 local Tween = require(Packages.TweenPromise)
 local Promise = require(Packages.Promise)
-local SmoothValue = require(game.ReplicatedStorage.Modules.SmoothValue)
+local HumanoidAnimatorUtils = require(Packages.HumanoidAnimatorUtils)
+
+local Modules = ReplicatedStorage.Modules
+local SmoothValue = require(Modules.SmoothValue)
 
 local MovementController = Knit.CreateController { Name = "MovementController" }
 MovementController.janitor = Janitor.new()
 
 local HudController 
+local WeaponController
 
 MovementController.normalSpeed = 16
 MovementController.sprintSpeed = 22
+MovementController.loadedAnimations = {}
 
 function MovementController:Slide(hum, humanoidRootPart)
     self.isSliding = true
@@ -32,6 +37,7 @@ function MovementController:Slide(hum, humanoidRootPart)
     self.slideJanitor:Add(function()
         self.isSliding = false
         slideV:Destroy()
+        self.loadedAnimations.slide:Stop(0.2)
         Tween(hum, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(0, 0, 0)})
     end)
     self.sprintJanitor:Cleanup()
@@ -54,6 +60,7 @@ function MovementController:Slide(hum, humanoidRootPart)
     self.slideJanitor:AddPromise(Promise.delay(0.7)):andThen(function()
         self.isSliding = false
         slideV:Destroy()
+        self.loadedAnimations.slide:Stop(0.2)
         self.slideJanitor:AddPromise(Tween(sound, TweenInfo.new(0.2), {Volume = 0}))
         self.slideJanitor:AddPromise(Promise.delay(0.2)):andThen(function()
             sound:Destroy()
@@ -61,6 +68,8 @@ function MovementController:Slide(hum, humanoidRootPart)
 
         self:Crouch(hum)
     end)
+
+    self.loadedAnimations.slide:Play(0.2)
 
     self.janitor:Add(self.slideJanitor)
 end
@@ -78,6 +87,7 @@ end
 
 function MovementController:KnitInit()
     HudController = Knit.GetController("HudController")
+    WeaponController = Knit.GetController("WeaponController")
 end
 
 function MovementController:KnitStart()
@@ -87,10 +97,13 @@ function MovementController:KnitStart()
     self.canSlide = true
     self.isCrouching = false
     self.canCrouch = true
+    self.canClimb = true
     self.camera = workspace.CurrentCamera
 
     Knit.Player.CharacterAdded:Connect(function(character)
         local hum = character:WaitForChild("Humanoid")
+        self.loadedAnimations.slide = HumanoidAnimatorUtils.getOrCreateAnimator(hum):LoadAnimation(ReplicatedStorage.Assets.Animations.Slide)
+
         local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
         local function getMovingDir()
@@ -143,7 +156,6 @@ function MovementController:KnitStart()
                             self.isSprinting = false
                             value:set(self.normalSpeed)
                             walkShake.Amplitude = 0
-                            HudController.crosshairOffset:set(50)
                         end)
                         self.slideJanitor:Cleanup()
                         self.crouchJanitor:Cleanup()
@@ -183,7 +195,11 @@ function MovementController:KnitStart()
                 if getMovingDir() ~= "forward" then
                     self.sprintJanitor:Cleanup()
                 end
+                if not self.isSprinting and HudController.crosshairOffset.target ~= 60 then
+                    HudController.crosshairOffset:set(60)
+                end
             else
+                HudController.crosshairOffset:set(40)
                 self.sprintJanitor:Cleanup()
             end
         end))
@@ -235,20 +251,21 @@ function MovementController:KnitStart()
                 hum.WalkSpeed = value:update(dt)
             end
 
-            if hum.FloorMaterial == Enum.Material.Air and canClimb then
+            if hum.FloorMaterial == Enum.Material.Air and canClimb and self.canClimb then
                 local raycastParams = RaycastParams.new()
                 raycastParams.FilterDescendantsInstances = {character, self.camera}
                 raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
                 for i = 0, 0.5, 0.1 do
-                    local raycastResult = workspace:Raycast(character.Head.Position - Vector3.new(0,i,0), (character.Head.CFrame.LookVector - Vector3.new(0,i,0)).Unit * 2, raycastParams)
+                    local raycastResult = workspace:Raycast(character.Head.Position - Vector3.new(0,i,0), (character.Head.CFrame.LookVector - Vector3.new(0,i,0)).Unit * 3, raycastParams)
                     if raycastResult then
-                        if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) - 1 and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 1 then 
+                        if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) - 2 and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 2 then 
                             local climbV = Instance.new("BodyVelocity")
                             climbV.MaxForce = Vector3.new(1,1,1) * 30000
                             climbV.Velocity = humanoidRootPart.CFrame.LookVector * 15 + Vector3.new(0,30,0)
                             climbV.Parent = humanoidRootPart
                             task.delay(0.05, function()climbV:Destroy()end)
                             canClimb = false
+                            WeaponController:Climb(character.Head.Position.Y - (raycastResult.Instance.Position.Y + raycastResult.Instance.Size.Y / 2))
                             break
                         end
                     end

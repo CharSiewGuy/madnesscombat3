@@ -6,9 +6,35 @@ local Tween = require(Packages.TweenPromise)
 
 local module = {}
 
-function module:GetBobbing(addition,speed,modifier)
-    return math.sin(tick()*addition*speed)*modifier
+module.velocity = Vector3.new()
+module.speed = 0
+module.distance = 0
+
+function module:fromAxisAngle(x, y, z)
+	if not y then
+		x, y, z = x.X, x.Y, x.Z
+	end
+	local m = (x * x + y * y + z * z) ^ 0.5
+	if m > 1e-5 then
+		local si = math.sin(m / 2) / m
+		return CFrame.new(0, 0, 0, si * x, si * y, si * z, math.cos(m / 2))
+	else
+		return CFrame.new()
+	end
 end
+
+function module:viewmodelBob(aa, rr, baseWalkSpeed)
+	local a, r = aa or 1, rr or 1
+	local d, s, v = self.distance * 6.28318 * 3 / 4, self.speed, -self.velocity
+	--if s < baseWalkSpeed then
+	local w = Vector3.new(r * math.sin(d / 4 - 1) / 256 + r * (math.sin(d / 64) - r * v.Z / 4) / 512, r * math.cos(d / 128) / 128 - r * math.cos(d / 8) / 256, r * math.sin(d / 8) / 128 + r * v.X / 1024) * s / 20 * 6.28318
+	return CFrame.new(r * math.cos(d / 8 - 1) * s / 196, 1.25 * a * math.sin(d / 4) * s / 512, 0) * self:fromAxisAngle(w)
+	--else
+	--local w = Vector3.new((r * math.sin(d / 4 - 1) / 256 + r * (math.sin(d / 64) - r * v.Z / 4) / 512) * s / 20 * 6.28318, (r * math.cos(d / 128) / 128 - r * math.cos(d / 8) / 256) * s / 20 * 6.28318, r * math.sin(d / 8) / 128 * (5 * s - 56) / 20 * 6.28318 + r * v.X / 1024)
+	--return CFrame.new(r * math.cos(d / 8 - 1) * (5 * s - 56) / 196, 1.25 * a * math.sin(d / 4) * s / 512, 0) * Math.FromAxisAngle(w)
+	--end
+end
+
 
 function module:GetMousePos(unitRay, CastParams)
     local ori, dir = unitRay.Origin, unitRay.Direction * 500

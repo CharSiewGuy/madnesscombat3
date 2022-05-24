@@ -18,7 +18,7 @@ function SPRING.create(self, mass, force, damping, speed)
 		Mass		= mass or 3;
 		Force		= force or 50;
 		Damping		= damping or 4;
-		Speed		= speed  or 4;
+		Speed		= speed  or 5;
 	}
 	
 	function spring.shove(self, force)

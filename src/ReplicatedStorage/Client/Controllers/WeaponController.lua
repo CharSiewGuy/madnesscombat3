@@ -10,12 +10,17 @@ WeaponController._janitor = Janitor.new()
 
 local WeaponService
 
+WeaponController.currentViewmodel = nil
+WeaponController.currentModule = nil
+WeaponController.loadedAnimations = {}
+
 function WeaponController:KnitInit()
     WeaponService = Knit.GetService("WeaponService")
 end
 
 function WeaponController:KnitStart()
     local weaponModule = require(ReplicatedStorage.Weapons.Krait.MainModule)
+    self.currentModule = weaponModule
 
     Knit.Player.CharacterAdded:Connect(function(character)
         local hum = character:WaitForChild("Humanoid")
@@ -26,6 +31,11 @@ function WeaponController:KnitStart()
 
         local viewmodel = ReplicatedStorage.viewmodel:Clone()
         viewmodel.Parent = workspace.CurrentCamera
+        self.currentViewmodel = viewmodel
+        local ac = viewmodel:WaitForChild("AnimationController")
+        self.loadedAnimations.highclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.HighClimb)
+        self.loadedAnimations.lowclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.LowClimb)
+        self.loadedAnimations.midclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.MidClimb)
 
         repeat
             task.wait()
@@ -70,7 +80,7 @@ function WeaponController:KnitStart()
 
     WeaponService.PlaySignal:Connect(function(character, name, playOnRemove)
         print(character.Name .. " " .. name .. " play")
-        if not character.HumanoidRootPart then return end
+        if not character or not character.HumanoidRootPart then return end
         local sound = ReplicatedStorage.Weapons.Krait.Sounds:FindFirstChild(name)
         if sound then
             print("sucess")
@@ -104,7 +114,7 @@ function WeaponController:KnitStart()
     }
 
     WeaponService.FireSignal:Connect(function(character, direction)
-        casters["Krait"]:Fire(character, character.Krait.Handle.MuzzleBack.WorldPosition, direction)
+        casters["Krait"]:Fire(character, direction)
     end)
 end
 
@@ -156,4 +166,20 @@ function WeaponController:CreateBulletHole(raycastResult)
     end)
 end
 
+function WeaponController:Climb(val)
+    if not self.currentViewmodel or not self.currentViewmodel.AnimationController or not self.currentModule then return end
+    self.currentModule.lerpValues.climb:set(1)
+    pcall(function()self.currentModule.loadedAnimations.hide:Play(0)end)
+    if val < -1 then
+        self.loadedAnimations.highclimb:Play()
+    elseif val > 0 then
+        self.loadedAnimations.lowclimb:Play()
+    else
+        self.loadedAnimations.midclimb:Play()
+    end
+    task.delay(self.loadedAnimations.midclimb.Length, function()
+        self.currentModule.lerpValues.climb:set(0)
+        pcall(function()self.currentModule.loadedAnimations.hide:Stop(0)end)
+    end)
+end
 return WeaponController
