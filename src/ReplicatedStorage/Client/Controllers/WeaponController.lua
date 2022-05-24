@@ -170,6 +170,10 @@ function WeaponController:Climb(val)
     if not self.currentViewmodel or not self.currentViewmodel.AnimationController or not self.currentModule then return end
     self.currentModule.lerpValues.climb:set(1)
     pcall(function()self.currentModule.loadedAnimations.hide:Play(0)end)
+    self.currentModule.equipped = false
+    task.delay(0.1, function()
+        self.currentModule.lerpValues.unequip:set(1)
+    end)
     if val < -1 then
         self.loadedAnimations.highclimb:Play()
     elseif val > 0 then
@@ -180,6 +184,8 @@ function WeaponController:Climb(val)
     task.delay(self.loadedAnimations.midclimb.Length, function()
         self.currentModule.lerpValues.climb:set(0)
         pcall(function()self.currentModule.loadedAnimations.hide:Stop(0)end)
+        self.currentModule.lerpValues.unequip:set(0)
+        self.currentModule.equipped = true
     end)
 end
 return WeaponController

@@ -35,6 +35,7 @@ module.lerpValues.sprint = SmoothValue:create(0, 0, 12)
 module.lerpValues.slide = SmoothValue:create(0, 0, 10)
 module.lerpValues.aim = SmoothValue:create(0, 0, 18)
 module.lerpValues.climb = SmoothValue:create(0, 0, 20)
+module.lerpValues.unequip = SmoothValue:create(0, 0, 3)
 module.charspeed = 0
 module.running = false
 module.OldCamCF = nil
@@ -113,7 +114,8 @@ function module:SetupAnimations(character, vm)
         local slideOffset = sprintOffset:Lerp(CFrame.new(-0.3,-0.7,-0.8) * CFrame.Angles(0, 0, 0.2), self.lerpValues.slide:update(dt))
         local aimOffset = slideOffset:Lerp(CFrame.new(0,0.03,0) * CFrame.Angles(0.01,0,0), self.lerpValues.aim:update(dt))
         local climbOffset = aimOffset:Lerp(CFrame.new(0,0,0), self.lerpValues.climb:update(dt))
-        local finalOffset = climbOffset
+        local unequipOffset = climbOffset:Lerp(CFrame.new(0,-2,0) * CFrame.Angles(4,0,0), self.lerpValues.unequip:update(dt))
+        local finalOffset = unequipOffset
 
         vm.HumanoidRootPart.CFrame *= finalOffset
 
@@ -214,7 +216,7 @@ module.scopeOutPromise = nil
 
 function module:ToggleAim(inputState, vm)
     if inputState == Enum.UserInputState.Begin then
-        if self.isReloading or self.isAiming then return end
+        if not self.equipped or self.isReloading or self.isAiming then return end
 
         self.isAiming = true
         MovementController.canSprint = false
@@ -343,6 +345,7 @@ function module:Equip(character, vm)
     self:SetupAnimations(character, vm)
 
     self.canFire = true
+    self.equipped = true
     self.bullets = 30
     HudController:SetBullets(self.bullets)
     self.isReloading = false
@@ -387,7 +390,11 @@ function module:Equip(character, vm)
             self.lerpValues.sprint:set(0)
         end
 
-        if not self.canFire or self.isReloading then return end
+        if not self.equipped then
+            self.isFiring = false
+        end
+
+        if not self.canFire or not self.equipped or self.isReloading then return end
         if self.bullets > 0 then
             if self.isFiring == true then
                 self.canFire = false
