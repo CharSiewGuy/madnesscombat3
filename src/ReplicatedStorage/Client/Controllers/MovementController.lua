@@ -19,6 +19,7 @@ MovementController.janitor = Janitor.new()
 
 local HudController 
 local WeaponController
+local WeaponService
 
 MovementController.normalSpeed = 16
 MovementController.sprintSpeed = 22
@@ -29,7 +30,7 @@ function MovementController:Slide(hum, humanoidRootPart)
     self.canSlide = false
 
     local slideV = Instance.new("BodyVelocity")
-    slideV.MaxForce = Vector3.new(1,0,1) * 25000
+    slideV.MaxForce = Vector3.new(1,0,1) * 30000
     slideV.Velocity = humanoidRootPart.CFrame.LookVector * 80
     slideV.Parent = humanoidRootPart
 
@@ -45,6 +46,7 @@ function MovementController:Slide(hum, humanoidRootPart)
     local sound = ReplicatedStorage.Assets.Sounds.Slide:Clone()
     sound.Parent = self.camera
     sound:Play()
+    WeaponService:PlaySound("Slide", false)
     self.slideJanitor:Add(function()
         self.slideJanitor:AddPromise(Tween(sound, TweenInfo.new(0.2), {Volume = 0}))
         task.delay(0.2, function()
@@ -53,10 +55,11 @@ function MovementController:Slide(hum, humanoidRootPart)
         self.janitor:AddPromise(Promise.delay(1)):andThen(function()
             self.canSlide = true
         end)
+        WeaponService:StopSound("Slide")
     end)
 
     self.slideJanitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.5, 0)}))
-    self.slideJanitor:AddPromise(Tween(slideV, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.CFrame.LookVector * 20}))
+    self.slideJanitor:AddPromise(Tween(slideV, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.CFrame.LookVector * 30}))
     self.slideJanitor:AddPromise(Promise.delay(0.7)):andThen(function()
         self.isSliding = false
         slideV:Destroy()
@@ -77,17 +80,20 @@ end
 function MovementController:Crouch(hum)
     self.isCrouching = true
     self.canSlide = false
+    self.crouchJanitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.5, 0)}))
+    self.loadedAnimations.crouch:Play(0.2)
     self.crouchJanitor:Add(function()
         Tween(hum, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(0, 0, 0)})
         self.isCrouching = false
         self.canSlide = true
+        self.loadedAnimations.crouch:Stop(0.2)
     end)
-    self.crouchJanitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.5, 0)}))
 end
 
 function MovementController:KnitInit()
     HudController = Knit.GetController("HudController")
     WeaponController = Knit.GetController("WeaponController")
+    WeaponService = Knit.GetService("WeaponService")
 end
 
 function MovementController:KnitStart()
@@ -104,7 +110,9 @@ function MovementController:KnitStart()
         local hum = character:WaitForChild("Humanoid")
         local animator = HumanoidAnimatorUtils.getOrCreateAnimator(hum)
         self.loadedAnimations.slide = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.Slide)
+        self.loadedAnimations.slide.Priority = Enum.AnimationPriority.Action4
         self.loadedAnimations.sprint = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.Sprint)
+        self.loadedAnimations.crouch = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.Crouch)
 
         local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
@@ -160,6 +168,7 @@ function MovementController:KnitStart()
                             value:set(self.normalSpeed)
                             walkShake.Amplitude = 0
                             self.loadedAnimations.sprint:Stop(0.3)
+                            HudController.crosshairOffset:set(55)
                         end)
                         self.slideJanitor:Cleanup()
                         self.crouchJanitor:Cleanup()
@@ -203,11 +212,8 @@ function MovementController:KnitStart()
                 if getMovingDir() ~= "forward" then
                     self.sprintJanitor:Cleanup()
                 end
-                if not self.isSprinting and HudController.crosshairOffset.target ~= 60 then
-                    HudController.crosshairOffset:set(60)
-                end
             else
-                HudController.crosshairOffset:set(40)
+                HudController.crosshairOffset:set(55)
                 self.sprintJanitor:Cleanup()
             end
         end))
@@ -253,11 +259,14 @@ function MovementController:KnitStart()
             if self.isSliding then
                 hum.WalkSpeed = 0
             elseif self.isCrouching then
-                hum.WalkSpeed = 12
+                hum.WalkSpeed = 10
             else
                 hum.WalkSpeed = value:update(dt)
             end
 
+            local can = character and character.Humanoid and character.Humanoid.Health > 0 and character.Head
+            if not can then return end
+            
             if hum.FloorMaterial == Enum.Material.Air and canClimb and self.canClimb then
                 local raycastParams = RaycastParams.new()
                 raycastParams.FilterDescendantsInstances = {character, self.camera}

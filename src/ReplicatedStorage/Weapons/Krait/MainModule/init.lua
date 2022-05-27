@@ -236,6 +236,7 @@ function module:ToggleAim(inputState, vm)
         self.aimJanitor:AddPromise(Tween(self.camera, TweenInfo.new(0.2), {FieldOfView = 65}))
         HudController:ShowVignette(true, 0.2)
         HudController:ShowCrosshair(false, 0.2)
+        local oldOffset = HudController.crosshairOffset.target
         HudController.crosshairOffset:set(5)
 
         self.aimJanitor:Add(function()
@@ -250,7 +251,7 @@ function module:ToggleAim(inputState, vm)
             self.janitor:AddPromise(Tween(self.camera, TweenInfo.new(0.2), {FieldOfView = 90}))
             HudController:ShowVignette(false, 0.2)
             HudController:ShowCrosshair(true, 0.2)
-            HudController.crosshairOffset:set(50)
+            HudController.crosshairOffset:set(oldOffset)
             pcall(function() self.loadedAnimations.scopedShoot:Stop(0) end)
         end)
 

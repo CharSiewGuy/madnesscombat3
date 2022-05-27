@@ -29,7 +29,10 @@ local animNames = {
 			}, 
 	runbackward = 	{
 		{ id = "rbxassetid://6784655614", weight = 10 } 
-			},  
+			},
+	crouchWalk = {
+		{id = "rbxassetid://9737262104", weight = 10}
+			},
 	jump = 	{
 				{ id = "rbxassetid://6785337481", weight = 10 } 
 			}, 
@@ -330,18 +333,23 @@ local userInputService = game:GetService("UserInputService")
 
 function playRunAnim()
 	local dir = HumanoidRootPart.CFrame:VectorToObjectSpace(Humanoid.MoveDirection)
-	if dir.X < -0.9 or dir.X > 0.9 then
-		playAnimation("walk", 0.2, Humanoid)
-		setAnimationSpeed(0.65)
-	elseif dir.Z > 0.5 then
-		playAnimation("runbackward", 0.2, Humanoid)
-		setAnimationSpeed(0.7)
+	if Humanoid.WalkSpeed > 10 and Humanoid.WalkSpeed <= 12 then
+		playAnimation("crouchWalk", 0.2, Humanoid)
+		setAnimationSpeed(3)
 	else
-		if Humanoid.WalkSpeed > 20 then
-			playAnimation("run", 0.2, Humanoid)
-		else
+		if dir.X < -0.9 or dir.X > 0.9 then
 			playAnimation("walk", 0.2, Humanoid)
-			setAnimationSpeed(0.75)
+			setAnimationSpeed(0.65)
+		elseif dir.Z > 0.5 then
+			playAnimation("runbackward", 0.2, Humanoid)
+			setAnimationSpeed(0.7)
+		else
+			if Humanoid.WalkSpeed > 20 then
+				playAnimation("run", 0.2, Humanoid)
+			else
+				playAnimation("walk", 0.2, Humanoid)
+				setAnimationSpeed(0.75)
+			end
 		end
 	end
 end

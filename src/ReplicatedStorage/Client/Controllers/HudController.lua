@@ -13,7 +13,7 @@ HudController._janitor = Janitor.new()
 
 function HudController:KnitInit()
     HudController.crosshairOffset = SmoothValue:create(0, 0, 4)
-    HudController.crosshairOffset:set(40)
+    HudController.crosshairOffset:set(55)
 end
 
 function HudController:KnitStart()
@@ -29,10 +29,10 @@ end
 
 function HudController:ExpandCrosshair()
     self.crosshairOffset.speed = 20
-    self.crosshairOffset:set(self.crosshairOffset.target + 16)
+    self.crosshairOffset:set(self.crosshairOffset.target + 20)
     task.delay(0.05, function()
         self.crosshairOffset.speed = 4
-        self.crosshairOffset:set(self.crosshairOffset.target - 16)
+        self.crosshairOffset:set(self.crosshairOffset.target - 20)
     end)
 end
 

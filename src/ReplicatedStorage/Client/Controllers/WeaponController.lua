@@ -165,6 +165,7 @@ function WeaponController:KnitStart()
         local can = character and character.HumanoidRootPart
         if not can then return end
         local sound = ReplicatedStorage.Weapons.Krait.Sounds:FindFirstChild(name)
+        if not sound then sound = ReplicatedStorage.Assets.Sounds:FindFirstChild(name) end
         if sound then
             local soundClone = sound:Clone()
             soundClone.Parent = character.HumanoidRootPart
