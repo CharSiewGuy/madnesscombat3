@@ -22,15 +22,16 @@ local SOUND_DATA = {
 		SoundId = "rbxasset://sounds/action_get_up.mp3",
 	},
 	Jumping = {
-		SoundId = "rbxassetid://9363614714",
-		Volume = 0.1
+		SoundId = "rbxassetid://9727811998",
+		Volume = 2
 	},
 	DoubleJump = {
-		SoundId = "rbxassetid://9363614953",
-		Volume = 0.1
+		SoundId = "rbxassetid://9727811867",
+		Volume = 2
 	},
 	Landing = {
-		SoundId = "rbxasset://sounds/action_jump_land.mp3",
+		SoundId = "rbxassetid://9727812069",
+		Volume = 0.5
 	},
 	Running = {
 		SoundId = '' ,
@@ -191,7 +192,7 @@ local function initializeSoundSystem(player, humanoid, rootPart)
 
 	-- updaters for looped sounds
 	local loopedSoundUpdaters = {
-		[sounds.Climbing] = function(dt, sound, vel)
+		[sounds.Climbing] = function(_, sound, vel)
 			sound.Playing = vel.Magnitude > 0.1
 		end,
 
@@ -203,21 +204,23 @@ local function initializeSoundSystem(player, humanoid, rootPart)
 			end
 		end,
 
-		[sounds.Running] = function(dt, sound, vel)
-		--sound.Playing = vel.Magnitude > 0.5 and humanoid.MoveDirection.Magnitude > 0.5
-			
-		sound.SoundId = FootstepsSoundGroup:WaitForChild(humanoid.FloorMaterial).SoundId 
-		sound.PlaybackSpeed = FootstepsSoundGroup:WaitForChild(humanoid.FloorMaterial).PlaybackSpeed * (vel.Magnitude/20)
-			sound.Volume = FootstepsSoundGroup:WaitForChild(humanoid.FloorMaterial).Volume * (vel.Magnitude/12)
+		[sounds.Running] = function(_, sound, vel)				
+			sound.SoundId = FootstepsSoundGroup:WaitForChild(humanoid.FloorMaterial).SoundId 
+			sound.PlaybackSpeed = FootstepsSoundGroup:WaitForChild(humanoid.FloorMaterial).PlaybackSpeed * (vel.Magnitude/20)
+			if vel.Magnitude > 13 and vel.Magnitude < 24 then
+				sound.Volume = FootstepsSoundGroup:WaitForChild(humanoid.FloorMaterial).Volume * (vel.Magnitude/12)
+			else
+				sound.Volume = 0.02
+			end
 			sound.EmitterSize = FootstepsSoundGroup:WaitForChild(humanoid.FloorMaterial).Volume * (vel.Magnitude/12) * 50 
-		
 			
-		if FootstepsSoundGroup:FindFirstChild(humanoid.FloorMaterial) == nil then
-			sound.SoundId = FootstepsSoundGroup:WaitForChild("nil Sound").SoundId
-			sound.PlaybackSpeed = FootstepsSoundGroup:WaitForChild("nil Sound").PlaybackSpeed
-			sound.EmitterSize = FootstepsSoundGroup:WaitForChild("nil Sound").Volume
-			sound.Volume = FootstepsSoundGroup:WaitForChild("nil Sound").Volume
-		end
+				
+			if FootstepsSoundGroup:FindFirstChild(humanoid.FloorMaterial) == nil then
+				sound.SoundId = FootstepsSoundGroup:WaitForChild("nil Sound").SoundId
+				sound.PlaybackSpeed = FootstepsSoundGroup:WaitForChild("nil Sound").PlaybackSpeed
+				sound.EmitterSize = FootstepsSoundGroup:WaitForChild("nil Sound").Volume
+				sound.Volume = FootstepsSoundGroup:WaitForChild("nil Sound").Volume
+			end
 		end,
 	}
 
@@ -313,11 +316,11 @@ local function playerAdded(player)
 			return
 		end
 
-		-- must rely on HumanoidRootPart naming because Humanoid.RootPart does not fire changed signals
-		local rootPart = character:FindFirstChild("HumanoidRootPart")
+		-- must rely on Head naming because Humanoid.RootPart does not fire changed signals
+		local rootPart = character:FindFirstChild("Head")
 		while character:IsDescendantOf(game) and not rootPart do
 			waitForFirst(character.ChildAdded, character.AncestryChanged, humanoid.AncestryChanged, player.CharacterAdded)
-			rootPart = character:FindFirstChild("HumanoidRootPart")
+			rootPart = character:FindFirstChild("Head")
 		end
 
 		if rootPart and humanoid:IsDescendantOf(game) and character:IsDescendantOf(game) and player.Character == character then
@@ -342,7 +345,7 @@ repeat
 until game.Players.LocalPlayer.Character
 
 local Character = game.Players.LocalPlayer.Character
-local Head = Character:WaitForChild("HumanoidRootPart")
+local Head = Character:WaitForChild("Head")
 local RunningSound = Head:WaitForChild("Running")
 local Humanoid = Character:WaitForChild("Humanoid")
 local vel = 0

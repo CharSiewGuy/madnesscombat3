@@ -8,11 +8,20 @@ local WeaponService = Knit.CreateService {
     Client = {
         PlaySignal = Knit.CreateSignal(), 
         StopSignal = Knit.CreateSignal(),
-        FireSignal = Knit.CreateSignal()
+        FireSignal = Knit.CreateSignal(),
+        CreateBulletHoleSignal = Knit.CreateSignal(),
+        CreateImpactEffectSignal = Knit.CreateSignal()
     }
 }
 
-function WeaponService.Client:Damage(_, hum, damage)
+function WeaponService.Client:Damage(player, hum, damage)
+    if hum.Health > 0 then
+        if hum.Health - damage <= 0 then
+            local can = player.Character and player.Character.Humanoid
+            if not can then return end
+            player.Character.Humanoid.Health += 50
+        end
+    end
     hum:TakeDamage(damage)
 end
 
@@ -36,6 +45,15 @@ function WeaponService.Client:Tilt(player, c0)
 	if (hrp) then
 		hrp.RootJoint.C0 = c0
 	end
+end
+
+function WeaponService.Client:CreateBulletHole(player, raycastResult)
+    self.CreateBulletHoleSignal:FireExcept(player, raycastResult)
+end
+
+function WeaponService.Client:CreateImpactEffect(player, raycastResult, human)
+    self.CreateImpactEffectSignal:FireExcept(player, raycastResult, human)
+    
 end
 
 return WeaponService

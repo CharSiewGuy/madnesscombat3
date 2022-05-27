@@ -230,6 +230,9 @@ function module:ToggleAim(inputState, vm)
             self.loadedAnimations.scopeIdle:Play(0)
         end)
 
+        if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.scopeOut) then self.loadedAnimations.scopeOut:Stop(0) end
+        if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.scoped) then self.loadedAnimations.scoped:Stop(0) end
+
         self.aimJanitor:AddPromise(Tween(self.camera, TweenInfo.new(0.2), {FieldOfView = 65}))
         HudController:ShowVignette(true, 0.2)
         HudController:ShowCrosshair(false, 0.2)
@@ -346,9 +349,10 @@ function module:Equip(character, vm)
 
     self.canFire = true
     self.equipped = true
-    self.bullets = 30
     HudController:SetBullets(self.bullets)
     self.isReloading = false
+    self.curshots = 0
+    self.lastshot = tick()
 
     local function handleAction(actionName, inputState)
         if self.bullets <= 0 or self.isReloading then return end
@@ -416,18 +420,30 @@ function module:Equip(character, vm)
                     ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, 3)
                     self.loadedAnimations.Shoot:Play(0)
                     self.loaded3PAnimations.shoot:Play()
-                    self.springs.fire:shove(Vector3.new(4, math.random(-2, 2), 4))
-                    task.delay(0.1, function()
-                        self.springs.fire:shove(Vector3.new(-3, math.random(-1, 1), -4))
+                    self.springs.fire:shove(Vector3.new(4, math.random(-2, 2), 6))
+                    task.delay(0.2, function()
+                        self.springs.fire:shove(Vector3.new(-3, math.random(-1, 1), -6))
                     end)
                 else
-                    ClientCaster:Fire(vm.Krait.Handle.Muzzle.WorldPosition, direction, character, 1.1)
+                    ClientCaster:Fire(vm.Krait.Handle.Muzzle.WorldPosition, direction, character, 1.05)
                     self.loadedAnimations.scopedShoot:Play(0)
                     self.loaded3PAnimations.scopedShoot:Play(0)
-                    self.springs.fire:shove(Vector3.new(2, math.random(-1.5, 1.5), 4))
-                    task.delay(0.1, function()
-                        self.springs.fire:shove(Vector3.new(-1.5, math.random(-1, 1), -4))
-                    end)
+                    self.curshots = (tick() - self.lastshot > 0.3 and 1 or self.curshots + 1)
+                    self.lastshot = tick()
+                    if self.curshots > 30 then
+                        self.curshots = 10
+                    end
+                    if self.curshots < 10 then
+                        self.springs.fire:shove(Vector3.new(1, 0, 6))
+                        task.delay(0.2, function()
+                            self.springs.fire:shove(Vector3.new(-0.8, 0, -6))
+                        end)
+                    else
+                        self.springs.fire:shove(Vector3.new(1, math.random(-1, 1), 6))
+                        task.delay(0.2, function()
+                            self.springs.fire:shove(Vector3.new(-0.6, math.random(-0.5, 0.5), -6))
+                        end)
+                    end
                 end
 
                 local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()

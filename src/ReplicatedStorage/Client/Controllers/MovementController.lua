@@ -29,7 +29,7 @@ function MovementController:Slide(hum, humanoidRootPart)
     self.canSlide = false
 
     local slideV = Instance.new("BodyVelocity")
-    slideV.MaxForce = Vector3.new(1,0,1) * 20000
+    slideV.MaxForce = Vector3.new(1,0,1) * 25000
     slideV.Velocity = humanoidRootPart.CFrame.LookVector * 80
     slideV.Parent = humanoidRootPart
 
@@ -102,7 +102,9 @@ function MovementController:KnitStart()
 
     Knit.Player.CharacterAdded:Connect(function(character)
         local hum = character:WaitForChild("Humanoid")
-        self.loadedAnimations.slide = HumanoidAnimatorUtils.getOrCreateAnimator(hum):LoadAnimation(ReplicatedStorage.Assets.Animations.Slide)
+        local animator = HumanoidAnimatorUtils.getOrCreateAnimator(hum)
+        self.loadedAnimations.slide = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.Slide)
+        self.loadedAnimations.sprint = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.Sprint)
 
         local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
@@ -152,13 +154,19 @@ function MovementController:KnitStart()
                         value:set(self.sprintSpeed)
                         walkShake.Amplitude = 0.2
                         HudController.crosshairOffset:set(100)
+                        self.loadedAnimations.sprint:Play(0.3)
                         self.sprintJanitor:Add(function()
                             self.isSprinting = false
                             value:set(self.normalSpeed)
                             walkShake.Amplitude = 0
+                            self.loadedAnimations.sprint:Stop(0.3)
                         end)
                         self.slideJanitor:Cleanup()
                         self.crouchJanitor:Cleanup()
+
+                        local sound = ReplicatedStorage.Assets.Sounds:FindFirstChild("Sprint" .. math.random(1, 2)):Clone()
+                        sound.Parent = self.camera
+                        sound:Destroy()
                     end
                 elseif inputState == Enum.UserInputState.End then
                    self.sprintJanitor:Cleanup()
@@ -241,10 +249,9 @@ function MovementController:KnitStart()
         
         self.janitor:Add(UserInputService.JumpRequest:Connect(onJumpRequest))
         
-        self.janitor:Add(RunService.Heartbeat:Connect(function(dt)
+        self.janitor:Add(RunService.Stepped:Connect(function(dt)
             if self.isSliding then
                 hum.WalkSpeed = 0
-                humanoidRootPart.Running.Volume = 0
             elseif self.isCrouching then
                 hum.WalkSpeed = 12
             else
@@ -258,14 +265,18 @@ function MovementController:KnitStart()
                 for i = 0, 0.5, 0.1 do
                     local raycastResult = workspace:Raycast(character.Head.Position - Vector3.new(0,i,0), (character.Head.CFrame.LookVector - Vector3.new(0,i,0)).Unit * 3, raycastParams)
                     if raycastResult then
-                        if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) - 2 and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 2 then 
+                        if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) - 2.5 and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 2.5 then 
                             local climbV = Instance.new("BodyVelocity")
                             climbV.MaxForce = Vector3.new(1,1,1) * 30000
-                            climbV.Velocity = humanoidRootPart.CFrame.LookVector * 15 + Vector3.new(0,30,0)
+                            climbV.Velocity = humanoidRootPart.CFrame.LookVector * 40 + Vector3.new(0,32,0)
                             climbV.Parent = humanoidRootPart
                             task.delay(0.05, function()climbV:Destroy()end)
                             canClimb = false
                             WeaponController:Climb(character.Head.Position.Y - (raycastResult.Instance.Position.Y + raycastResult.Instance.Size.Y / 2))
+
+                            local sound = ReplicatedStorage.Assets.Sounds:FindFirstChild("Climb" .. math.random(1, 3)):Clone()
+                            sound.Parent = self.camera
+                            sound:Destroy()
                             break
                         end
                     end

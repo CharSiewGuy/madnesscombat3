@@ -18,6 +18,89 @@ function WeaponController:KnitInit()
     WeaponService = Knit.GetService("WeaponService")
 end
 
+function WeaponController:CreateImpactEffect(raycastResult, human)
+    local attachment = Instance.new("Attachment")
+    attachment.CFrame = CFrame.new(raycastResult.Position, raycastResult.Position + raycastResult.Normal)
+    attachment.Parent = workspace.Terrain
+    task.delay(1, function()
+        attachment:Destroy()
+    end)
+
+    local fxFolder
+    local sound
+
+    if human then
+        fxFolder = ReplicatedStorage.Assets.Particles.ImpactEffects.Blood
+        sound = ReplicatedStorage.Assets.Sounds.BulletImpact.Blood
+    else
+        fxFolder = ReplicatedStorage.Assets.Particles.ImpactEffects:FindFirstChild(raycastResult.Instance.Material.Name)
+        sound = ReplicatedStorage.Assets.Sounds.BulletImpact:FindFirstChild(raycastResult.Instance.Material.Name)
+    end
+
+    local can = fxFolder and sound
+    if not can then return end
+
+    for _, v in pairs(fxFolder:GetChildren()) do
+        local fxClone = v:Clone()
+        fxClone.Parent = attachment
+        fxClone:Emit(10)
+    end
+
+    local soundClone = sound:Clone()
+    soundClone.Parent = attachment
+    soundClone.PlaybackSpeed = math.random(9, 11)/10
+    soundClone:Destroy()
+end
+
+function WeaponController:CreateBulletHole(raycastResult)
+    local part = Instance.new("Part")
+    part.Size = Vector3.new(1, 1, 0.1)
+    part.Transparency = 1
+    part.CastShadow = false
+    part.Anchored = true
+    part.CanCollide = false
+    part.CanQuery = false
+    part.CanTouch = false
+    part.CFrame = CFrame.new(raycastResult.Position, raycastResult.Position + raycastResult.Normal)
+    part.Name = "bullethole"
+    part.Parent = workspace.Projectiles
+
+    local bulletHoleFolder = ReplicatedStorage.Assets.BulletHoles:FindFirstChild(raycastResult.Instance.Material.Name)
+    if not bulletHoleFolder then bulletHoleFolder = ReplicatedStorage.Assets.BulletHoles.Concrete end
+
+    local bulletHole = bulletHoleFolder:FindFirstChild(math.random(1, #bulletHoleFolder:GetChildren()))
+    if not bulletHole then return end
+
+    local fxClone = bulletHole:Clone()
+    fxClone.Parent = part
+    task.delay(8, function()
+        part:Destroy()
+    end)
+end
+
+function WeaponController:Climb(val)
+    if not self.currentViewmodel or not self.currentViewmodel.AnimationController or not self.currentModule then return end
+    self.currentModule.lerpValues.climb:set(1)
+    pcall(function()self.currentModule.loadedAnimations.hide:Play(0)end)
+    self.currentModule.equipped = false
+    task.delay(0.1, function()
+        self.currentModule.lerpValues.unequip:set(1)
+    end)
+    if val < -1 then
+        self.loadedAnimations.highclimb:Play()
+    elseif val > 0 then
+        self.loadedAnimations.lowclimb:Play()
+    else
+        self.loadedAnimations.midclimb:Play()
+    end
+    task.delay(self.loadedAnimations.midclimb.Length, function()
+        self.currentModule.lerpValues.climb:set(0)
+        pcall(function()self.currentModule.loadedAnimations.hide:Stop(0)end)
+        self.currentModule.lerpValues.unequip:set(0)
+        self.currentModule.equipped = true
+    end)
+end
+
 function WeaponController:KnitStart()
     local weaponModule = require(ReplicatedStorage.Weapons.Krait.MainModule)
     self.currentModule = weaponModule
@@ -79,11 +162,10 @@ function WeaponController:KnitStart()
     end)
 
     WeaponService.PlaySignal:Connect(function(character, name, playOnRemove)
-        print(character.Name .. " " .. name .. " play")
-        if not character or not character.HumanoidRootPart then return end
+        local can = character and character.HumanoidRootPart
+        if not can then return end
         local sound = ReplicatedStorage.Weapons.Krait.Sounds:FindFirstChild(name)
         if sound then
-            print("sucess")
             local soundClone = sound:Clone()
             soundClone.Parent = character.HumanoidRootPart
             if playOnRemove then
@@ -116,76 +198,13 @@ function WeaponController:KnitStart()
     WeaponService.FireSignal:Connect(function(character, direction)
         casters["Krait"]:Fire(character, direction)
     end)
-end
 
-function WeaponController:CreateImpactEffect(raycastResult, human)
-    local attachment = Instance.new("Attachment")
-    attachment.CFrame = CFrame.new(raycastResult.Position, raycastResult.Position + raycastResult.Normal)
-    attachment.Parent = workspace.Terrain
-
-    local fxFolder
-
-    if human then
-        fxFolder = ReplicatedStorage.Assets.Particles.ImpactEffects.Blood
-    else
-        fxFolder = ReplicatedStorage.Assets.Particles.ImpactEffects:FindFirstChild(raycastResult.Instance.Material.Name)
-    end
-
-    if not fxFolder then return end
-
-    for _, v in pairs(fxFolder:GetChildren()) do
-        local fxClone = v:Clone()
-        fxClone.Parent = attachment
-        fxClone:Emit(10)
-        task.delay(1, function()
-            attachment:Destroy()
-        end)
-    end
-end
-
-function WeaponController:CreateBulletHole(raycastResult)
-    local part = Instance.new("Part")
-    part.Size = Vector3.new(1, 1, 0.1)
-    part.Transparency = 1
-    part.CastShadow = false
-    part.Anchored = true
-    part.CFrame = CFrame.new(raycastResult.Position, raycastResult.Position + raycastResult.Normal)
-    part.Name = "bullethole"
-    part.Parent = workspace.Projectiles
-
-    local bulletHoleFolder = ReplicatedStorage.Assets.BulletHoles:FindFirstChild(raycastResult.Instance.Material.Name)
-    if not bulletHoleFolder then bulletHoleFolder = ReplicatedStorage.Assets.BulletHoles.Concrete end
-
-    local bulletHole = bulletHoleFolder:FindFirstChild(math.random(1, #bulletHoleFolder:GetChildren()))
-    if not bulletHole then return end
-
-    local fxClone = bulletHole:Clone()
-    fxClone.Parent = part
-    task.delay(8, function()
-        part:Destroy()
+    WeaponService.CreateBulletHoleSignal:Connect(function(r)
+        self:CreateBulletHole(r)
     end)
-end
 
-function WeaponController:Climb(val)
-    if not self.currentViewmodel or not self.currentViewmodel.AnimationController or not self.currentModule then return end
-    self.currentModule.lerpValues.climb:set(1)
-    pcall(function()self.currentModule.loadedAnimations.hide:Play(0)end)
-    self.currentModule.equipped = false
-    task.delay(0.1, function()
-        self.currentModule.lerpValues.unequip:set(1)
-    end)
-    if val < -1 then
-        self.loadedAnimations.highclimb:Play()
-    elseif val > 0 then
-        self.loadedAnimations.lowclimb:Play()
-    else
-        self.loadedAnimations.midclimb:Play()
-    end
-    task.delay(self.loadedAnimations.midclimb.Length, function()
-        self.currentModule.lerpValues.climb:set(0)
-        pcall(function()self.currentModule.loadedAnimations.hide:Stop(0)end)
-        self.currentModule.lerpValues.unequip:set(0)
-        self.currentModule.equipped = true
+    WeaponService.CreateImpactEffectSignal:Connect(function(r, h)
+        self:CreateImpactEffect(r, h)
     end)
 end
 return WeaponController

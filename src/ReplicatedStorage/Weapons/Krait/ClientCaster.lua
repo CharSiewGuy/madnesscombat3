@@ -69,14 +69,22 @@ function module:Initialize()
             curParent = curParent.Parent
             humanoid = curParent:FindFirstChild("Humanoid")
         until curParent == workspace or humanoid
+        
+        local resultData = {
+            ["Position"] = result.Position, 
+            ["Normal"] = result.Normal,
+            ["Instance"] = {
+                ["Material"] = result.Instance.Material
+            }
+        }
     
         if humanoid and humanoid.Parent ~= Knit.Player.Character then
             local distance = (Knit.Player.Character.HumanoidRootPart.Position - result.Position).Magnitude
             if headshot then
                 if distance < 30 then
-                    WeaponService:Damage(humanoid, 45)
+                    WeaponService:Damage(humanoid, 40)
                 elseif distance < 50 then
-                    WeaponService:Damage(humanoid, 38)
+                    WeaponService:Damage(humanoid, 35)
                 else
                     WeaponService:Damage(humanoid, 30)
                 end
@@ -101,9 +109,12 @@ function module:Initialize()
     
             HudController:ShowHitmarker(headshot)
             WeaponController:CreateImpactEffect(result, true)
+            WeaponService:CreateImpactEffect(resultData, true)
         else
             WeaponController:CreateImpactEffect(result, false)
+            WeaponService:CreateImpactEffect(resultData, false)
             WeaponController:CreateBulletHole(result)
+            WeaponService:CreateBulletHole(resultData)
         end
     end
     

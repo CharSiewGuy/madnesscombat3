@@ -3,6 +3,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage.Packages
 local FastCast = require(Packages.FastCastRedux)
 
+local Knit = require(Packages.Knit)
+local WeaponController
+Knit.OnStart():andThen(function()
+    WeaponController = Knit.GetController("WeaponController")
+end)
+
 local module = {}
 
 module.mainCaster = FastCast.new()
@@ -25,7 +31,9 @@ end
 module.mainCaster.CastTerminating:Connect(castTerminating)
 
 function module:Fire(character, direction)
-    if not character.Krait or not character.Krait.Handle or not character.Krait.Handle.Muzzle then return end
+    local can = character.Krait and character.Krait.Handle and character.Krait.Handle.MuzzleBack
+    if not can then return end
+    
     local CastParams = RaycastParams.new()
     CastParams.IgnoreWater = true
     CastParams.FilterType = Enum.RaycastFilterType.Blacklist
@@ -40,7 +48,16 @@ function module:Fire(character, direction)
     CastBehavior.Acceleration = Vector3.new(0, -5, 0)
     CastBehavior.AutoIgnoreContainer = true
 
-    self.mainCaster:Fire(character.Krait.Handle.Muzzle.WorldPosition, direction, 250, CastBehavior)
+    self.mainCaster:Fire(character.Krait.Handle.MuzzleBack.WorldPosition, direction, 350, CastBehavior)
+
+    if not character.Krait.Handle.Muzzle then return end
+
+    local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
+    flash.Parent = character.Krait.Handle.Muzzle
+    flash:Emit(1)
+    task.delay(0.15, function()
+        flash:Destroy()
+    end)
 end
 
 return module
