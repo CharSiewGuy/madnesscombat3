@@ -10,6 +10,11 @@ module.velocity = Vector3.new()
 module.speed = 0
 module.distance = 0
 
+function module:ClampMagnitude(v, max)
+    if (v.magnitude == 0) then return Vector3.new(0,0,0) end
+    return v.Unit * math.min(v.Magnitude, max) 
+end
+
 function module:fromAxisAngle(x, y, z)
 	if not y then
 		x, y, z = x.X, x.Y, x.Z

@@ -35,7 +35,7 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
 
     local directionCF = CFrame.new(Vector3.new(), direction)
     local spreadDirection = CFrame.fromOrientation(0, 0, math.random(0, math.pi * 2))
-    local spreadAngle = CFrame.fromOrientation(math.rad(math.random(1, spreadMagnitude)), 0, 0)
+    local spreadAngle = CFrame.fromOrientation(math.rad(math.random(0, spreadMagnitude)), 0, 0)
     local finalDirection = (directionCF * spreadDirection * spreadAngle).LookVector
     self.mainCaster:Fire(origin, finalDirection, 500, CastBehavior)
     WeaponService:CastProjectile(finalDirection)
@@ -80,32 +80,43 @@ function module:Initialize()
     
         if humanoid and humanoid.Parent ~= Knit.Player.Character then
             local distance = (Knit.Player.Character.HumanoidRootPart.Position - result.Position).Magnitude
+            local damage = 15
             if headshot then
                 if distance < 30 then
-                    WeaponService:Damage(humanoid, 40)
+                    damage = 40
                 elseif distance < 50 then
-                    WeaponService:Damage(humanoid, 35)
+                    damage = 35
                 else
-                    WeaponService:Damage(humanoid, 30)
+                    damage = 30
                 end
             else
                 if distance < 30 then
-                    WeaponService:Damage(humanoid, 20)
+                    damage = 20
                 elseif distance < 50 then
-                    WeaponService:Damage(humanoid, 18)
+                    damage = 18
                 else
-                    WeaponService:Damage(humanoid, 15)
+                    damage = 15
                 end            
             end
 
+            WeaponService:Damage(humanoid, damage)
+            
             local sound
             if headshot then
                 sound = ReplicatedStorage.Assets.Sounds.Headshot:Clone()
             else
-                sound = ReplicatedStorage.Assets.Sounds.Hit:Clone()
+                sound = ReplicatedStorage.Assets.Sounds["Hit" .. math.random(1,3)]:Clone()
             end
             sound.Parent = workspace.CurrentCamera
             sound:Destroy()
+
+            if humanoid.Health > 0 and humanoid.Health - damage <= 0 then
+                sound = ReplicatedStorage.Assets.Sounds.Kill:Clone()
+                sound.Parent = workspace.CurrentCamera
+                task.delay(0.1, function()
+                    sound:Destroy()
+                end)
+            end
     
             HudController:ShowHitmarker(headshot)
             WeaponController:CreateImpactEffect(result, true)

@@ -24,6 +24,7 @@ local WeaponService
 MovementController.normalSpeed = 16
 MovementController.sprintSpeed = 22
 MovementController.loadedAnimations = {}
+MovementController.fovOffset = SmoothValue:create(0, 0, 5)
 
 function MovementController:Slide(hum, humanoidRootPart)
     self.isSliding = true
@@ -31,15 +32,18 @@ function MovementController:Slide(hum, humanoidRootPart)
 
     local slideV = Instance.new("BodyVelocity")
     slideV.MaxForce = Vector3.new(1,0,1) * 30000
-    slideV.Velocity = humanoidRootPart.CFrame.LookVector * 80
+    slideV.Velocity = humanoidRootPart.CFrame.LookVector * 90
+    slideV.Name = "SlideVelocity"
     slideV.Parent = humanoidRootPart
-
-    self.slideJanitor:Add(slideV)
+    self.fovOffset:set(15)
     self.slideJanitor:Add(function()
         self.isSliding = false
-        slideV:Destroy()
+        task.delay(0.05, function()
+            slideV:Destroy()
+        end)        
         self.loadedAnimations.slide:Stop(0.2)
         Tween(hum, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(0, 0, 0)})
+        self.fovOffset:set(0)
     end)
     self.sprintJanitor:Cleanup()
 
@@ -68,7 +72,7 @@ function MovementController:Slide(hum, humanoidRootPart)
         self.slideJanitor:AddPromise(Promise.delay(0.2)):andThen(function()
             sound:Destroy()
         end)
-
+        self.fovOffset:set(0)
         self:Crouch(hum)
     end)
 
@@ -151,7 +155,9 @@ function MovementController:KnitStart()
             self.camera.CFrame *= CFrame.new(pos) * CFrame.Angles(rot.X, rot.Y, rot.Z)
         end)
 
-        local value = SmoothValue:create(self.normalSpeed, self.normalSpeed, 10)
+        local value = SmoothValue:create(self.normalSpeed, self.normalSpeed, 5)
+        self.fovOffset.value = 0
+        self.fovOffset.target = 0
 
         local function handleAction(actionName, inputState)
             if actionName == "Sprint" then
@@ -161,21 +167,17 @@ function MovementController:KnitStart()
                         self.isSprinting = true
                         value:set(self.sprintSpeed)
                         walkShake.Amplitude = 0.2
-                        HudController.crosshairOffset:set(100)
+                        HudController.crosshairOffset:set(80)
                         self.loadedAnimations.sprint:Play(0.3)
                         self.sprintJanitor:Add(function()
                             self.isSprinting = false
                             value:set(self.normalSpeed)
                             walkShake.Amplitude = 0
                             self.loadedAnimations.sprint:Stop(0.3)
-                            HudController.crosshairOffset:set(55)
+                            HudController.crosshairOffset:set(40)
                         end)
                         self.slideJanitor:Cleanup()
                         self.crouchJanitor:Cleanup()
-
-                        local sound = ReplicatedStorage.Assets.Sounds:FindFirstChild("Sprint" .. math.random(1, 2)):Clone()
-                        sound.Parent = self.camera
-                        sound:Destroy()
                     end
                 elseif inputState == Enum.UserInputState.End then
                    self.sprintJanitor:Cleanup()
@@ -213,7 +215,7 @@ function MovementController:KnitStart()
                     self.sprintJanitor:Cleanup()
                 end
             else
-                HudController.crosshairOffset:set(55)
+                HudController.crosshairOffset:set(40)
                 self.sprintJanitor:Cleanup()
             end
         end))
@@ -250,12 +252,20 @@ function MovementController:KnitStart()
             elseif new == Enum.HumanoidStateType.Jumping then
                 self.crouchJanitor:Cleanup()
                 self.slideJanitor:Cleanup()
+                if humanoidRootPart:FindFirstChild("SlideVelocity") then
+                    local slideV = Instance.new("BodyVelocity")
+                    slideV.Name = "SlideJumpVel"
+                    slideV.MaxForce = Vector3.new(1,0,1) * 15000
+                    slideV.Velocity = humanoidRootPart.SlideVelocity.Velocity * 3                  
+                    slideV.Parent = humanoidRootPart
+                    Tween(slideV, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.CFrame.LookVector * 30})
+                end
             end
         end))
         
         self.janitor:Add(UserInputService.JumpRequest:Connect(onJumpRequest))
         
-        self.janitor:Add(RunService.Stepped:Connect(function(dt)
+        self.janitor:Add(RunService.Heartbeat:Connect(function(dt)
             if self.isSliding then
                 hum.WalkSpeed = 0
             elseif self.isCrouching then
@@ -274,7 +284,8 @@ function MovementController:KnitStart()
                 for i = 0, 0.5, 0.1 do
                     local raycastResult = workspace:Raycast(character.Head.Position - Vector3.new(0,i,0), (character.Head.CFrame.LookVector - Vector3.new(0,i,0)).Unit * 3, raycastParams)
                     if raycastResult then
-                        if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) - 2.5 and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 2.5 then 
+                        if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) - 3 and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 4 then 
+                            if humanoidRootPart:FindFirstChild("SlideJumpVel") then humanoidRootPart.SlideJumpVel:Destroy() end 
                             local climbV = Instance.new("BodyVelocity")
                             climbV.MaxForce = Vector3.new(1,1,1) * 30000
                             climbV.Velocity = humanoidRootPart.CFrame.LookVector * 40 + Vector3.new(0,32,0)
@@ -291,6 +302,8 @@ function MovementController:KnitStart()
                     end
                 end
             end
+
+            self.camera.FieldOfView = WeaponController.baseFov:update(dt) + self.fovOffset:update(dt)
         end))
 
         

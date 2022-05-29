@@ -5,6 +5,9 @@ local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
 
+local Modules = ReplicatedStorage.Modules
+local SmoothValue = require(Modules.SmoothValue)
+
 local WeaponController = Knit.CreateController { Name = "WeaponController" }
 WeaponController._janitor = Janitor.new()
 
@@ -13,6 +16,9 @@ local WeaponService
 WeaponController.currentViewmodel = nil
 WeaponController.currentModule = nil
 WeaponController.loadedAnimations = {}
+
+WeaponController.initialMouseSens = 0
+WeaponController.baseFov = SmoothValue.create(90, 90, 8)
 
 function WeaponController:KnitInit()
     WeaponService = Knit.GetService("WeaponService")
@@ -43,7 +49,7 @@ function WeaponController:CreateImpactEffect(raycastResult, human)
     for _, v in pairs(fxFolder:GetChildren()) do
         local fxClone = v:Clone()
         fxClone.Parent = attachment
-        fxClone:Emit(10)
+        fxClone:Emit(12)
     end
 
     local soundClone = sound:Clone()
@@ -104,6 +110,8 @@ end
 function WeaponController:KnitStart()
     local weaponModule = require(ReplicatedStorage.Weapons.Krait.MainModule)
     self.currentModule = weaponModule
+
+    self.initialMouseSens = game:GetService("UserInputService").MouseDeltaSensitivity
 
     Knit.Player.CharacterAdded:Connect(function(character)
         local hum = character:WaitForChild("Humanoid")
@@ -183,11 +191,9 @@ function WeaponController:KnitStart()
     end)
 
     WeaponService.StopSignal:Connect(function(character, name)
-        print(character.Name .. " " .. name .. " stop")
         if not character.HumanoidRootPart then return end
         local sound = character.HumanoidRootPart:FindFirstChild(name)
         if sound then
-            print("sucess")
             sound:Destroy()
         end
     end)

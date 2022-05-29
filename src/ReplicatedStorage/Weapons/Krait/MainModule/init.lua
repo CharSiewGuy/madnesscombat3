@@ -19,6 +19,7 @@ local SmoothValue = require(Modules.SmoothValue)
 
 local WeaponService
 
+local WeaponController
 local HudController
 local MovementController
 
@@ -39,6 +40,22 @@ module.lerpValues.unequip = SmoothValue:create(0, 0, 4)
 module.charspeed = 0
 module.running = false
 module.OldCamCF = nil
+
+module.unscopedPattern = {
+    {1, 2, 1, -2, -1, 0.4};
+    {5, 2, 0.8, -1.7, -0.8, 0.5};
+    {10, 2, 1.2, -1.5, -1, 0.6};
+    {20, 2, 1, -1.5, -0.5, 0.8};
+    {30, 2, -1, -1.5, 0.5, 1};
+}
+
+module.scopedPattern = {
+    {1, 2, 1, -2, -1, 0.2};
+    {5, 2, 1, -2, -1, 0.5};
+    {10, 2, 1, -1.8, -1, 0.6};
+    {20, 2, 1, -1.8, -0.8, 0.8};
+    {30, 2, -1, -1.8, 0.8, 1};
+}
 
 function module:SetupAnimations(character, vm)
     self.springs.sway = Spring.create()
@@ -103,7 +120,7 @@ function module:SetupAnimations(character, vm)
         vm.HumanoidRootPart.CFrame = self.camera.CoordinateFrame
 
         local mouseDelta = UserInputService:GetMouseDelta()
-        self.springs.sway:shove(Vector3.new(mouseDelta.X / 400,mouseDelta.Y / 400))
+        self.springs.sway:shove(Vector3.new(mouseDelta.X/300,mouseDelta.Y/300))
         local sway = self.springs.sway:update(dt)
 
         local gunbobcf = CFrame.new(0,0,0)
@@ -147,6 +164,7 @@ function module:SetupAnimations(character, vm)
         else
             RelativeVelocity = CFrame.new().VectorToObjectSpace(character.HumanoidRootPart.CFrame, character.HumanoidRootPart.Velocity)
         end
+        RelativeVelocity = UtilModule:ClampMagnitude(RelativeVelocity, 15)
         self.springs.speed.t = (Vector3.new(1, 0, 1) * RelativeVelocity).Magnitude
 		self.springs.velocity.t = RelativeVelocity
 		UtilModule.speed = self.springs.speed.p
@@ -233,7 +251,8 @@ function module:ToggleAim(inputState, vm)
         if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.scopeOut) then self.loadedAnimations.scopeOut:Stop(0) end
         if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.scoped) then self.loadedAnimations.scoped:Stop(0) end
 
-        self.aimJanitor:AddPromise(Tween(self.camera, TweenInfo.new(0.2), {FieldOfView = 65}))
+        WeaponController.baseFov:set(65)
+        game:GetService("UserInputService").MouseDeltaSensitivity = 65/90 * WeaponController.initialMouseSens
         HudController:ShowVignette(true, 0.2)
         HudController:ShowCrosshair(false, 0.2)
         local oldOffset = HudController.crosshairOffset.target
@@ -248,7 +267,8 @@ function module:ToggleAim(inputState, vm)
             if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController,self.loadedAnimations.scopeIdle) then self.loadedAnimations.scopeIdle:Stop() end
             self.loaded3PAnimations.scoped:Stop()
             self.lerpValues.aim:set(0)
-            self.janitor:AddPromise(Tween(self.camera, TweenInfo.new(0.2), {FieldOfView = 90}))
+            WeaponController.baseFov:set(90)
+            game:GetService("UserInputService").MouseDeltaSensitivity = WeaponController.initialMouseSens
             HudController:ShowVignette(false, 0.2)
             HudController:ShowCrosshair(true, 0.2)
             HudController.crosshairOffset:set(oldOffset)
@@ -333,7 +353,7 @@ end
 
 
 function module:Equip(character, vm)
-    self.camera.FieldOfView = 90
+    WeaponController.baseFov:set(90)
 
     local Krait = script.Parent.Krait:Clone()
     Krait.Parent = vm
@@ -408,7 +428,7 @@ function module:Equip(character, vm)
                 end)
 
                 CastParams.FilterDescendantsInstances = {character, self.camera}
-                local direction = self.camera.CFrame.LookVector * 500
+                local direction
 
                 if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.Reload) then 
                     self.loadedAnimations.Reload:Stop(0)
@@ -417,36 +437,75 @@ function module:Equip(character, vm)
                     self.loaded3PAnimations.Reload:Stop(0)
                 end
 
+                local randSound = "Shoot" .. math.random(1, 3)
+				local sound = script.Parent.Sounds[randSound]:Clone()
+				sound.Parent = self.camera
+                sound.PlayOnRemove = false
+                if tick() - self.lastshot > 0.3 then
+                    sound.Volume = 2.5
+                else
+                    sound.Volume = 1.5
+                end
+				sound:Play() 
+                task.delay(sound.TimeLength, function()
+                    sound:Destroy()
+                end)   
+                WeaponService:PlaySound(randSound, true) 
+                
+                if self.camera:FindFirstChild("Tail") then self.camera.Tail:Destroy() end
+                local tailSound = script.Parent.Sounds.Tail:Clone()
+                tailSound.Parent = self.camera
+                tailSound:Play()
+
+                local emptyClipSound = script.Parent.Sounds.EmptyClip:Clone()
+                emptyClipSound.Parent = self.camera
+                emptyClipSound.Volume = (30/self.bullets)/2
+                emptyClipSound:Destroy()
+
                 if not self.scopedIn then
-                    ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, 3)
                     self.loadedAnimations.Shoot:Play(0)
                     self.loaded3PAnimations.shoot:Play()
-                    self.springs.fire:shove(Vector3.new(4, math.random(-2, 2), 6))
-                    task.delay(0.2, function()
-                        self.springs.fire:shove(Vector3.new(-3, math.random(-1, 1), -6))
+                    self.curshots = (tick() - self.lastshot > 0.3 and 1 or self.curshots + 1)
+                    self.lastshot = tick()
+                    if self.curshots > 28 then
+                        self.curshots = 1
+                    end
+                    local curRecoil
+                    for _, v in pairs(self.unscopedPattern) do
+                        if self.curshots < v[1] then
+                            curRecoil = v
+                            break
+                        end
+                    end
+                    self.springs.fire:shove(Vector3.new(curRecoil[2], curRecoil[3], 4))
+                    task.delay(0.1, function()
+                        self.springs.fire:shove(Vector3.new(curRecoil[4], curRecoil[5], -4))
                     end)
+                    direction = (self.camera.CFrame * CFrame.Angles(math.rad(1.5),math.rad(1.5),0)).LookVector
+                    ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, curRecoil[6])
                 else
-                    ClientCaster:Fire(vm.Krait.Handle.Muzzle.WorldPosition, direction, character, 1.05)
                     self.loadedAnimations.scopedShoot:Play(0)
                     self.loaded3PAnimations.scopedShoot:Play(0)
                     self.curshots = (tick() - self.lastshot > 0.3 and 1 or self.curshots + 1)
                     self.lastshot = tick()
-                    if self.curshots > 30 then
-                        self.curshots = 10
+                    if self.curshots > 24 then
+                        self.curshots = 1
                     end
-                    if self.curshots < 10 then
-                        self.springs.fire:shove(Vector3.new(1, 0, 6))
-                        task.delay(0.2, function()
-                            self.springs.fire:shove(Vector3.new(-0.8, 0, -6))
-                        end)
-                    else
-                        self.springs.fire:shove(Vector3.new(1, math.random(-1, 1), 6))
-                        task.delay(0.2, function()
-                            self.springs.fire:shove(Vector3.new(-0.6, math.random(-0.5, 0.5), -6))
-                        end)
+                    local curRecoil
+                    for _, v in pairs(self.scopedPattern) do
+                        if self.curshots < v[1] then
+                            curRecoil = v
+                            break
+                        end
                     end
+                    self.springs.fire:shove(Vector3.new(curRecoil[2], curRecoil[3], 4))
+                    task.delay(0.1, function()
+                        self.springs.fire:shove(Vector3.new(curRecoil[4], curRecoil[5], -4))
+                    end)
+                    direction = self.camera.CFrame.LookVector
+                    ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, curRecoil[6])
                 end
-
+                
                 local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
                 flash.Parent = vm.Krait.Handle.Muzzle
                 flash:Emit(1)
@@ -458,17 +517,7 @@ function module:Equip(character, vm)
 
                 self.janitor:AddPromise(Promise.delay(.05)):andThen(function()
                     vm.Krait.Handle.Muzzle.PointLight.Enabled = false
-                end)
-				
-                local randSound = "Shoot" .. math.random(1, 3)
-				local sound = script.Parent.Sounds[randSound]:Clone()
-				sound.Parent = self.camera
-                sound.PlayOnRemove = false
-				sound:Play() 
-                task.delay(sound.TimeLength, function()
-                    sound:Destroy()
-                end)   
-                WeaponService:PlaySound(randSound, true)             
+                end)         
 
                 HudController:ExpandCrosshair()
                 self.bullets = self.bullets - 1
@@ -500,6 +549,7 @@ function module:Unequip()
 end
 
 Knit.OnStart():andThen(function()
+    WeaponController = Knit.GetController("WeaponController")
     HudController = Knit.GetController("HudController")
     MovementController = Knit.GetController("MovementController")
     WeaponService = Knit.GetService("WeaponService")
