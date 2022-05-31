@@ -40,6 +40,10 @@ function module:viewmodelBob(aa, rr, baseWalkSpeed)
 	--end
 end
 
+function module:ViewmodelBreath(a)
+	local d, s = os.clock() * 6, 2 * (1.2 - a)
+	return CFrame.new(math.cos(d / 8) * s / 128, -math.sin(d / 4) * s / 128, math.sin(d / 16) * s / 64)
+end
 
 function module:GetMousePos(unitRay, CastParams)
     local ori, dir = unitRay.Origin, unitRay.Direction * 500

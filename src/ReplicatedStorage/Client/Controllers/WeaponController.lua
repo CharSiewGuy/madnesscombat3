@@ -12,6 +12,7 @@ local WeaponController = Knit.CreateController { Name = "WeaponController" }
 WeaponController._janitor = Janitor.new()
 
 local WeaponService
+local HudController
 
 WeaponController.currentViewmodel = nil
 WeaponController.currentModule = nil
@@ -22,6 +23,7 @@ WeaponController.baseFov = SmoothValue.create(90, 90, 8)
 
 function WeaponController:KnitInit()
     WeaponService = Knit.GetService("WeaponService")
+    HudController = Knit.GetController("HudController")
 end
 
 function WeaponController:CreateImpactEffect(raycastResult, human)
@@ -107,6 +109,19 @@ function WeaponController:Climb(val)
     end)
 end
 
+function WeaponController:Damage(humanoid, damage)
+    if humanoid.Health > 0 and humanoid.Health - damage <= 0 then
+        local sound = ReplicatedStorage.Assets.Sounds.Kill:Clone()
+        sound.Parent = workspace.CurrentCamera
+        task.delay(0.1, function()
+            HudController:PromptKill(humanoid.Parent.Name)
+            sound:Destroy()
+        end)
+    end
+
+    WeaponService:Damage(humanoid, damage)
+end
+
 function WeaponController:KnitStart()
     local weaponModule = require(ReplicatedStorage.Weapons.Krait.MainModule)
     self.currentModule = weaponModule
@@ -162,6 +177,11 @@ function WeaponController:KnitStart()
         
         ContextActionService:BindAction("Equip", handleAction, true, Enum.KeyCode.One)
         ContextActionService:BindAction("Unequip", handleAction, true, Enum.KeyCode.Two)
+
+        HudController:SetHealth(100)
+        hum.HealthChanged:Connect(function(h)
+            HudController:SetHealth(h)
+        end)
 
         self._janitor:Add(hum.Died:Connect(function()
             weaponModule:Unequip(character)

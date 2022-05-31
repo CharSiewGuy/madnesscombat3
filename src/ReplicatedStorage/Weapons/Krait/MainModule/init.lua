@@ -15,6 +15,7 @@ local Tween = require(Packages.TweenPromise)
 local Modules = ReplicatedStorage.Modules
 local Spring = require(Modules.Spring)
 local Spring2 = require(Modules.Spring2)
+local Spring3 = require(Modules.Spring3)
 local SmoothValue = require(Modules.SmoothValue)
 
 local WeaponService
@@ -42,19 +43,21 @@ module.running = false
 module.OldCamCF = nil
 
 module.unscopedPattern = {
-    {1, 2, 1, -2, -1, 0.4};
-    {5, 2, 0.8, -1.7, -0.8, 0.5};
-    {10, 2, 1.2, -1.5, -1, 0.6};
-    {20, 2, 1, -1.5, -0.5, 0.8};
-    {30, 2, -1, -1.5, 0.5, 1};
+    {1, 2, 1, -2, -1, 0.6};
+    {5, 2, 1, -1.7, -0.8, 0.8};
+    {10, 2, 1.2, -1.7, -1, 0.9};
+    {20, 2, -1, -1.7, 0.5, 1};
+    {25, 2, 1, -1.5, -0.5, 1.2};
+    {30, 2, -1, -1.5, 0.5, 1.4};
 }
 
 module.scopedPattern = {
-    {1, 2, 1, -2, -1, 0.2};
-    {5, 2, 1, -2, -1, 0.5};
-    {10, 2, 1, -1.8, -1, 0.6};
-    {20, 2, 1, -1.8, -0.8, 0.8};
-    {30, 2, -1, -1.8, 0.8, 1};
+    {1, 2, 1, -2, -1, 0.6};
+    {5, 2, 1, -2, -0.8, 0.8};
+    {10, 2, 1.2, -1.8, -1, 0.9};
+    {20, 2, -1, -1.7, 0.7, 1};
+    {25, 2, 1, -1.6, -0.7, 1.2};
+    {30, 2, -1, -1.6, 0.7, 1.4};
 }
 
 function module:SetupAnimations(character, vm)
@@ -62,7 +65,7 @@ function module:SetupAnimations(character, vm)
 
     self.springs.jump = Spring.create(1, 10, 0, 1.8)
     self.springs.jumpCam = Spring.create()
-    self.springs.fire = Spring.create()
+    self.springs.fire = Spring3.new()
     self.springs.speed = Spring2.spring.new()
     self.springs.speed.s = 16
     self.springs.velocity = Spring2.spring.new(Vector3.new())
@@ -117,7 +120,7 @@ function module:SetupAnimations(character, vm)
 
     self.janitor:Add(RunService.RenderStepped:Connect(function(dt)
         if not vm.HumanoidRootPart then return end
-        vm.HumanoidRootPart.CFrame = self.camera.CoordinateFrame
+        vm.HumanoidRootPart.CFrame = self.camera.CFrame
 
         local mouseDelta = UserInputService:GetMouseDelta()
         self.springs.sway:shove(Vector3.new(mouseDelta.X/300,mouseDelta.Y/300))
@@ -125,6 +128,7 @@ function module:SetupAnimations(character, vm)
 
         local gunbobcf = CFrame.new(0,0,0)
         local jump = self.springs.jump:update(dt)
+        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0, math.abs(jump.y/10))
 
         local idleOffset = CFrame.new(0.5,-0.5,-0.5)
         local sprintOffset = idleOffset:Lerp(CFrame.new(0.5,-1,-1) * CFrame.Angles(0.1,1,0.2), self.lerpValues.sprint:update(dt))
@@ -174,8 +178,10 @@ function module:SetupAnimations(character, vm)
         if not MovementController.isSprinting then
             if self.isAiming then
                 vm.HumanoidRootPart.CFrame *= UtilModule:viewmodelBob(0.3, 0.15, character.Humanoid.WalkSpeed)
+                vm.HumanoidRootPart.CFrame *= UtilModule:ViewmodelBreath(0.8)
             else
                 vm.HumanoidRootPart.CFrame *= UtilModule:viewmodelBob(0.8, 0.4, character.Humanoid.WalkSpeed)
+                vm.HumanoidRootPart.CFrame *= UtilModule:ViewmodelBreath(0)
             end
         end
 
@@ -257,6 +263,7 @@ function module:ToggleAim(inputState, vm)
         HudController:ShowCrosshair(false, 0.2)
         local oldOffset = HudController.crosshairOffset.target
         HudController.crosshairOffset:set(5)
+        self.lerpValues.unequip.speed = 15
 
         self.aimJanitor:Add(function()
             self.isAiming = false
@@ -273,6 +280,7 @@ function module:ToggleAim(inputState, vm)
             HudController:ShowCrosshair(true, 0.2)
             HudController.crosshairOffset:set(oldOffset)
             pcall(function() self.loadedAnimations.scopedShoot:Stop(0) end)
+            self.lerpValues.unequip.speed = 4
         end)
 
         if self.scopeOutPromise then
@@ -442,9 +450,9 @@ function module:Equip(character, vm)
 				sound.Parent = self.camera
                 sound.PlayOnRemove = false
                 if tick() - self.lastshot > 0.3 then
-                    sound.Volume = 2.5
+                    sound.Volume = 3
                 else
-                    sound.Volume = 1.5
+                    sound.Volume = 2
                 end
 				sound:Play() 
                 task.delay(sound.TimeLength, function()
@@ -477,9 +485,9 @@ function module:Equip(character, vm)
                             break
                         end
                     end
-                    self.springs.fire:shove(Vector3.new(curRecoil[2], curRecoil[3], 4))
+                    self.springs.fire:shove(Vector3.new(curRecoil[2], curRecoil[3], 6))
                     task.delay(0.1, function()
-                        self.springs.fire:shove(Vector3.new(curRecoil[4], curRecoil[5], -4))
+                        self.springs.fire:shove(Vector3.new(curRecoil[4], curRecoil[5], -6))
                     end)
                     direction = (self.camera.CFrame * CFrame.Angles(math.rad(1.5),math.rad(1.5),0)).LookVector
                     ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, curRecoil[6])

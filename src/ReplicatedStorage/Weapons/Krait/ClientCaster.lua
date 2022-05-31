@@ -99,7 +99,7 @@ function module:Initialize()
                 end            
             end
 
-            WeaponService:Damage(humanoid, damage)
+            WeaponController:Damage(humanoid, damage)
             
             local sound
             if headshot then
@@ -109,14 +109,6 @@ function module:Initialize()
             end
             sound.Parent = workspace.CurrentCamera
             sound:Destroy()
-
-            if humanoid.Health > 0 and humanoid.Health - damage <= 0 then
-                sound = ReplicatedStorage.Assets.Sounds.Kill:Clone()
-                sound.Parent = workspace.CurrentCamera
-                task.delay(0.1, function()
-                    sound:Destroy()
-                end)
-            end
     
             HudController:ShowHitmarker(headshot)
             WeaponController:CreateImpactEffect(result, true)

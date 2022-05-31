@@ -22,7 +22,7 @@ local WeaponController
 local WeaponService
 
 MovementController.normalSpeed = 16
-MovementController.sprintSpeed = 22
+MovementController.sprintSpeed = 24
 MovementController.loadedAnimations = {}
 MovementController.fovOffset = SmoothValue:create(0, 0, 5)
 
@@ -32,8 +32,8 @@ function MovementController:Slide(hum, humanoidRootPart)
 
     local slideV = Instance.new("BodyVelocity")
     slideV.MaxForce = Vector3.new(1,0,1) * 30000
-    slideV.Velocity = humanoidRootPart.CFrame.LookVector * 90
-    slideV.Name = "SlideVelocity"
+    slideV.Velocity = humanoidRootPart.CFrame.LookVector * math.clamp(humanoidRootPart.Velocity.Magnitude * 3.5, 20, 100)
+    slideV.Name = "SlideVel"
     slideV.Parent = humanoidRootPart
     self.fovOffset:set(15)
     self.slideJanitor:Add(function()
@@ -63,8 +63,8 @@ function MovementController:Slide(hum, humanoidRootPart)
     end)
 
     self.slideJanitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.5, 0)}))
-    self.slideJanitor:AddPromise(Tween(slideV, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.CFrame.LookVector * 30}))
-    self.slideJanitor:AddPromise(Promise.delay(0.7)):andThen(function()
+    self.slideJanitor:AddPromise(Tween(slideV, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.CFrame.LookVector * 30}))
+    self.slideJanitor:AddPromise(Promise.delay(0.6)):andThen(function()
         self.isSliding = false
         slideV:Destroy()
         self.loadedAnimations.slide:Stop(0.2)
@@ -176,7 +176,7 @@ function MovementController:KnitStart()
                             self.loadedAnimations.sprint:Stop(0.3)
                             HudController.crosshairOffset:set(40)
                         end)
-                        self.slideJanitor:Cleanup()
+                        task.delay(0.05, function()self.slideJanitor:Cleanup()end)
                         self.crouchJanitor:Cleanup()
                     end
                 elseif inputState == Enum.UserInputState.End then
@@ -251,14 +251,17 @@ function MovementController:KnitStart()
                 canDoubleJump = true
             elseif new == Enum.HumanoidStateType.Jumping then
                 self.crouchJanitor:Cleanup()
-                self.slideJanitor:Cleanup()
-                if humanoidRootPart:FindFirstChild("SlideVelocity") then
+                task.delay(0.05, function()self.slideJanitor:Cleanup()end)
+                if humanoidRootPart:FindFirstChild("SlideVel") then
                     local slideV = Instance.new("BodyVelocity")
                     slideV.Name = "SlideJumpVel"
                     slideV.MaxForce = Vector3.new(1,0,1) * 15000
-                    slideV.Velocity = humanoidRootPart.SlideVelocity.Velocity * 3                  
+                    slideV.Velocity = humanoidRootPart.SlideVel.Velocity * 5                 
                     slideV.Parent = humanoidRootPart
-                    Tween(slideV, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.CFrame.LookVector * 30})
+                    Tween(slideV, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.SlideVel.Velocity * 1})
+                    task.delay(0.5, function()
+                        if slideV then slideV:Destroy() end
+                    end)
                 end
             end
         end))
@@ -286,6 +289,7 @@ function MovementController:KnitStart()
                     if raycastResult then
                         if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) - 3 and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 4 then 
                             if humanoidRootPart:FindFirstChild("SlideJumpVel") then humanoidRootPart.SlideJumpVel:Destroy() end 
+                            if humanoidRootPart:FindFirstChild("SlideVel") then humanoidRootPart.SlideVel:Destroy() end 
                             local climbV = Instance.new("BodyVelocity")
                             climbV.MaxForce = Vector3.new(1,1,1) * 30000
                             climbV.Velocity = humanoidRootPart.CFrame.LookVector * 40 + Vector3.new(0,32,0)
@@ -304,6 +308,9 @@ function MovementController:KnitStart()
             end
 
             self.camera.FieldOfView = WeaponController.baseFov:update(dt) + self.fovOffset:update(dt)
+
+            HudController:SetVel(math.floor(humanoidRootPart.Velocity.Magnitude))
+            HudController.crosshairOffset:set(humanoidRootPart.Velocity.Magnitude)
         end))
 
         
