@@ -176,7 +176,7 @@ function MovementController:KnitStart()
                             self.loadedAnimations.sprint:Stop(0.3)
                             HudController.crosshairOffset:set(40)
                         end)
-                        task.delay(0.05, function()self.slideJanitor:Cleanup()end)
+                        self.slideJanitor:Cleanup()
                         self.crouchJanitor:Cleanup()
                     end
                 elseif inputState == Enum.UserInputState.End then
@@ -251,7 +251,7 @@ function MovementController:KnitStart()
                 canDoubleJump = true
             elseif new == Enum.HumanoidStateType.Jumping then
                 self.crouchJanitor:Cleanup()
-                task.delay(0.05, function()self.slideJanitor:Cleanup()end)
+                self.slideJanitor:Cleanup()
                 if humanoidRootPart:FindFirstChild("SlideVel") then
                     local slideV = Instance.new("BodyVelocity")
                     slideV.Name = "SlideJumpVel"
