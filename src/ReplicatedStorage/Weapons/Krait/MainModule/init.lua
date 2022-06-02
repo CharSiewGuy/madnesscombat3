@@ -64,7 +64,7 @@ function module:SetupAnimations(character, vm)
     self.springs.sway = Spring.create()
 
     self.springs.jump = Spring.create(1, 10, 0, 1.8)
-    self.springs.jumpCam = Spring.create()
+    self.springs.jumpCam = Spring3.new()
     self.springs.fire = Spring3.new()
     self.springs.speed = Spring2.spring.new()
     self.springs.speed.s = 16
@@ -79,13 +79,18 @@ function module:SetupAnimations(character, vm)
             task.delay(0.2, function()
                 self.springs.jump:shove(Vector3.new(0, -0.5))
             end)
-            self.springs.jumpCam:shove(Vector3.new(0, 0.1))
-        elseif newState == Enum.HumanoidStateType.Landed then
+            self.springs.jumpCam:shove(Vector3.new(0, -0.1))
+            task.delay(0.1, function()
+                self.springs.jumpCam:shove(Vector3.new(0, 0.1))
+            end)        elseif newState == Enum.HumanoidStateType.Landed then
             self.springs.jump:shove(Vector3.new(0, -0.5))
             task.delay(0.15, function()
                 self.springs.jump:shove(Vector3.new(0, 0.5))
             end)
             self.springs.jumpCam:shove(Vector3.new(0, -0.1))
+            task.delay(0.1, function()
+                self.springs.jumpCam:shove(Vector3.new(0, 0.1))
+            end)
         end
         
         if newState == Enum.HumanoidStateType.Swimming then
@@ -342,11 +347,11 @@ function module:Reload()
         end))
 
         self.janitor:AddPromise(Promise.delay(0.25)):andThen(function()
-            UtilModule:SetGlow(self.camera.viewmodel.Krait, false)
+            UtilModule:SetGlow(self.camera.viewmodel.Prime, false)
         end)
 
         self.janitor:AddPromise(Promise.delay(0.85)):andThen(function()
-            UtilModule:SetGlow(self.camera.viewmodel.Krait, true)
+            UtilModule:SetGlow(self.camera.viewmodel.Prime, true)
         end)
 
         self.janitor:Add(function()
@@ -363,15 +368,15 @@ end
 function module:Equip(character, vm)
     WeaponController.baseFov:set(90)
 
-    local Krait = script.Parent.Krait:Clone()
-    Krait.Parent = vm
-    self.janitor:Add(Krait)
+    local Prime = script.Parent.Prime:Clone()
+    Prime.Parent = vm
+    self.janitor:Add(Prime)
 
     local vmRoot = vm:WaitForChild("HumanoidRootPart")
 
     local weaponMotor6D = script.Parent.Handle:Clone()
     weaponMotor6D.Part0 = vmRoot
-    weaponMotor6D.Part1 = Krait.Handle
+    weaponMotor6D.Part1 = Prime.Handle
     weaponMotor6D.Parent = vmRoot
 
     self:SetupAnimations(character, vm)
@@ -385,24 +390,24 @@ function module:Equip(character, vm)
 
     local function handleAction(actionName, inputState)
         if self.bullets <= 0 or self.isReloading then return end
-        if actionName == "KraitShoot" then
+        if actionName == "PrimeShoot" then
             if inputState == Enum.UserInputState.Begin then
                 self.isFiring = true
             elseif inputState == Enum.UserInputState.End then
                 self.isFiring = false
             end 
-        elseif actionName == "KraitAim" then
+        elseif actionName == "PrimeAim" then
             self:ToggleAim(inputState, vm)
-        elseif actionName == "KraitReload" then
+        elseif actionName == "PrimeReload" then
             if inputState == Enum.UserInputState.Begin then
                 self:Reload()
             end
         end
     end
 
-    ContextActionService:BindAction("KraitShoot", handleAction, true, Enum.UserInputType.MouseButton1)
-    ContextActionService:BindAction("KraitAim", handleAction, true, Enum.UserInputType.MouseButton2)
-    ContextActionService:BindAction("KraitReload", handleAction, true, Enum.KeyCode.R)
+    ContextActionService:BindAction("PrimeShoot", handleAction, true, Enum.UserInputType.MouseButton1)
+    ContextActionService:BindAction("PrimeAim", handleAction, true, Enum.UserInputType.MouseButton2)
+    ContextActionService:BindAction("PrimeReload", handleAction, true, Enum.KeyCode.R)
 
     ClientCaster:Initialize()
 
@@ -450,9 +455,9 @@ function module:Equip(character, vm)
 				sound.Parent = self.camera
                 sound.PlayOnRemove = false
                 if tick() - self.lastshot > 0.3 then
-                    sound.Volume = 3
+                    sound.Volume = 10
                 else
-                    sound.Volume = 2
+                    sound.Volume = 7
                 end
 				sound:Play() 
                 task.delay(sound.TimeLength, function()
@@ -489,8 +494,12 @@ function module:Equip(character, vm)
                     task.delay(0.1, function()
                         self.springs.fire:shove(Vector3.new(curRecoil[4], curRecoil[5], -6))
                     end)
-                    direction = (self.camera.CFrame * CFrame.Angles(math.rad(1.5),math.rad(1.5),0)).LookVector
-                    ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, curRecoil[6])
+                    if (self.camera.CFrame.Position - Knit.Player:GetMouse().Hit.Position).Magnitude < 50 then
+                        direction = (self.camera.CFrame * CFrame.Angles(math.rad(1.5),math.rad(1.5),0)).LookVector
+                    else
+                        direction = self.camera.CFrame.LookVector
+                    end
+                    ClientCaster:Fire(vm.Prime.Handle.MuzzleBack.WorldPosition, direction, character, curRecoil[6])
                 else
                     self.loadedAnimations.scopedShoot:Play(0)
                     self.loaded3PAnimations.scopedShoot:Play(0)
@@ -511,20 +520,20 @@ function module:Equip(character, vm)
                         self.springs.fire:shove(Vector3.new(curRecoil[4], curRecoil[5], -4))
                     end)
                     direction = self.camera.CFrame.LookVector
-                    ClientCaster:Fire(vm.Krait.Handle.MuzzleBack.WorldPosition, direction, character, curRecoil[6])
+                    ClientCaster:Fire(vm.Prime.Handle.MuzzleBack.WorldPosition, direction, character, curRecoil[6])
                 end
                 
                 local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
-                flash.Parent = vm.Krait.Handle.Muzzle
+                flash.Parent = vm.Prime.Handle.Muzzle
                 flash:Emit(1)
                 task.delay(0.15, function()
                     flash:Destroy()
 			    end)
 
-                vm.Krait.Handle.Muzzle.PointLight.Enabled = true
+                vm.Prime.Handle.Muzzle.PointLight.Enabled = true
 
                 self.janitor:AddPromise(Promise.delay(.05)):andThen(function()
-                    vm.Krait.Handle.Muzzle.PointLight.Enabled = false
+                    vm.Prime.Handle.Muzzle.PointLight.Enabled = false
                 end)         
 
                 HudController:ExpandCrosshair()
@@ -542,9 +551,9 @@ function module:Equip(character, vm)
         self.loadedAnimations = {}
         HumanoidAnimatorUtils.stopAnimations(vm.AnimationController, 0)
 
-        ContextActionService:UnbindAction("KraitShoot")
-        ContextActionService:UnbindAction("KraitAim")
-        ContextActionService:UnbindAction("KraitReload")
+        ContextActionService:UnbindAction("PrimeShoot")
+        ContextActionService:UnbindAction("PrimeAim")
+        ContextActionService:UnbindAction("PrimeReload")
         ClientCaster:Deinitialize()
         self.canFire = false
         self.isFiring = false

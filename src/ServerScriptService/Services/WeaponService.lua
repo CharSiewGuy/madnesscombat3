@@ -9,6 +9,7 @@ local WeaponService = Knit.CreateService {
         PlaySignal = Knit.CreateSignal(), 
         StopSignal = Knit.CreateSignal(),
         FireSignal = Knit.CreateSignal(),
+        KillSignal = Knit.CreateSignal(),
         CreateBulletHoleSignal = Knit.CreateSignal(),
         CreateImpactEffectSignal = Knit.CreateSignal()
     }
@@ -20,9 +21,10 @@ function WeaponService.Client:Damage(player, hum, damage)
             local can = player.Character and player.Character.Humanoid
             if not can then return end
             player.Character.Humanoid.Health += 50
+            self.KillSignal:Fire(player, hum.Parent.Name)
         end
+        hum:TakeDamage(damage)
     end
-    hum:TakeDamage(damage)
 end
 
 function WeaponService.Client:PlaySound(player, soundName, playOnRemove)
@@ -42,7 +44,8 @@ end
 
 function WeaponService.Client:Tilt(player, c0)
 	local hrp = player.Character:FindFirstChild("HumanoidRootPart");
-	if (hrp) then
+	if hrp then
+        if not hrp.RootJoint then return end
 		hrp.RootJoint.C0 = c0
 	end
 end

@@ -31,7 +31,7 @@ end
 module.mainCaster.CastTerminating:Connect(castTerminating)
 
 function module:Fire(character, direction)
-    local can = character.Krait and character.Krait.Handle and character.Krait.Handle.MuzzleBack
+    local can = character.Prime and character.Prime.Handle and character.Prime.Handle.MuzzleBack
     if not can then return end
     
     local CastParams = RaycastParams.new()
@@ -48,12 +48,12 @@ function module:Fire(character, direction)
     CastBehavior.Acceleration = Vector3.new(0, -5, 0)
     CastBehavior.AutoIgnoreContainer = true
 
-    self.mainCaster:Fire(character.Krait.Handle.MuzzleBack.WorldPosition, direction, 350, CastBehavior)
+    self.mainCaster:Fire(character.Prime.Handle.MuzzleBack.WorldPosition, direction, 350, CastBehavior)
 
-    if not character.Krait.Handle.Muzzle then return end
+    if not character.Prime.Handle.Muzzle then return end
 
     local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
-    flash.Parent = character.Krait.Handle.Muzzle
+    flash.Parent = character.Prime.Handle.Muzzle
     flash:Emit(1)
     task.delay(0.15, function()
         flash:Destroy()

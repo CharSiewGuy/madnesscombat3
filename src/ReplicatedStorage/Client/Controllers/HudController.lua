@@ -103,14 +103,13 @@ function HudController:PromptKill(name)
         Tween(v, TweenInfo.new(0.1, Enum.EasingStyle.Linear), {Position = UDim2.fromScale(0, v.Position.Y.Scale + 0.5)})
     end
     local killPrompt = ReplicatedStorage.Assets.KillPrompt:Clone()
-    killPrompt.PlayerName.Text = "<i>" .. string.upper(name) .. "</i>"
+    killPrompt.PlayerName.Text = '<i><font color = "#FFFFFF">' .. "KILLED " .. "</font>" .. string.upper(name) .. "</i>"
     killPrompt.Parent = self.ScreenGui.KillPromptArea
     killPrompt.Position = UDim2.fromScale(0, -0.5)
     Tween(killPrompt, TweenInfo.new(0.1, Enum.EasingStyle.Linear), {Position = UDim2.fromScale(0, 0)})
-    task.delay(2, function()
-        Tween(killPrompt.Killed, TweenInfo.new(0.3, Enum.EasingStyle.Linear), {TextTransparency = 1, TextStrokeTransparency = 1})
-        Tween(killPrompt.PlayerName, TweenInfo.new(0.3, Enum.EasingStyle.Linear), {TextTransparency = 1, TextStrokeTransparency = 1})
-        task.delay(.3, function()
+    task.delay(1.5, function()
+        Tween(killPrompt.PlayerName, TweenInfo.new(1, Enum.EasingStyle.Linear), {TextTransparency = 1, TextStrokeTransparency = 1})
+        task.delay(1, function()
             killPrompt:Destroy()
         end)
     end)

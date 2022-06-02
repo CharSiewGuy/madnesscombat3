@@ -110,20 +110,11 @@ function WeaponController:Climb(val)
 end
 
 function WeaponController:Damage(humanoid, damage)
-    if humanoid.Health > 0 and humanoid.Health - damage <= 0 then
-        local sound = ReplicatedStorage.Assets.Sounds.Kill:Clone()
-        sound.Parent = workspace.CurrentCamera
-        task.delay(0.1, function()
-            HudController:PromptKill(humanoid.Parent.Name)
-            sound:Destroy()
-        end)
-    end
-
     WeaponService:Damage(humanoid, damage)
 end
 
 function WeaponController:KnitStart()
-    local weaponModule = require(ReplicatedStorage.Weapons.Krait.MainModule)
+    local weaponModule = require(ReplicatedStorage.Weapons.Prime.MainModule)
     self.currentModule = weaponModule
 
     self.initialMouseSens = game:GetService("UserInputService").MouseDeltaSensitivity
@@ -142,6 +133,8 @@ function WeaponController:KnitStart()
         self.loadedAnimations.highclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.HighClimb)
         self.loadedAnimations.lowclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.LowClimb)
         self.loadedAnimations.midclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.MidClimb)
+        self.loadedAnimations.slideCamera = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.SlideCamera)
+        self.loadedAnimations.sprintCamera = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.SprintCamera)
 
         repeat
             task.wait()
@@ -180,7 +173,7 @@ function WeaponController:KnitStart()
 
         HudController:SetHealth(100)
         hum.HealthChanged:Connect(function(h)
-            HudController:SetHealth(h)
+            HudController:SetHealth(math.floor(h))
         end)
 
         self._janitor:Add(hum.Died:Connect(function()
@@ -192,7 +185,7 @@ function WeaponController:KnitStart()
     WeaponService.PlaySignal:Connect(function(character, name, playOnRemove)
         local can = character and character.HumanoidRootPart
         if not can then return end
-        local sound = ReplicatedStorage.Weapons.Krait.Sounds:FindFirstChild(name)
+        local sound = ReplicatedStorage.Weapons.Prime.Sounds:FindFirstChild(name)
         if not sound then sound = ReplicatedStorage.Assets.Sounds:FindFirstChild(name) end
         if sound then
             local soundClone = sound:Clone()
@@ -218,12 +211,18 @@ function WeaponController:KnitStart()
         end
     end)
 
+    WeaponService.KillSignal:Connect(function(name)
+        local sound = ReplicatedStorage.Assets.Sounds.Kill:Clone()
+        sound.Parent = workspace.CurrentCamera
+        HudController:PromptKill(name)
+        sound:Destroy()
+    end)
     local casters = {
-        ["Krait"] = require(ReplicatedStorage.Weapons.Krait.ReplicatedCaster)
+        ["Prime"] = require(ReplicatedStorage.Weapons.Prime.ReplicatedCaster)
     }
 
     WeaponService.FireSignal:Connect(function(character, direction)
-        casters["Krait"]:Fire(character, direction)
+        casters["Prime"]:Fire(character, direction)
     end)
 
     WeaponService.CreateBulletHoleSignal:Connect(function(r)
