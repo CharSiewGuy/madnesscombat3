@@ -26,23 +26,25 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
 
     local CastBehavior = FastCast.newBehavior()
     CastBehavior.RaycastParams = CastParams
-    CastBehavior.MaxDistance = 500
+    CastBehavior.MaxDistance = 800
     CastBehavior.HighFidelityBehavior = FastCast.HighFidelityBehavior.Default
-    CastBehavior.CosmeticBulletContainer = workspace.Projectiles
-    CastBehavior.CosmeticBulletTemplate = script.Parent.BulletPart
-    CastBehavior.Acceleration = Vector3.new(0, -5, 0)
+    CastBehavior.Acceleration = Vector3.new(0, -200, 0)
     CastBehavior.AutoIgnoreContainer = true
 
     local directionCF = CFrame.new(Vector3.new(), direction)
     local spreadDirection = CFrame.fromOrientation(0, 0, math.random(0, math.pi * 2))
     local spreadAngle = CFrame.fromOrientation(math.rad(math.random(0, spreadMagnitude)), 0, 0)
     local finalDirection = (directionCF * spreadDirection * spreadAngle).LookVector
-    self.mainCaster:Fire(origin, finalDirection, 500, CastBehavior)
+    self.mainCaster:Fire(workspace.CurrentCamera.CFrame.Position, finalDirection, 800, CastBehavior)
+    CastBehavior.CosmeticBulletContainer = workspace.Projectiles
+    CastBehavior.CosmeticBulletTemplate = script.Parent.BulletPart
+    self.cosmeticCaster:Fire(origin, finalDirection, 800, CastBehavior)
     WeaponService:CastProjectile(finalDirection)
 end
 
 function module:Initialize()
     self.mainCaster = FastCast.new()
+    self.cosmeticCaster = FastCast.new()
 
     local function lengthChanged(_, lastPoint, direction, length, _, bullet)
         if bullet then
@@ -52,7 +54,7 @@ function module:Initialize()
         end
     end
     
-    self.janitor:Add(self.mainCaster.LengthChanged:Connect(lengthChanged), "Disconnect")
+    self.janitor:Add(self.cosmeticCaster.LengthChanged:Connect(lengthChanged), "Disconnect")
     
     local function rayHit(cast, result, velocity, bullet)
         local hitPart = result.Instance
@@ -99,20 +101,22 @@ function module:Initialize()
                 end            
             end
 
-            WeaponController:Damage(humanoid, damage)
+            if humanoid.Health > 0 then
+                WeaponController:Damage(humanoid, damage)
+                
+                local sound
+                if headshot then
+                    sound = ReplicatedStorage.Assets.Sounds.Headshot:Clone()
+                else
+                    sound = ReplicatedStorage.Assets.Sounds["Hit" .. math.random(1,3)]:Clone()
+                end
+                sound.Parent = workspace.CurrentCamera
+                sound:Destroy()
             
-            local sound
-            if headshot then
-                sound = ReplicatedStorage.Assets.Sounds.Headshot:Clone()
-            else
-                sound = ReplicatedStorage.Assets.Sounds["Hit" .. math.random(1,3)]:Clone()
+                HudController:ShowHitmarker()
+                WeaponController:CreateImpactEffect(result, true)
+                WeaponService:CreateImpactEffect(resultData, true)
             end
-            sound.Parent = workspace.CurrentCamera
-            sound:Destroy()
-    
-            HudController:ShowHitmarker(headshot)
-            WeaponController:CreateImpactEffect(result, true)
-            WeaponService:CreateImpactEffect(resultData, true)
         else
             WeaponController:CreateImpactEffect(result, false)
             WeaponService:CreateImpactEffect(resultData, false)
@@ -128,7 +132,7 @@ function module:Initialize()
         bullet:Destroy()
     end
     
-    self.janitor:Add(self.mainCaster.CastTerminating:Connect(castTerminating), "Disconnect")
+    self.janitor:Add(self.cosmeticCaster.CastTerminating:Connect(castTerminating), "Disconnect")
 end
 
 function module:Deinitialize()

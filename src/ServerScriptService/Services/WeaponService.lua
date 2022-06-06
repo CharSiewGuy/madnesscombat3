@@ -43,10 +43,15 @@ function WeaponService.Client:CastProjectile(player, direction)
 end
 
 function WeaponService.Client:Tilt(player, c0)
+    if not player.Character then return end
+    if not player.Character.Humanoid then return end
+    if player.Character.Humanoid.Health <= 0 then return end
 	local hrp = player.Character:FindFirstChild("HumanoidRootPart");
 	if hrp then
-        if not hrp.RootJoint then return end
-		hrp.RootJoint.C0 = c0
+        local rj = hrp:FindFirstChild("RootJoint")
+        if rj then
+    		rj.C0 = c0
+		end
 	end
 end
 

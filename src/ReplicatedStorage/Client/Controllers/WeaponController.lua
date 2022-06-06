@@ -140,7 +140,7 @@ function WeaponController:KnitStart()
             task.wait()
         until character:FindFirstChild("HumanoidRootPart") and viewmodel:FindFirstChild("HumanoidRootPart")
         
-        weaponModule:Equip(character, viewmodel)
+        weaponModule:Equip(character, viewmodel, weaponModule.maxBullets)
 
         local equipped = true
         local equipDebounce = false

@@ -12,8 +12,8 @@ local HudController = Knit.CreateController { Name = "HudController" }
 HudController._janitor = Janitor.new()
 
 function HudController:KnitInit()
-    HudController.crosshairOffset = SmoothValue:create(0, 0, 4)
-    HudController.crosshairOffset:set(40)
+    HudController.crosshairOffset = SmoothValue:create(20, 20, 4)
+    HudController.crosshairOffset2 = SmoothValue:create(0,0,20)
 end
 
 function HudController:KnitStart()
@@ -22,10 +22,10 @@ function HudController:KnitStart()
     self.Overlay = Knit.Player.PlayerGui:WaitForChild("Overlay")
     self.Overlay.Crosshair.Visible = true
     game:GetService("RunService").Heartbeat:Connect(function(dt)
-        self.Overlay.Crosshair.Bottom.Position = UDim2.new(0.5, 0, 0.5, self.crosshairOffset:update(dt))
-        self.Overlay.Crosshair.Top.Position = UDim2.new(0.5, 0, 0.5, -self.crosshairOffset:update(dt))
-        self.Overlay.Crosshair.Right.Position = UDim2.new(0.5, self.crosshairOffset:update(dt), 0.5, 0)
-        self.Overlay.Crosshair.Left.Position = UDim2.new(0.5, -self.crosshairOffset:update(dt), 0.5, 0)
+        self.Overlay.Crosshair.Bottom.Position = UDim2.new(0.5, 0, 0.5, self.crosshairOffset:update(dt) + self.crosshairOffset2:update(dt))
+        self.Overlay.Crosshair.Top.Position = UDim2.new(0.5, 0, 0.5, -self.crosshairOffset:update(dt) - self.crosshairOffset2:update(dt))
+        self.Overlay.Crosshair.Right.Position = UDim2.new(0.5, self.crosshairOffset:update(dt) + self.crosshairOffset2:update(dt), 0.5, 0)
+        self.Overlay.Crosshair.Left.Position = UDim2.new(0.5, -self.crosshairOffset:update(dt) - self.crosshairOffset2:update(dt), 0.5, 0)
     end)
 
     workspace.ServerRegion.Changed:Connect(function(v)
@@ -37,11 +37,11 @@ function HudController:KnitStart()
 end
 
 function HudController:ExpandCrosshair()
-    self.crosshairOffset.speed = 20
-    self.crosshairOffset:set(self.crosshairOffset.target + 20)
+    self.crosshairOffset2.speed = 20
+    self.crosshairOffset2:set(20)
     task.delay(0.05, function()
-        self.crosshairOffset.speed = 4
-        self.crosshairOffset:set(self.crosshairOffset.target - 20)
+        self.crosshairOffset2.speed = 4
+        self.crosshairOffset2:set(0)
     end)
 end
 
@@ -50,22 +50,53 @@ function HudController:SetBullets(num)
     self.ScreenGui.Frame.Bullets.Cur.Text = num
 end
 
-local lastShownHitmarker = os.clock()
+HudController.lastShownHitmarker = tick()
+HudController.hitmarkerJanitor = Janitor.new()
+HudController.hitmarkerTweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+HudController.headHitmarkerTweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad)
 
-function HudController:ShowHitmarker(headshot)
-    lastShownHitmarker = os.clock()
+function HudController:ShowHitmarker(crit)
+    self.lastShownHitmarker = tick()
     local hitmarker = self.Overlay.Crosshair.Hitmarker
-    Tween(hitmarker, TweenInfo.new(0.05, Enum.EasingStyle.Sine), {ImageTransparency = 0})
-    Promise.delay(0.2):andThen(function()
-        if os.clock() - lastShownHitmarker > 0.2 then
-            Tween(hitmarker, TweenInfo.new(0.1, Enum.EasingStyle.Sine), {ImageTransparency = 1})
+    for _, v in pairs(hitmarker:GetChildren()) do
+        v.BackgroundTransparency = 0
+    end
+    self.hitmarkerJanitor:Cleanup()
+    self.Overlay.Crosshair.Hitmarker.Bottom.Position = UDim2.new(0.5, 0, 0.5, 20)
+    self.Overlay.Crosshair.Hitmarker.Top.Position = UDim2.new(0.5, 0, 0.5, -20)
+    self.Overlay.Crosshair.Hitmarker.Right.Position = UDim2.new(0.5, 20, 0.5, 0)
+    self.Overlay.Crosshair.Hitmarker.Left.Position = UDim2.new(0.5, -20, 0.5, 0)
+
+    if crit then
+        self.hitmarkerJanitor:AddPromise(Tween(self.Overlay.Crosshair.Hitmarker.Bottom, self.headHitmarkerTweenInfo, {Position = UDim2.new(0.5, 0, 0.5, 30)}))
+        self.hitmarkerJanitor:AddPromise(Tween(self.Overlay.Crosshair.Hitmarker.Top, self.headHitmarkerTweenInfo, {Position = UDim2.new(0.5, 0, 0.5, -30)}))
+        self.hitmarkerJanitor:AddPromise(Tween(self.Overlay.Crosshair.Hitmarker.Right, self.headHitmarkerTweenInfo, {Position = UDim2.new(0.5, 30, 0.5, 0)}))
+        self.hitmarkerJanitor:AddPromise(Tween(self.Overlay.Crosshair.Hitmarker.Left, self.headHitmarkerTweenInfo, {Position = UDim2.new(0.5, -30, 0.5, 0)}))
+    end
+
+    local lifetime = 0.1
+    if crit then lifetime = 0.2 end
+
+    Promise.delay(lifetime):andThen(function()
+        if tick() - self.lastShownHitmarker > lifetime then
+            for _, v in pairs(hitmarker:GetChildren()) do
+                self.hitmarkerJanitor:AddPromise(Tween(v, self.hitmarkerTweenInfo, {BackgroundTransparency = 1}))
+            end
+            self.hitmarkerJanitor:AddPromise(Tween(self.Overlay.Crosshair.Hitmarker.Bottom, self.hitmarkerTweenInfo, {Position = UDim2.new(0.5, 0, 0.5, 5)}))
+            self.hitmarkerJanitor:AddPromise(Tween(self.Overlay.Crosshair.Hitmarker.Top, self.hitmarkerTweenInfo, {Position = UDim2.new(0.5, 0, 0.5, -5)}))
+            self.hitmarkerJanitor:AddPromise(Tween(self.Overlay.Crosshair.Hitmarker.Right, self.hitmarkerTweenInfo, {Position = UDim2.new(0.5, 5, 0.5, 0)}))
+            self.hitmarkerJanitor:AddPromise(Tween(self.Overlay.Crosshair.Hitmarker.Left, self.hitmarkerTweenInfo, {Position = UDim2.new(0.5, -5, 0.5, 0)}))
         end
     end)
 
-    if headshot then
-        hitmarker.ImageColor3 = Color3.fromRGB(193, 6, 6)
+    if crit then
+        for _, v in pairs(hitmarker:GetChildren()) do
+            v.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        end    
     else
-        hitmarker.ImageColor3 = Color3.fromRGB(255, 255, 255)
+        for _, v in pairs(hitmarker:GetChildren()) do
+            v.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        end     
     end
 end
 
@@ -79,7 +110,7 @@ end
 
 function HudController:ShowCrosshair(val, time)
     for _, v in pairs(self.Overlay.Crosshair:GetChildren()) do
-        if v:IsA("Frame") then
+        if v:IsA("Frame") and v.Name ~= "Hitmarker" then
             if val then
                 Tween(v, TweenInfo.new(time), {BackgroundTransparency = 0})
             else
@@ -99,6 +130,7 @@ function HudController:SetVel(v)
 end
 
 function HudController:PromptKill(name)
+    self:ShowHitmarker(true)
     for _, v in pairs(self.ScreenGui.KillPromptArea:GetChildren()) do
         Tween(v, TweenInfo.new(0.1, Enum.EasingStyle.Linear), {Position = UDim2.fromScale(0, v.Position.Y.Scale + 0.5)})
     end

@@ -133,10 +133,10 @@ function module:SetupAnimations(character, vm)
 
         local gunbobcf = CFrame.new(0,0,0)
         local jump = self.springs.jump:update(dt)
-        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0, math.abs(jump.y/10))
+        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/10))
 
-        local idleOffset = CFrame.new(0.5,-0.5,-0.5)
-        local sprintOffset = idleOffset:Lerp(CFrame.new(0.5,-1,-1) * CFrame.Angles(0.1,1,0.2), self.lerpValues.sprint:update(dt))
+        local idleOffset = CFrame.new(0.8,-0.8,-0.7)
+        local sprintOffset = idleOffset:Lerp(CFrame.new(0.5,-1.3,-1.2) * CFrame.Angles(0,1,0.2), self.lerpValues.sprint:update(dt))
         local slideOffset = sprintOffset:Lerp(CFrame.new(-0.3,-0.7,-0.8) * CFrame.Angles(0, 0, 0.2), self.lerpValues.slide:update(dt))
         local aimOffset = slideOffset:Lerp(CFrame.new(0,0.03,0) * CFrame.Angles(0.01,0,0), self.lerpValues.aim:update(dt))
         local climbOffset = aimOffset:Lerp(CFrame.new(0,0,0), self.lerpValues.climb:update(dt))
@@ -156,12 +156,12 @@ function module:SetupAnimations(character, vm)
                 gunbobcf = CFrame.new(0,0,0)
             else
                 gunbobcf = gunbobcf:Lerp(CFrame.new(
-                    .2 * (self.charspeed/4) * math.sin(tick() * 10),
-                    .2 * (self.charspeed    /4) * math.cos(tick() * 20),
+                    0.1 * (self.charspeed/4) * math.sin(tick() * 10),
+                    0.2 * (self.charspeed/4) * math.cos(tick() * 20),
                     0
                     ) * CFrame.Angles(
-                        math.rad( 1 * (self.charspeed/4) * math.sin(tick() * 20) ), 
-                        math.rad( 1 * (self.charspeed/4) * math.cos(tick() * 10) ), 
+                        math.rad(5 * (self.charspeed/4) * math.sin(tick() * 20)), 
+                        math.rad(7 * (self.charspeed/4) * math.cos(tick() * 10)), 
                         math.rad(0)
                     ), 0.1)
             end
@@ -256,7 +256,7 @@ function module:ToggleAim(inputState, vm)
         self.loaded3PAnimations.scoped:Play()
         self.aimJanitor:AddPromise(Promise.delay(self.loadedAnimations.scopeIn.Length/1.25 - 0.05)):andThen(function()
             self.scopedIn = true 
-            self.loadedAnimations.scopeIdle:Play(0)
+            self.loadedAnimations.scopeIdle:Play()
         end)
 
         if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.scopeOut) then self.loadedAnimations.scopeOut:Stop(0) end
@@ -365,7 +365,7 @@ end
 
 
 
-function module:Equip(character, vm)
+function module:Equip(character, vm, bullets)
     WeaponController.baseFov:set(90)
 
     local Prime = script.Parent.Prime:Clone()
@@ -387,6 +387,11 @@ function module:Equip(character, vm)
     self.isReloading = false
     self.curshots = 0
     self.lastshot = tick()
+
+    if bullets then
+        self.bullets = bullets
+        HudController:SetBullets(bullets)
+    end
 
     local function handleAction(actionName, inputState)
         if self.bullets <= 0 or self.isReloading then return end
@@ -455,9 +460,9 @@ function module:Equip(character, vm)
 				sound.Parent = self.camera
                 sound.PlayOnRemove = false
                 if tick() - self.lastshot > 0.3 then
-                    sound.Volume = 10
+                    sound.Volume = 6
                 else
-                    sound.Volume = 7
+                    sound.Volume = 4
                 end
 				sound:Play() 
                 task.delay(sound.TimeLength, function()
@@ -494,11 +499,7 @@ function module:Equip(character, vm)
                     task.delay(0.1, function()
                         self.springs.fire:shove(Vector3.new(curRecoil[4], curRecoil[5], -6))
                     end)
-                    if (self.camera.CFrame.Position - Knit.Player:GetMouse().Hit.Position).Magnitude < 50 then
-                        direction = (self.camera.CFrame * CFrame.Angles(math.rad(1.5),math.rad(1.5),0)).LookVector
-                    else
-                        direction = self.camera.CFrame.LookVector
-                    end
+                    direction = self.camera.CFrame.LookVector
                     ClientCaster:Fire(vm.Prime.Handle.MuzzleBack.WorldPosition, direction, character, curRecoil[6])
                 else
                     self.loadedAnimations.scopedShoot:Play(0)
