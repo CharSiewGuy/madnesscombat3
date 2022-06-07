@@ -210,7 +210,7 @@ local function initializeSoundSystem(player, humanoid, rootPart)
 			if vel.Magnitude > 13 and vel.Magnitude < 24 then
 				sound.Volume = FootstepsSoundGroup:WaitForChild(humanoid.FloorMaterial).Volume * (vel.Magnitude/12)
 			else
-				sound.Volume = 0.1
+				sound.Volume = 0.025
 			end
 			sound.EmitterSize = FootstepsSoundGroup:WaitForChild(humanoid.FloorMaterial).Volume * (vel.Magnitude/12) * 50 
 			

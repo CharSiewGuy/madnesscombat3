@@ -56,7 +56,9 @@ function MovementController:Slide(hum, humanoidRootPart)
 
     self.sprintJanitor:Cleanup()
 
-    local sound = ReplicatedStorage.Assets.Sounds.Slide:Clone()
+    local randSound = "Slide" .. math.random(1,2)
+
+    local sound = ReplicatedStorage.Assets.Sounds[randSound]:Clone()
     sound.Parent = self.camera
     sound:Play()
     WeaponController.loadedAnimations.slideCamera:Play()
@@ -69,7 +71,7 @@ function MovementController:Slide(hum, humanoidRootPart)
         self.janitor:AddPromise(Promise.delay(1)):andThen(function()
             self.canSlide = true
         end)
-        WeaponService:StopSound("Slide")
+        WeaponService:StopSound(randSound)
         self.lastSlide = tick()
         WeaponController.loadedAnimations.slideCamera:Stop()
     end)
@@ -95,7 +97,7 @@ function MovementController:Slide(hum, humanoidRootPart)
 
     self.janitor:Add(self.slideJanitor)
 
-    WeaponService:PlaySound("Slide", false)
+    WeaponService:PlaySound(randSound, false)
 end
 
 function MovementController:Crouch(hum)
@@ -304,15 +306,15 @@ function MovementController:KnitStart()
                 raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
                 for i = 0, 0.5, 0.1 do
                     local raycastResult = workspace:Raycast(character.Head.Position - Vector3.new(0,i,0), (character.Head.CFrame.LookVector - Vector3.new(0,i,0)).Unit * 3, raycastParams)
-                    if raycastResult then
+                    if raycastResult and raycastResult.Instance and raycastResult.Instance.CanCollide then
                         if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) - 3 and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 4 then 
                             if humanoidRootPart:FindFirstChild("SlideJumpVel") then humanoidRootPart.SlideJumpVel:Destroy() end 
                             if humanoidRootPart:FindFirstChild("SlideVel") then humanoidRootPart.SlideVel:Destroy() end 
-                            local climbV = Instance.new("BodyPosition")
-                            climbV.MaxForce = Vector3.new(1,1,1) * 30000
-                            climbV.Position = (humanoidRootPart.CFrame * CFrame.new(0,10,-15)).Position
+                            local climbV = Instance.new("BodyVelocity")
+                            climbV.MaxForce = Vector3.new(1,1,1) * 50000
+                            climbV.Velocity = humanoidRootPart.CFrame.LookVector * 50 + Vector3.new(0,30,0)
                             climbV.Parent = humanoidRootPart
-                            task.delay(0.05, function()climbV:Destroy()end)
+                            task.delay(0.03, function()climbV:Destroy()end)
                             canClimb = false
                             WeaponController:Climb(character.Head.Position.Y - (raycastResult.Instance.Position.Y + raycastResult.Instance.Size.Y / 2))
 

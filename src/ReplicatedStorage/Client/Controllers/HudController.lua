@@ -39,6 +39,8 @@ function HudController:KnitStart()
     
     local StarterGui = game:GetService("StarterGui")
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
+
+    game.Lighting.Atmosphere.Density = 0.6
 end
 
 function HudController:ExpandCrosshair()
@@ -80,7 +82,7 @@ function HudController:ShowHitmarker(crit)
     end
 
     local lifetime = 0.1
-    if crit then lifetime = 0.2 end
+    if crit then lifetime = 0.3 end
 
     Promise.delay(lifetime):andThen(function()
         if tick() - self.lastShownHitmarker > lifetime then
@@ -125,9 +127,35 @@ function HudController:ShowCrosshair(val, time)
     end
 end
 
+HudController.BloodTweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
 function HudController:SetHealth(h)
     Tween(self.ScreenGui.Frame.HealthBar.Bar, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.fromScale(h/100, 1)})
     self.ScreenGui.Frame.HealthBar.Health.Text = h
+    Tween(self.Overlay.Blood, self.BloodTweenInfo, {ImageTransparency = h/100})
+    Tween(self.Overlay.Blood2, self.BloodTweenInfo, {ImageTransparency = h/100})
+    Tween(self.Overlay.Vignette2, self.BloodTweenInfo, {ImageTransparency = h/100})
+    if h < 50 then
+        if h < 10 then
+            game.Lighting.ColorCorrection.Saturation = -0.8
+            self.Overlay.Heartbeat.Volume = 1
+        elseif h < 20 then
+            game.Lighting.ColorCorrection.Saturation = -0.6
+            self.Overlay.Heartbeat.Volume = 0.8
+        elseif h < 30 then
+            game.Lighting.ColorCorrection.Saturation = -0.4
+            self.Overlay.Heartbeat.Volume = 0.6
+        elseif h < 40 then
+            game.Lighting.ColorCorrection.Saturation = -0.2
+            self.Overlay.Heartbeat.Volume = 0.4
+        else
+            self.Overlay.Heartbeat.Volume = 0.2
+            game.Lighting.ColorCorrection.Saturation = -0.1
+        end
+    else
+        self.Overlay.Heartbeat.Volume = 0
+        game.Lighting.ColorCorrection.Saturation = 0
+    end
 end
 
 function HudController:SetVel(v)
