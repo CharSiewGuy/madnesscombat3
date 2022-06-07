@@ -40,7 +40,7 @@ function HudController:KnitStart()
     local StarterGui = game:GetService("StarterGui")
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
 
-    game.Lighting.Atmosphere.Density = 0.6
+    game.Lighting.Atmosphere.Density = 0.55
 end
 
 function HudController:ExpandCrosshair()

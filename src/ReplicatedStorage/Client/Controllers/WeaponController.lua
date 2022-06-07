@@ -177,6 +177,9 @@ function WeaponController:KnitStart()
         end)
 
         self._janitor:Add(hum.Died:Connect(function()
+            local s = ReplicatedStorage.Assets.Sounds.Death:Clone()
+            s.Parent = workspace.CurrentCamera
+            s:Destroy()
             weaponModule:Unequip(character)
             self._janitor:Cleanup()
         end))

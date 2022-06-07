@@ -282,6 +282,7 @@ function module:ToggleAim(inputState, vm)
             HudController:ShowVignette(false, 0.2)
             HudController:ShowCrosshair(true, 0.2)
             HudController.isAiming = false
+            HudController.crosshairOffset:set(20)
             pcall(function() self.loadedAnimations.scopedShoot:Stop(0) end)
             self.lerpValues.unequip.speed = 4
         end)
