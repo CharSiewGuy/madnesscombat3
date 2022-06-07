@@ -14,6 +14,8 @@ HudController._janitor = Janitor.new()
 function HudController:KnitInit()
     HudController.crosshairOffset = SmoothValue:create(20, 20, 4)
     HudController.crosshairOffset2 = SmoothValue:create(0,0,20)
+    HudController.isAiming = false
+    HudController.crosshairOffsetMultiplier = 2
 end
 
 function HudController:KnitStart()
@@ -22,10 +24,13 @@ function HudController:KnitStart()
     self.Overlay = Knit.Player.PlayerGui:WaitForChild("Overlay")
     self.Overlay.Crosshair.Visible = true
     game:GetService("RunService").Heartbeat:Connect(function(dt)
-        self.Overlay.Crosshair.Bottom.Position = UDim2.new(0.5, 0, 0.5, self.crosshairOffset:update(dt) + self.crosshairOffset2:update(dt))
-        self.Overlay.Crosshair.Top.Position = UDim2.new(0.5, 0, 0.5, -self.crosshairOffset:update(dt) - self.crosshairOffset2:update(dt))
-        self.Overlay.Crosshair.Right.Position = UDim2.new(0.5, self.crosshairOffset:update(dt) + self.crosshairOffset2:update(dt), 0.5, 0)
-        self.Overlay.Crosshair.Left.Position = UDim2.new(0.5, -self.crosshairOffset:update(dt) - self.crosshairOffset2:update(dt), 0.5, 0)
+        if self.isAiming then
+            self.crosshairOffset:set(5)
+        end
+        self.Overlay.Crosshair.Bottom.Position = UDim2.new(0.5, 0, 0.5, self.crosshairOffset:update(dt) * 2 + self.crosshairOffset2:update(dt))
+        self.Overlay.Crosshair.Top.Position = UDim2.new(0.5, 0, 0.5, -self.crosshairOffset:update(dt) * 2 - self.crosshairOffset2:update(dt))
+        self.Overlay.Crosshair.Right.Position = UDim2.new(0.5, self.crosshairOffset:update(dt) * 2 + self.crosshairOffset2:update(dt), 0.5, 0)
+        self.Overlay.Crosshair.Left.Position = UDim2.new(0.5, -self.crosshairOffset:update(dt)* 2 - self.crosshairOffset2:update(dt), 0.5, 0)
     end)
 
     workspace.ServerRegion.Changed:Connect(function(v)

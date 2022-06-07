@@ -266,8 +266,6 @@ function module:ToggleAim(inputState, vm)
         game:GetService("UserInputService").MouseDeltaSensitivity = 65/90 * WeaponController.initialMouseSens
         HudController:ShowVignette(true, 0.2)
         HudController:ShowCrosshair(false, 0.2)
-        local oldOffset = HudController.crosshairOffset.target
-        HudController.crosshairOffset:set(5)
         self.lerpValues.unequip.speed = 15
 
         self.aimJanitor:Add(function()
@@ -283,7 +281,7 @@ function module:ToggleAim(inputState, vm)
             game:GetService("UserInputService").MouseDeltaSensitivity = WeaponController.initialMouseSens
             HudController:ShowVignette(false, 0.2)
             HudController:ShowCrosshair(true, 0.2)
-            HudController.crosshairOffset:set(oldOffset)
+            HudController.isAiming = false
             pcall(function() self.loadedAnimations.scopedShoot:Stop(0) end)
             self.lerpValues.unequip.speed = 4
         end)
@@ -294,6 +292,7 @@ function module:ToggleAim(inputState, vm)
 
         pcall(function()MovementController.sprintJanitor:Cleanup()end)
         
+        HudController.isAiming = true
         self.lerpValues.aim:set(1)
 
         local inSound = script.Parent.Sounds.ScopeIn:Clone()
