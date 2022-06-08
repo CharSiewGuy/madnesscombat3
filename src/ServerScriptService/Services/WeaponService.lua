@@ -11,7 +11,8 @@ local WeaponService = Knit.CreateService {
         FireSignal = Knit.CreateSignal(),
         KillSignal = Knit.CreateSignal(),
         CreateBulletHoleSignal = Knit.CreateSignal(),
-        CreateImpactEffectSignal = Knit.CreateSignal()
+        CreateImpactEffectSignal = Knit.CreateSignal(),
+        OnDamagedSignal = Knit.CreateSignal()
     }
 }
 
@@ -24,6 +25,9 @@ function WeaponService.Client:Damage(player, hum, damage)
             self.KillSignal:Fire(player, hum.Parent.Name)
         end
         hum:TakeDamage(damage)
+        if game.Players:GetPlayerFromCharacter(hum.Parent) then
+            self.OnDamagedSignal:Fire(game.Players:GetPlayerFromCharacter(hum.Parent), player)
+        end
     end
 end
 

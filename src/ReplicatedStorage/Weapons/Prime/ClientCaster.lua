@@ -115,6 +115,7 @@ function module:Initialize()
             
                 HudController:ShowHitmarker()
                 WeaponController:CreateImpactEffect(result, true)
+                WeaponController:ShowDamageNumber(humanoid, damage, headshot)
                 WeaponService:CreateImpactEffect(resultData, true)
             end
         else

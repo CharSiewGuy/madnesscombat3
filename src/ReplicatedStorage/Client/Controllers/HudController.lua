@@ -31,6 +31,16 @@ function HudController:KnitStart()
         self.Overlay.Crosshair.Top.Position = UDim2.new(0.5, 0, 0.5, -self.crosshairOffset:update(dt) * 2 - self.crosshairOffset2:update(dt))
         self.Overlay.Crosshair.Right.Position = UDim2.new(0.5, self.crosshairOffset:update(dt) * 2 + self.crosshairOffset2:update(dt), 0.5, 0)
         self.Overlay.Crosshair.Left.Position = UDim2.new(0.5, -self.crosshairOffset:update(dt)* 2 - self.crosshairOffset2:update(dt), 0.5, 0)
+
+        for _, v in pairs(self.Overlay.DamageIndicators:GetChildren()) do
+            local myPosition = workspace.CurrentCamera.CFrame.Position
+            local enemyPosition = v:GetAttribute("Pos")
+            local camCFrame = workspace.CurrentCamera.CFrame
+            local flatCFrame = CFrame.lookAt(myPosition, myPosition + camCFrame.LookVector * Vector3.new(1, 0, 1))
+            local travel = flatCFrame:Inverse() * enemyPosition 
+            local rot = math.atan2(travel.Z, travel.X)
+            v.Rotation = math.deg(rot) + 90
+        end
     end)
 
     workspace.ServerRegion.Changed:Connect(function(v)
@@ -82,7 +92,7 @@ function HudController:ShowHitmarker(crit)
     end
 
     local lifetime = 0.1
-    if crit then lifetime = 0.3 end
+    if crit then lifetime = 0.5 end
 
     Promise.delay(lifetime):andThen(function()
         if tick() - self.lastShownHitmarker > lifetime then
@@ -177,6 +187,28 @@ function HudController:PromptKill(name)
         task.delay(1, function()
             killPrompt:Destroy()
         end)
+    end)
+end
+
+function HudController:ShowDamageDir(playerName, pos)
+    local can = self.Overlay.DamageIndicators:FindFirstChild(playerName) and tick() - self.Overlay.DamageIndicators[playerName]:GetAttribute("t") < 0.3
+    local d
+    if can then
+        d = self.Overlay.DamageIndicators[playerName]
+    else    
+        d = ReplicatedStorage.Assets.DamageIndicator:Clone()
+        d.Name = playerName
+        d.Parent = self.Overlay.DamageIndicators
+    end
+    d:SetAttribute("t", tick())
+    d:SetAttribute("Pos", pos)
+    task.delay(0.3, function()
+        if d and tick() - d:GetAttribute("t") > 0.3 then
+            Tween(d, TweenInfo.new(0.3), {ImageTransparency = 1})
+            task.delay(0.3, function()
+                d:Destroy()
+            end)
+        end
     end)
 end
 

@@ -4,6 +4,7 @@ local ContextActionService = game:GetService("ContextActionService")
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
+local Tween = require(Packages.TweenPromise)
 
 local Modules = ReplicatedStorage.Modules
 local SmoothValue = require(Modules.SmoothValue)
@@ -83,6 +84,49 @@ function WeaponController:CreateBulletHole(raycastResult)
     fxClone.Parent = part
     task.delay(8, function()
         part:Destroy()
+    end)
+end
+
+function WeaponController:ShowDamageNumber(hum, num, braindamage)
+    if not hum.Parent:FindFirstChild("HumanoidRootPart") then return end
+    
+    local dmgNum
+    local highest = 0
+    for _, v in pairs(hum.Parent.HumanoidRootPart:GetChildren()) do
+        if v.Name == "DamageNumber" then
+            if v:GetAttribute("t") > highest then highest = v:GetAttribute("t") end
+        end
+    end
+
+    local can = hum.Parent.HumanoidRootPart:FindFirstChild("DamageNumber") and tick() - highest < 0.31    
+
+    if can then
+        dmgNum = hum.Parent.HumanoidRootPart.DamageNumber
+        dmgNum.TextLabel.Text = tonumber(dmgNum.TextLabel.Text) + num
+    else
+        dmgNum = ReplicatedStorage.Assets.DamageNumber:Clone()
+        dmgNum.Parent = hum.Parent.HumanoidRootPart
+        dmgNum.TextLabel.Text = num
+        dmgNum.StudsOffset = Vector3.new(math.random(-1.5,1.5),5,0)
+    end
+    if braindamage then
+        dmgNum.TextLabel.TextColor3 = Color3.fromRGB(255,255,0)
+    else
+        dmgNum.TextLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    end
+    
+    dmgNum:SetAttribute("t", tick())
+
+    task.delay(0.3, function()
+        if tick() - dmgNum:GetAttribute("t") > 0.29 then
+            task.delay(0.2, function()
+                if dmgNum then dmgNum:Destroy() end
+            end)
+            if not dmgNum:FindFirstChild("TextLabel") then return end
+            Tween(dmgNum.TextLabel, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {TextTransparency = 1})
+            Tween(dmgNum.TextLabel, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.fromScale(0.5, 0.3)})
+            Tween(dmgNum.TextLabel.UIStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Transparency = 1})
+        end
     end)
 end
 
@@ -220,6 +264,13 @@ function WeaponController:KnitStart()
         HudController:PromptKill(name)
         sound:Destroy()
     end)
+
+    WeaponService.OnDamagedSignal:Connect(function(p)
+        if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            HudController:ShowDamageDir(p.Character.Name, p.Character.HumanoidRootPart.Position)
+        end
+    end)
+
     local casters = {
         ["Prime"] = require(ReplicatedStorage.Weapons.Prime.ReplicatedCaster)
     }

@@ -129,6 +129,9 @@ function MovementController:KnitStart()
     self.canCrouch = true
     self.canClimb = true
     self.camera = workspace.CurrentCamera
+    self.fallingSound = ReplicatedStorage.Assets.Sounds.Fall:Clone()
+    self.fallingSound.Parent = self.camera
+    self.fallingSound:Play()
 
     Knit.Player.CharacterAdded:Connect(function(character)
         local hum = character:WaitForChild("Humanoid")
@@ -190,7 +193,7 @@ function MovementController:KnitStart()
                 end
             elseif actionName == "Crouch" then
                 if inputState == Enum.UserInputState.Begin then
-                    if hum.FloorMaterial == Enum.Material.Air then return end
+                    if not (hum:GetState() == Enum.HumanoidStateType.Running or hum:GetState() == Enum.HumanoidStateType.Landed) then return end
                     if self.isSprinting then
                         if self.canSlide and not self.isSliding then
                             self:Slide(hum, humanoidRootPart)
@@ -337,6 +340,15 @@ function MovementController:KnitStart()
                     self:Crouch(hum)
                 end
             end 
+
+            if hum:GetState() == Enum.HumanoidStateType.Freefall then
+                local yVel = humanoidRootPart.Velocity.Magnitude
+                if yVel > 40 then
+                    self.fallingSound.Volume = math.clamp((yVel)/160 - 0.25, 0, 1)
+                end
+            else
+                self.fallingSound.Volume = 0
+            end
 
             self.camera.FieldOfView = WeaponController.baseFov:update(dt) + self.fovOffset:update(dt)
             HudController:SetVel(math.floor(humanoidRootPart.Velocity.Magnitude))
