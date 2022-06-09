@@ -31,9 +31,9 @@ function WeaponService.Client:Damage(player, hum, damage)
     end
 end
 
-function WeaponService.Client:PlaySound(player, soundName, playOnRemove)
+function WeaponService.Client:PlaySound(player, weapon, soundName, playOnRemove)
     if not player.Character then return end
-    self.PlaySignal:FireExcept(player, player.Character, soundName, playOnRemove)
+    self.PlaySignal:FireExcept(player, player.Character, weapon, soundName, playOnRemove)
 end
 
 function WeaponService.Client:StopSound(player, soundName)
@@ -41,9 +41,9 @@ function WeaponService.Client:StopSound(player, soundName)
     self.StopSignal:FireExcept(player, player.Character, soundName)
 end
 
-function WeaponService.Client:CastProjectile(player, direction)
+function WeaponService.Client:CastProjectile(player, weapon, direction)
     if not player.Character then return end
-    self.FireSignal:FireExcept(player, player.Character, direction)
+    self.FireSignal:FireExcept(player, player.Character, weapon, direction)
 end
 
 function WeaponService.Client:Tilt(player, c0)

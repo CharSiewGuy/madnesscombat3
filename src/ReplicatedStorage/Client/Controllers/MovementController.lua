@@ -97,7 +97,7 @@ function MovementController:Slide(hum, humanoidRootPart)
 
     self.janitor:Add(self.slideJanitor)
 
-    WeaponService:PlaySound(randSound, false)
+    WeaponService:PlaySound(nil, randSound, false)
 end
 
 function MovementController:Crouch(hum)

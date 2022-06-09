@@ -39,7 +39,7 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
     CastBehavior.CosmeticBulletContainer = workspace.Projectiles
     CastBehavior.CosmeticBulletTemplate = script.Parent.BulletPart
     self.cosmeticCaster:Fire(origin, finalDirection, 800, CastBehavior)
-    WeaponService:CastProjectile("Prime", finalDirection)
+    WeaponService:CastProjectile("Outlaw", finalDirection)
 end
 
 function module:Initialize()
@@ -85,19 +85,19 @@ function module:Initialize()
             local damage = 15
             if headshot then
                 if distance < 30 then
-                    damage = 40
+                    damage = 60
                 elseif distance < 50 then
-                    damage = 35
+                    damage = 56
                 else
-                    damage = 30
+                    damage = 52
                 end
             else
                 if distance < 30 then
-                    damage = 20
+                    damage = 32
                 elseif distance < 50 then
-                    damage = 18
+                    damage = 30
                 else
-                    damage = 15
+                    damage = 28
                 end            
             end
 

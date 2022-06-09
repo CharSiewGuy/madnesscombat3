@@ -159,6 +159,7 @@ end
 
 function WeaponController:KnitStart()
     local weaponModule = require(ReplicatedStorage.Weapons.Prime.MainModule)
+    local weaponModule2 = require(ReplicatedStorage.Weapons.Outlaw.MainModule)
     self.currentModule = weaponModule
 
     self.initialMouseSens = game:GetService("UserInputService").MouseDeltaSensitivity
@@ -184,27 +185,37 @@ function WeaponController:KnitStart()
             task.wait()
         until character:FindFirstChild("HumanoidRootPart") and viewmodel:FindFirstChild("HumanoidRootPart")
         
-        weaponModule:Equip(character, viewmodel, weaponModule.maxBullets)
+        weaponModule:Equip(character, viewmodel)
 
-        local equipped = true
+        weaponModule.bullets = weaponModule.maxBullets
+        weaponModule2.bullets = weaponModule2.maxBullets
+        local weapon1Equipped = true
+        local weapon2Equipped = false
         local equipDebounce = false
         
         local function handleAction(actionName, inputState)
-            if equipDebounce then return end
-            if actionName == "Equip" and not equipped then
+            local can = not equipDebounce and (hum.Health > 0 and character.HumanoidRootPart and viewmodel.HumanoidRootPart)
+            if not can then return end
+            if actionName == "Equip" and not weapon1Equipped and weapon2Equipped then
                 if inputState == Enum.UserInputState.Begin then
                     equipDebounce = true
                     weaponModule:Equip(character, viewmodel)
-                    equipped = true
+                    weaponModule2:Unequip()
+                    self.currentModule = weaponModule
+                    weapon1Equipped = true
+                    weapon2Equipped = false
                     task.delay(0.2, function()
                         equipDebounce = false
                     end)
                 end
-            elseif actionName == "Unequip" and equipped then
+            elseif actionName == "Equip2" and not weapon2Equipped and weapon1Equipped then
                 if inputState == Enum.UserInputState.Begin then
                     equipDebounce = true
-                    weaponModule:Unequip(character)
-                    equipped = false
+                    weaponModule:Unequip()
+                    weaponModule2:Equip(character, viewmodel)
+                    self.currentModule = weaponModule2
+                    weapon2Equipped = true
+                    weapon1Equipped = false
                     task.delay(0.2, function()
                         equipDebounce = false
                     end)
@@ -213,7 +224,7 @@ function WeaponController:KnitStart()
         end
         
         ContextActionService:BindAction("Equip", handleAction, true, Enum.KeyCode.One)
-        ContextActionService:BindAction("Unequip", handleAction, true, Enum.KeyCode.Two)
+        ContextActionService:BindAction("Equip2", handleAction, true, Enum.KeyCode.Two)
 
         HudController:SetHealth(100)
         hum.HealthChanged:Connect(function(h)
@@ -224,16 +235,20 @@ function WeaponController:KnitStart()
             local s = ReplicatedStorage.Assets.Sounds.Death:Clone()
             s.Parent = workspace.CurrentCamera
             s:Destroy()
-            weaponModule:Unequip(character)
+            self.currentModule:Unequip(character)
             self._janitor:Cleanup()
         end))
     end)
 
-    WeaponService.PlaySignal:Connect(function(character, name, playOnRemove)
+    WeaponService.PlaySignal:Connect(function(character, weapon, name, playOnRemove)
         local can = character and character.HumanoidRootPart
         if not can then return end
-        local sound = ReplicatedStorage.Weapons.Prime.Sounds:FindFirstChild(name)
-        if not sound then sound = ReplicatedStorage.Assets.Sounds:FindFirstChild(name) end
+        local sound
+        if weapon ~= nil then 
+            sound = ReplicatedStorage.Weapons[weapon].Sounds:FindFirstChild(name)
+        else
+            sound = ReplicatedStorage.Assets.Sounds:FindFirstChild(name)
+        end
         if sound then
             local soundClone = sound:Clone()
             soundClone.Parent = character.HumanoidRootPart
@@ -272,11 +287,12 @@ function WeaponController:KnitStart()
     end)
 
     local casters = {
-        ["Prime"] = require(ReplicatedStorage.Weapons.Prime.ReplicatedCaster)
+        ["Prime"] = require(ReplicatedStorage.Weapons.Prime.ReplicatedCaster),
+        ["Outlaw"] = require(ReplicatedStorage.Weapons.Outlaw.ReplicatedCaster)
     }
 
-    WeaponService.FireSignal:Connect(function(character, direction)
-        casters["Prime"]:Fire(character, direction)
+    WeaponService.FireSignal:Connect(function(character, weapon, direction)
+        casters[weapon]:Fire(character, direction)
     end)
 
     WeaponService.CreateBulletHoleSignal:Connect(function(r)

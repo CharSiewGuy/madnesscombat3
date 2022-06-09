@@ -135,10 +135,10 @@ function module:SetupAnimations(character, vm)
         local jump = self.springs.jump:update(dt)
         HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/10))
 
-        local idleOffset = CFrame.new(0.8,-0.8,-0.7)
-        local sprintOffset = idleOffset:Lerp(CFrame.new(0.5,-1.3,-1.2) * CFrame.Angles(0,1,0.2), self.lerpValues.sprint:update(dt))
+        local idleOffset = CFrame.new(0.5,-0.5,-0.6)
+        local sprintOffset = idleOffset:Lerp(CFrame.new(1,-2.2,-1) * CFrame.Angles(1,0,0), self.lerpValues.sprint:update(dt))
         local slideOffset = sprintOffset:Lerp(CFrame.new(-0.3,-0.7,-0.8) * CFrame.Angles(0, 0, 0.2), self.lerpValues.slide:update(dt))
-        local aimOffset = slideOffset:Lerp(CFrame.new(0,0.03,0) * CFrame.Angles(0.01,0,0), self.lerpValues.aim:update(dt))
+        local aimOffset = slideOffset:Lerp(CFrame.new(0,0.01,0) * CFrame.Angles(0.01,0,0), self.lerpValues.aim:update(dt))
         local climbOffset = aimOffset:Lerp(CFrame.new(0,0,0), self.lerpValues.climb:update(dt))
         local unequipOffset = climbOffset:Lerp(CFrame.new(0,-3,0) * CFrame.Angles(4,0,0), self.lerpValues.unequip:update(dt))
         local finalOffset = unequipOffset
@@ -238,7 +238,7 @@ module.aimJanitor = Janitor.new()
 module.isAiming = false
 module.scopedIn = false
 module.isFiring = false
-module.fireRate = 0.1
+module.fireRate = 0.22
 module.scopeOutPromise = nil
 
 function module:ToggleAim(inputState, vm)
@@ -250,9 +250,9 @@ function module:ToggleAim(inputState, vm)
         MovementController.canClimb = false
         if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.Reload) then self.loadedAnimations.Reload:Stop(0) end
         self.loadedAnimations.scopeIn:Play(0)
-        self.loadedAnimations.scopeIn:AdjustSpeed(1.25)
+        self.loadedAnimations.scopeIn:AdjustSpeed(1.5)
         self.loaded3PAnimations.scoped:Play()
-        self.aimJanitor:AddPromise(Promise.delay(self.loadedAnimations.scopeIn.Length/1.25 - 0.05)):andThen(function()
+        self.aimJanitor:AddPromise(Promise.delay(self.loadedAnimations.scopeIn.Length/1.5 - 0.05)):andThen(function()
             self.scopedIn = true 
             self.loadedAnimations.scopeIdle:Play()
         end)
@@ -305,13 +305,12 @@ function module:ToggleAim(inputState, vm)
             self.aimJanitor:Cleanup()
             self.loadedAnimations.scopeOut:Play(0)
             self.loaded3PAnimations.scoped:Stop()
-            self.loadedAnimations.scopeOut:AdjustSpeed(1.25)
         end
     end
 end
 
-module.bullets = 30
-module.maxBullets = 30
+module.bullets = 6
+module.maxBullets = 6
 module.isReloading = false
 
 function module:Reload()
@@ -325,19 +324,24 @@ function module:Reload()
 
         self.loadedAnimations.Reload:Play(0)
         self.loaded3PAnimations.reload:Play(0)
-        self.loadedAnimations.Reload:AdjustSpeed(1.25) 
-        self.janitor:AddPromise(Promise.delay(self.loadedAnimations.Reload.Length - 0.7)):andThen(function()
+        if self.speedloader then
+            self.speedloader.Wheel1.Transparency = 0
+            self.speedloader.Wheel2.Transparency = 0
+        end
+        self.janitor:AddPromise(Promise.delay(self.loadedAnimations.Reload.Length - 0.5)):andThen(function()
             self.isReloading = false
             MovementController.canClimb = true
             self.bullets = self.maxBullets
             HudController:SetBullets(self.bullets)
+            self.speedloader.Wheel1.Transparency = 1
+            self.speedloader.Wheel2.Transparency = 1
         end)
 
         local sound = script.Parent.Sounds.Reload:Clone()
         sound.Parent = self.camera
         sound:Play(0)
         if WeaponService then
-            WeaponService:PlaySound("Prime", "Reload", false)
+            WeaponService:PlaySound("Outlaw", "Reload", false)
         end
         
         self.janitor:Add(sound.Ended:Connect(function()
@@ -345,11 +349,11 @@ function module:Reload()
         end))
 
         self.janitor:AddPromise(Promise.delay(0.25)):andThen(function()
-            UtilModule:SetGlow(self.camera.viewmodel.Prime, false)
+            UtilModule:SetGlow(self.camera.viewmodel.Outlaw, false)
         end)
 
         self.janitor:AddPromise(Promise.delay(0.85)):andThen(function()
-            UtilModule:SetGlow(self.camera.viewmodel.Prime, true)
+            UtilModule:SetGlow(self.camera.viewmodel.Outlaw, true)
         end)
 
         self.janitor:Add(function()
@@ -366,25 +370,37 @@ end
 function module:Equip(character, vm, bullets)
     WeaponController.baseFov:set(90)
 
-    local Prime = script.Parent.Prime:Clone()
-    Prime.Parent = vm
-    self.janitor:Add(Prime)
+    local Outlaw = script.Parent.Outlaw:Clone()
+    Outlaw.Parent = vm
+    self.janitor:Add(Outlaw)
 
     local vmRoot = vm:WaitForChild("HumanoidRootPart")
-
     local weaponMotor6D = script.Parent.Handle:Clone()
     weaponMotor6D.Part0 = vmRoot
-    weaponMotor6D.Part1 = Prime.Handle
+    weaponMotor6D.Part1 = Outlaw.Handle
     weaponMotor6D.Parent = vmRoot
     self.janitor:Add(weaponMotor6D)
 
+    self.speedloader = script.Parent.speedloader:Clone()
+    self.speedloader.Parent = vm
+    self.janitor:Add(self.speedloader)
+    local speedloaderWeld = script.Parent.Wheel1:Clone()
+    speedloaderWeld.Part0 = vmRoot
+    speedloaderWeld.Part1 = self.speedloader.Wheel1
+    speedloaderWeld.Parent = vmRoot
+    self.janitor:Add(speedloaderWeld)
+
+    self.speedloader.Wheel1.Transparency = 1
+    self.speedloader.Wheel2.Transparency = 1
+
     self:SetupAnimations(character, vm)
+    self.loadedAnimations.Idle:Play(0)
     self.loaded3PAnimations.Idle:Play(0)
 
     self.canFire = true
     self.equipped = true
     HudController:SetBullets(self.bullets, self.maxBullets)
-    HudController.crosshairOffsetMultiplier = 2
+    HudController.crosshairOffsetMultiplier = 1
     self.isReloading = false
     self.curshots = 0
     self.lastshot = tick()
@@ -396,24 +412,25 @@ function module:Equip(character, vm, bullets)
 
     local function handleAction(actionName, inputState)
         if self.bullets <= 0 or self.isReloading then return end
-        if actionName == "PrimeShoot" then
+        if actionName == "OutlawShoot" then
             if inputState == Enum.UserInputState.Begin then
                 self.isFiring = true
-            elseif inputState == Enum.UserInputState.End then
-                self.isFiring = false
+                task.delay(0.1, function()
+                    self.isFiring = false
+                end)
             end 
-        elseif actionName == "PrimeAim" then
+        elseif actionName == "OutlawAim" then
             self:ToggleAim(inputState, vm)
-        elseif actionName == "PrimeReload" then
+        elseif actionName == "OutlawReload" then
             if inputState == Enum.UserInputState.Begin then
                 self:Reload()
             end
         end
     end
 
-    ContextActionService:BindAction("PrimeShoot", handleAction, true, Enum.UserInputType.MouseButton1)
-    ContextActionService:BindAction("PrimeAim", handleAction, true, Enum.UserInputType.MouseButton2)
-    ContextActionService:BindAction("PrimeReload", handleAction, true, Enum.KeyCode.R)
+    ContextActionService:BindAction("OutlawShoot", handleAction, true, Enum.UserInputType.MouseButton1)
+    ContextActionService:BindAction("OutlawAim", handleAction, true, Enum.UserInputType.MouseButton2)
+    ContextActionService:BindAction("OutlawReload", handleAction, true, Enum.KeyCode.R)
 
     ClientCaster:Initialize()
 
@@ -422,7 +439,6 @@ function module:Equip(character, vm, bullets)
     CastParams.FilterType = Enum.RaycastFilterType.Blacklist
 
     self.janitor:Add(RunService.Heartbeat:Connect(function()
-        self.loadedAnimations.Idle:Play(0)
         if MovementController.isSprinting and not self.isReloading then 
             self.isFiring = false
             self.lerpValues.sprint:set(1)
@@ -457,25 +473,15 @@ function module:Equip(character, vm, bullets)
                     self.loaded3PAnimations.Reload:Stop(0)
                 end
 
-                local randSound = "Shoot" .. math.random(1, 3)
-				local sound = script.Parent.Sounds[randSound]:Clone()
+				local sound = script.Parent.Sounds.Shoot:Clone()
 				sound.Parent = self.camera
                 sound.PlayOnRemove = false
-                if tick() - self.lastshot > 0.3 then
-                    sound.Volume = 6
-                else
-                    sound.Volume = 4
-                end
+                sound.Volume = 2.5
 				sound:Play() 
                 task.delay(sound.TimeLength, function()
                     sound:Destroy()
                 end)   
-                WeaponService:PlaySound("Prime", randSound, true) 
-                
-                if self.camera:FindFirstChild("Tail") then self.camera.Tail:Destroy() end
-                local tailSound = script.Parent.Sounds.Tail:Clone()
-                tailSound.Parent = self.camera
-                tailSound:Play()
+                WeaponService:PlaySound("Outlaw", "Shoot", true) 
 
                 local emptyClipSound = script.Parent.Sounds.EmptyClip:Clone()
                 emptyClipSound.Parent = self.camera
@@ -485,58 +491,26 @@ function module:Equip(character, vm, bullets)
                 if not self.scopedIn then
                     self.loadedAnimations.Shoot:Play(0)
                     self.loaded3PAnimations.shoot:Play()
-                    self.curshots = (tick() - self.lastshot > 0.3 and 1 or self.curshots + 1)
-                    self.lastshot = tick()
-                    if self.curshots > 28 then
-                        self.curshots = 1
-                    end
-                    local curRecoil
-                    for _, v in pairs(self.unscopedPattern) do
-                        if self.curshots < v[1] then
-                            curRecoil = v
-                            break
-                        end
-                    end
-                    self.springs.fire:shove(Vector3.new(curRecoil[2], curRecoil[3], 6))
-                    task.delay(0.1, function()
-                        self.springs.fire:shove(Vector3.new(curRecoil[4], curRecoil[5], -6))
-                    end)
                     direction = self.camera.CFrame.LookVector
-                    ClientCaster:Fire(vm.Prime.Handle.MuzzleBack.WorldPosition, direction, character, curRecoil[6])
+                    ClientCaster:Fire(vm.Outlaw.Handle.MuzzleBack.WorldPosition, direction, character, 0.6)
                 else
                     self.loadedAnimations.scopedShoot:Play(0)
                     self.loaded3PAnimations.scopedShoot:Play(0)
-                    self.curshots = (tick() - self.lastshot > 0.3 and 1 or self.curshots + 1)
-                    self.lastshot = tick()
-                    if self.curshots > 24 then
-                        self.curshots = 1
-                    end
-                    local curRecoil
-                    for _, v in pairs(self.scopedPattern) do
-                        if self.curshots < v[1] then
-                            curRecoil = v
-                            break
-                        end
-                    end
-                    self.springs.fire:shove(Vector3.new(curRecoil[2], curRecoil[3], 4))
-                    task.delay(0.1, function()
-                        self.springs.fire:shove(Vector3.new(curRecoil[4], curRecoil[5], -4))
-                    end)
                     direction = self.camera.CFrame.LookVector
-                    ClientCaster:Fire(vm.Prime.Handle.MuzzleBack.WorldPosition, direction, character, curRecoil[6])
+                    ClientCaster:Fire(vm.Outlaw.Handle.MuzzleBack.WorldPosition, direction, character, 0.5)
                 end
                 
                 local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
-                flash.Parent = vm.Prime.Handle.Muzzle
+                flash.Parent = vm.Outlaw.Handle.Muzzle
                 flash:Emit(1)
                 task.delay(0.15, function()
                     flash:Destroy()
 			    end)
 
-                vm.Prime.Handle.Muzzle.PointLight.Enabled = true
+                vm.Outlaw.Handle.Muzzle.PointLight.Enabled = true
 
                 self.janitor:AddPromise(Promise.delay(.05)):andThen(function()
-                    vm.Prime.Handle.Muzzle.PointLight.Enabled = false
+                    vm.Outlaw.Handle.Muzzle.PointLight.Enabled = false
                 end)         
 
                 HudController:ExpandCrosshair()
@@ -555,9 +529,9 @@ function module:Equip(character, vm, bullets)
         self.loaded3PAnimations.Idle:Stop(0)
         HumanoidAnimatorUtils.stopAnimations(vm.AnimationController, 0)
 
-        ContextActionService:UnbindAction("PrimeShoot")
-        ContextActionService:UnbindAction("PrimeAim")
-        ContextActionService:UnbindAction("PrimeReload")
+        ContextActionService:UnbindAction("OutlawShoot")
+        ContextActionService:UnbindAction("OutlawAim")
+        ContextActionService:UnbindAction("OutlawReload")
         ClientCaster:Deinitialize()
         self.canFire = false
         self.isFiring = false

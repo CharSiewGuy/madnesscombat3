@@ -27,10 +27,10 @@ function HudController:KnitStart()
         if self.isAiming then
             self.crosshairOffset:set(5)
         end
-        self.Overlay.Crosshair.Bottom.Position = UDim2.new(0.5, 0, 0.5, self.crosshairOffset:update(dt) * 2 + self.crosshairOffset2:update(dt))
-        self.Overlay.Crosshair.Top.Position = UDim2.new(0.5, 0, 0.5, -self.crosshairOffset:update(dt) * 2 - self.crosshairOffset2:update(dt))
-        self.Overlay.Crosshair.Right.Position = UDim2.new(0.5, self.crosshairOffset:update(dt) * 2 + self.crosshairOffset2:update(dt), 0.5, 0)
-        self.Overlay.Crosshair.Left.Position = UDim2.new(0.5, -self.crosshairOffset:update(dt)* 2 - self.crosshairOffset2:update(dt), 0.5, 0)
+        self.Overlay.Crosshair.Bottom.Position = UDim2.new(0.5, 0, 0.5, self.crosshairOffset:update(dt) * self.crosshairOffsetMultiplier + self.crosshairOffset2:update(dt))
+        self.Overlay.Crosshair.Top.Position = UDim2.new(0.5, 0, 0.5, -self.crosshairOffset:update(dt) * self.crosshairOffsetMultiplier - self.crosshairOffset2:update(dt))
+        self.Overlay.Crosshair.Right.Position = UDim2.new(0.5, self.crosshairOffset:update(dt) * self.crosshairOffsetMultiplier + self.crosshairOffset2:update(dt), 0.5, 0)
+        self.Overlay.Crosshair.Left.Position = UDim2.new(0.5, -self.crosshairOffset:update(dt)* self.crosshairOffsetMultiplier - self.crosshairOffset2:update(dt), 0.5, 0)
 
         for _, v in pairs(self.Overlay.DamageIndicators:GetChildren()) do
             local myPosition = workspace.CurrentCamera.CFrame.Position
@@ -62,9 +62,10 @@ function HudController:ExpandCrosshair()
     end)
 end
 
-function HudController:SetBullets(num)
+function HudController:SetBullets(num, max)
     if not self.ScreenGui then return end
     self.ScreenGui.Frame.Bullets.Cur.Text = num
+    if max then self.ScreenGui.Frame.Bullets.Max.Text = max end
 end
 
 HudController.lastShownHitmarker = tick()
