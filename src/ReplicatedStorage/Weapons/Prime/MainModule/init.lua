@@ -37,7 +37,6 @@ module.lerpValues.sprint = SmoothValue:create(0, 0, 12)
 module.lerpValues.slide = SmoothValue:create(0, 0, 10)
 module.lerpValues.aim = SmoothValue:create(0, 0, 18)
 module.lerpValues.climb = SmoothValue:create(0, 0, 20)
-module.lerpValues.unequip = SmoothValue:create(0, 0, 4)
 module.charspeed = 0
 module.running = false
 module.OldCamCF = nil
@@ -140,8 +139,7 @@ function module:SetupAnimations(character, vm)
         local slideOffset = sprintOffset:Lerp(CFrame.new(-0.3,-0.7,-0.8) * CFrame.Angles(0, 0, 0.2), self.lerpValues.slide:update(dt))
         local aimOffset = slideOffset:Lerp(CFrame.new(0,0.03,0) * CFrame.Angles(0.01,0,0), self.lerpValues.aim:update(dt))
         local climbOffset = aimOffset:Lerp(CFrame.new(0,0,0), self.lerpValues.climb:update(dt))
-        local unequipOffset = climbOffset:Lerp(CFrame.new(0,-3,0) * CFrame.Angles(4,0,0), self.lerpValues.unequip:update(dt))
-        local finalOffset = unequipOffset
+        local finalOffset = climbOffset
 
         vm.HumanoidRootPart.CFrame *= finalOffset
 
@@ -222,6 +220,10 @@ function module:SetupAnimations(character, vm)
     self.loadedAnimations.scopeOut = vm.AnimationController:LoadAnimation(script.Parent.Animations.ScopeOut)
     self.loadedAnimations.scopedShoot = vm.AnimationController:LoadAnimation(script.Parent.Animations.ScopeShoot)
     self.loadedAnimations.hide = vm.AnimationController:LoadAnimation(script.Parent.Animations.Hide)
+    self.loadedAnimations.equip = vm.AnimationController:LoadAnimation(script.Parent.Animations.Equip)
+    self.loadedAnimations.equipCam = vm.AnimationController:LoadAnimation(script.Parent.Animations.EquipCam)
+    self.loadedAnimations.equip.Looped = false
+    self.loadedAnimations.equip.Priority = Enum.AnimationPriority.Action4
 
     self.loadedAnimations.scopeIdle.Looped = true
 
@@ -238,7 +240,7 @@ module.aimJanitor = Janitor.new()
 module.isAiming = false
 module.scopedIn = false
 module.isFiring = false
-module.fireRate = 0.1
+module.fireRate = 0.088
 module.scopeOutPromise = nil
 
 function module:ToggleAim(inputState, vm)
@@ -264,7 +266,6 @@ function module:ToggleAim(inputState, vm)
         game:GetService("UserInputService").MouseDeltaSensitivity = 65/90 * WeaponController.initialMouseSens
         HudController:ShowVignette(true, 0.2)
         HudController:ShowCrosshair(false, 0.2)
-        self.lerpValues.unequip.speed = 15
 
         self.aimJanitor:Add(function()
             self.isAiming = false
@@ -282,7 +283,6 @@ function module:ToggleAim(inputState, vm)
             HudController.isAiming = false
             HudController.crosshairOffset:set(20)
             pcall(function() self.loadedAnimations.scopedShoot:Stop(0) end)
-            self.lerpValues.unequip.speed = 4
         end)
 
         if self.scopeOutPromise then
@@ -367,6 +367,7 @@ function module:Equip(character, vm, bullets)
     WeaponController.baseFov:set(90)
 
     local Prime = script.Parent.Prime:Clone()
+    for _, v in pairs(Prime:GetDescendants()) do if v:IsA("BasePart") or v:IsA("Texture") then v.Transparency = 1 end end
     Prime.Parent = vm
     self.janitor:Add(Prime)
 
@@ -379,10 +380,33 @@ function module:Equip(character, vm, bullets)
     self.janitor:Add(weaponMotor6D)
 
     self:SetupAnimations(character, vm)
+    self.loadedAnimations.Idle:Play(0)
+    self.loadedAnimations.Idle.Looped = true
     self.loaded3PAnimations.Idle:Play(0)
 
+    self.loadedAnimations.equip:Play(0)
+    self.loadedAnimations.equipCam:Play(0)
+    self.loadedAnimations.equip.Priority = Enum.AnimationPriority.Action4
+    self.janitor:AddPromise(Promise.delay(self.loadedAnimations.equip.Length - 0.2)):andThen(function()
+        self.loadedAnimations.equip.Priority = Enum.AnimationPriority.Idle
+        self.equipped = true
+    end)
+
+    task.delay(0.05, function()
+        for _, v in pairs(vm.Prime:GetDescendants()) do 
+            if v:IsA("BasePart") then 
+                v.Transparency = 0 
+            elseif v:IsA("Texture") then
+                v.Transparency = tonumber(v.Name)
+            end
+        end
+        local s = script.Parent.Sounds.Equip:Clone()
+        s.Parent = self.camera
+        s:Destroy()
+    end)
+
     self.canFire = true
-    self.equipped = true
+    self.equipped = false
     HudController:SetBullets(self.bullets, self.maxBullets)
     HudController.crosshairOffsetMultiplier = 2
     self.isReloading = false
@@ -422,7 +446,6 @@ function module:Equip(character, vm, bullets)
     CastParams.FilterType = Enum.RaycastFilterType.Blacklist
 
     self.janitor:Add(RunService.Heartbeat:Connect(function()
-        self.loadedAnimations.Idle:Play(0)
         if MovementController.isSprinting and not self.isReloading then 
             self.isFiring = false
             self.lerpValues.sprint:set(1)
@@ -432,6 +455,10 @@ function module:Equip(character, vm, bullets)
             self.lerpValues.slide:set(1)
         else
             self.lerpValues.slide:set(0)
+            self.lerpValues.sprint:set(0)
+        end
+
+        if WeaponController.isClimbing then
             self.lerpValues.sprint:set(0)
         end
 
@@ -482,9 +509,15 @@ function module:Equip(character, vm, bullets)
                 emptyClipSound.Volume = (30/self.bullets)/2
                 emptyClipSound:Destroy()
 
-                if not self.scopedIn then
-                    self.loadedAnimations.Shoot:Play(0)
+                if not self.isAiming then
+                    self.loadedAnimations.Shoot:Play()
                     self.loaded3PAnimations.shoot:Play()
+                else
+                    self.loadedAnimations.scopedShoot:Play()
+                    self.loaded3PAnimations.scopedShoot:Play()
+                end
+
+                if not self.scopedIn then
                     self.curshots = (tick() - self.lastshot > 0.3 and 1 or self.curshots + 1)
                     self.lastshot = tick()
                     if self.curshots > 28 then
@@ -504,8 +537,6 @@ function module:Equip(character, vm, bullets)
                     direction = self.camera.CFrame.LookVector
                     ClientCaster:Fire(vm.Prime.Handle.MuzzleBack.WorldPosition, direction, character, curRecoil[6])
                 else
-                    self.loadedAnimations.scopedShoot:Play(0)
-                    self.loaded3PAnimations.scopedShoot:Play(0)
                     self.curshots = (tick() - self.lastshot > 0.3 and 1 or self.curshots + 1)
                     self.lastshot = tick()
                     if self.curshots > 24 then

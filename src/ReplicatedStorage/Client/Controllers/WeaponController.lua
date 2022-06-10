@@ -132,29 +132,38 @@ end
 
 function WeaponController:Climb(val)
     if not self.currentViewmodel or not self.currentViewmodel.AnimationController or not self.currentModule then return end
+    self.isClimbing = true
     self.currentModule.lerpValues.climb:set(1)
-    pcall(function()self.currentModule.loadedAnimations.hide:Play(0)end)
     self.currentModule.equipped = false
-    task.delay(0.1, function()
-        self.currentModule.lerpValues.unequip:set(1)
-    end)
+    local climbAnim
     if val < -1 then
-        self.loadedAnimations.highclimb:Play()
+        climbAnim = self.loadedAnimations.highclimb
     elseif val > 0 then
-        self.loadedAnimations.lowclimb:Play()
+        climbAnim = self.loadedAnimations.lowclimb
     else
-        self.loadedAnimations.midclimb:Play()
+        climbAnim = self.loadedAnimations.midclimb
     end
-    task.delay(self.loadedAnimations.midclimb.Length, function()
+    climbAnim:Play(0)
+    pcall(function()self.currentModule.loadedAnimations.hide:Play(0)end)
+    task.delay(self.loadedAnimations.midclimb.Length - 0.05, function()
+        climbAnim:Stop(0)
         self.currentModule.lerpValues.climb:set(0)
         pcall(function()self.currentModule.loadedAnimations.hide:Stop(0)end)
-        self.currentModule.lerpValues.unequip:set(0)
-        self.currentModule.equipped = true
+        self.currentModule.loadedAnimations.equip:Play(0)
+        task.delay(self.currentModule.loadedAnimations.equip.Length - 0.35, function()
+            self.isClimbing = false
+            self.currentModule.equipped = true
+        end)
     end)
 end
 
 function WeaponController:Damage(humanoid, damage)
     WeaponService:Damage(humanoid, damage)
+    if humanoid.Parent.Name == "low" then
+        game.Lighting.GlobalShadows = false
+    elseif humanoid.Parent.Name == "high" then
+        game.Lighting.GlobalShadows = true
+    end
 end
 
 function WeaponController:KnitStart()
@@ -178,6 +187,9 @@ function WeaponController:KnitStart()
         self.loadedAnimations.highclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.HighClimb)
         self.loadedAnimations.lowclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.LowClimb)
         self.loadedAnimations.midclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.MidClimb)
+        self.loadedAnimations.highclimb.Priority = Enum.AnimationPriority.Action3
+        self.loadedAnimations.lowclimb.Priority = Enum.AnimationPriority.Action3 
+        self.loadedAnimations.midclimb.Priority = Enum.AnimationPriority.Action3
         self.loadedAnimations.slideCamera = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.SlideCamera)
         self.loadedAnimations.sprintCamera = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.SprintCamera)
 
@@ -185,7 +197,7 @@ function WeaponController:KnitStart()
             task.wait()
         until character:FindFirstChild("HumanoidRootPart") and viewmodel:FindFirstChild("HumanoidRootPart")
         
-        weaponModule:Equip(character, viewmodel)
+        weaponModule:Equip(character, viewmodel, weaponModule.maxBullets)
 
         weaponModule.bullets = weaponModule.maxBullets
         weaponModule2.bullets = weaponModule2.maxBullets
@@ -199,8 +211,8 @@ function WeaponController:KnitStart()
             if actionName == "Equip" and not weapon1Equipped and weapon2Equipped then
                 if inputState == Enum.UserInputState.Begin then
                     equipDebounce = true
-                    weaponModule:Equip(character, viewmodel)
                     weaponModule2:Unequip()
+                    weaponModule:Equip(character, viewmodel)
                     self.currentModule = weaponModule
                     weapon1Equipped = true
                     weapon2Equipped = false

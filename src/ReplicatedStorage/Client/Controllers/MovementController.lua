@@ -135,7 +135,6 @@ function MovementController:KnitStart()
 
     Knit.Player.CharacterAdded:Connect(function(character)
         local hum = character:WaitForChild("Humanoid")
-        hum:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
         hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
 
         local animator = HumanoidAnimatorUtils.getOrCreateAnimator(hum)
@@ -277,10 +276,10 @@ function MovementController:KnitStart()
                 if humanoidRootPart:FindFirstChild("SlideVel") then
                     local slideV = Instance.new("BodyVelocity")
                     slideV.Name = "SlideJumpVel"
-                    slideV.MaxForce = Vector3.new(1,0,1) * 15000
+                    slideV.MaxForce = Vector3.new(1,0,1) * 20000
                     slideV.Velocity = humanoidRootPart.SlideVel.Velocity * 5                 
                     slideV.Parent = humanoidRootPart
-                    Tween(slideV, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.SlideVel.Velocity * 1})
+                    Tween(slideV, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.SlideVel.Velocity * 2})
                     task.delay(0.5, function()
                         if slideV then slideV:Destroy() end
                     end)
@@ -309,13 +308,13 @@ function MovementController:KnitStart()
                 raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
                 for i = 0, 0.5, 0.1 do
                     local raycastResult = workspace:Raycast(character.Head.Position - Vector3.new(0,i,0), (character.Head.CFrame.LookVector - Vector3.new(0,i,0)).Unit * 3, raycastParams)
-                    if raycastResult and raycastResult.Instance and raycastResult.Instance.CanCollide then
-                        if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) - 3 and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 4 then 
+                    if raycastResult and raycastResult.Instance and raycastResult.Instance.CanCollide and not raycastResult.Instance:IsA("TrussPart") then
+                        if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 3 then 
                             if humanoidRootPart:FindFirstChild("SlideJumpVel") then humanoidRootPart.SlideJumpVel:Destroy() end 
                             if humanoidRootPart:FindFirstChild("SlideVel") then humanoidRootPart.SlideVel:Destroy() end 
                             local climbV = Instance.new("BodyVelocity")
                             climbV.MaxForce = Vector3.new(1,1,1) * 50000
-                            climbV.Velocity = humanoidRootPart.CFrame.LookVector * 50 + Vector3.new(0,30,0)
+                            climbV.Velocity = humanoidRootPart.CFrame.LookVector * 40 + Vector3.new(0,35,0)
                             climbV.Parent = humanoidRootPart
                             task.delay(0.03, function()climbV:Destroy()end)
                             canClimb = false
