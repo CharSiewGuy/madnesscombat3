@@ -136,10 +136,13 @@ function module:SetupAnimations(character, vm)
 
         local idleOffset = CFrame.new(0.5,-0.5,-0.6)
         local sprintOffset = idleOffset:Lerp(CFrame.new(1,-2.2,-1) * CFrame.Angles(1,0,0), self.lerpValues.sprint:update(dt))
-        local slideOffset = sprintOffset:Lerp(CFrame.new(-0.3,-0.7,-0.8) * CFrame.Angles(0, 0, 0.2), self.lerpValues.slide:update(dt))
-        local aimOffset = slideOffset:Lerp(CFrame.new(0,0.01,0) * CFrame.Angles(0.01,0,0), self.lerpValues.aim:update(dt))
-        local climbOffset = aimOffset:Lerp(CFrame.new(0,0,0), self.lerpValues.climb:update(dt))
-        local finalOffset = climbOffset
+        local slideOffset = sprintOffset:Lerp(CFrame.new(-0.3,-1,-1) * CFrame.Angles(0, 0, 0.6), self.lerpValues.slide:update(dt))
+        local aimOffset = slideOffset:Lerp(CFrame.new(0,0,0) * CFrame.Angles(0,0,0), self.lerpValues.aim:update(dt))
+        local finalOffset = aimOffset
+        if WeaponController.isClimbing then
+            local climbOffset = aimOffset:Lerp(CFrame.new(0,0,0), self.lerpValues.climb:update(dt))
+            finalOffset = climbOffset
+        end
 
         vm.HumanoidRootPart.CFrame *= finalOffset
 
@@ -322,12 +325,19 @@ function module:Reload()
         self.aimJanitor:Cleanup()
 
         self.loadedAnimations.Reload:Play(0)
+        self.loadedAnimations.Reload:AdjustSpeed(1.05)
         self.loaded3PAnimations.reload:Play(0)
         if self.speedloader then
             self.speedloader.Wheel1.Transparency = 0
             self.speedloader.Wheel2.Transparency = 0
         end
-        self.janitor:AddPromise(Promise.delay(self.loadedAnimations.Reload.Length - 0.5)):andThen(function()
+
+        local reloadLength = 3
+        if self.loadedAnimations.Reload.Length > 0 then
+            reloadLength = self.loadedAnimations.Reload.Length
+        end 
+
+        self.janitor:AddPromise(Promise.delay(reloadLength - 0.5)):andThen(function()
             self.isReloading = false
             MovementController.canClimb = true
             self.bullets = self.maxBullets
@@ -402,7 +412,7 @@ function module:Equip(character, vm, bullets)
     self.loadedAnimations.equip:Play(0)
     self.loadedAnimations.equipCam:Play(0)
     self.loadedAnimations.equip.Priority = Enum.AnimationPriority.Action4
-    self.janitor:AddPromise(Promise.delay(self.loadedAnimations.equip.Length - 0.4)):andThen(function()
+    self.janitor:AddPromise(Promise.delay(self.loadedAnimations.equip.Length - 0.6)):andThen(function()
         self.loadedAnimations.equip.Priority = Enum.AnimationPriority.Idle
         self.equipped = true
     end)
@@ -499,17 +509,12 @@ function module:Equip(character, vm, bullets)
 				local sound = script.Parent.Sounds.Shoot:Clone()
 				sound.Parent = self.camera
                 sound.PlayOnRemove = false
-                sound.Volume = 2.5
+                sound.Volume = 4
 				sound:Play() 
                 task.delay(sound.TimeLength, function()
                     sound:Destroy()
                 end)   
                 WeaponService:PlaySound("Outlaw", "Shoot", true) 
-
-                local emptyClipSound = script.Parent.Sounds.EmptyClip:Clone()
-                emptyClipSound.Parent = self.camera
-                emptyClipSound.Volume = (30/self.bullets)/2
-                emptyClipSound:Destroy()
 
                 if not self.isAiming then
                     self.loadedAnimations.scopeOut.Priority = Enum.AnimationPriority.Idle
@@ -528,12 +533,12 @@ function module:Equip(character, vm, bullets)
                     ClientCaster:Fire(vm.Outlaw.Handle.MuzzleBack.WorldPosition, direction, character, 0.5)
                 end
                 
-                local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
-                flash.Parent = vm.Outlaw.Handle.Muzzle
-                flash:Emit(1)
-                task.delay(0.15, function()
-                    flash:Destroy()
-			    end)
+                for _, v in pairs(vm.Outlaw.Handle.Muzzle:GetChildren()) do
+                    if v:IsA("ParticleEmitter") then
+                        v:Emit(10)
+                    end
+                end
+
 
                 vm.Outlaw.Handle.Muzzle.PointLight.Enabled = true
 

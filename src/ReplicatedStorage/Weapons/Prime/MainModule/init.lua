@@ -138,9 +138,11 @@ function module:SetupAnimations(character, vm)
         local sprintOffset = idleOffset:Lerp(CFrame.new(0.5,-1.3,-1.2) * CFrame.Angles(0,1,0.2), self.lerpValues.sprint:update(dt))
         local slideOffset = sprintOffset:Lerp(CFrame.new(-0.3,-0.7,-0.8) * CFrame.Angles(0, 0, 0.2), self.lerpValues.slide:update(dt))
         local aimOffset = slideOffset:Lerp(CFrame.new(0,0.03,0) * CFrame.Angles(0.01,0,0), self.lerpValues.aim:update(dt))
-        local climbOffset = aimOffset:Lerp(CFrame.new(0,0,0), self.lerpValues.climb:update(dt))
-        local finalOffset = climbOffset
-
+        local finalOffset = aimOffset
+        if WeaponController.isClimbing then
+            local climbOffset = aimOffset:Lerp(CFrame.new(0,0,0), self.lerpValues.climb:update(dt))
+            finalOffset = climbOffset
+        end
         vm.HumanoidRootPart.CFrame *= finalOffset
 
         if not self.isAiming then   
@@ -325,8 +327,14 @@ function module:Reload()
 
         self.loadedAnimations.Reload:Play(0)
         self.loaded3PAnimations.reload:Play(0)
-        self.loadedAnimations.Reload:AdjustSpeed(1.25) 
-        self.janitor:AddPromise(Promise.delay(self.loadedAnimations.Reload.Length - 0.7)):andThen(function()
+        self.loadedAnimations.Reload:AdjustSpeed(1.25)
+
+        local reloadLength = 3
+        if self.loadedAnimations.Reload.Length > 0 then
+            reloadLength = self.loadedAnimations.Reload.Length
+        end 
+
+        self.janitor:AddPromise(Promise.delay(reloadLength - 0.7)):andThen(function()
             self.isReloading = false
             MovementController.canClimb = true
             self.bullets = self.maxBullets
@@ -387,7 +395,7 @@ function module:Equip(character, vm, bullets)
     self.loadedAnimations.equip:Play(0)
     self.loadedAnimations.equipCam:Play(0)
     self.loadedAnimations.equip.Priority = Enum.AnimationPriority.Action4
-    self.janitor:AddPromise(Promise.delay(self.loadedAnimations.equip.Length - 0.2)):andThen(function()
+    self.janitor:AddPromise(Promise.delay(self.loadedAnimations.equip.Length - 0.3)):andThen(function()
         self.loadedAnimations.equip.Priority = Enum.AnimationPriority.Idle
         self.equipped = true
     end)

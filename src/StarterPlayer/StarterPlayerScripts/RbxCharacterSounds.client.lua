@@ -22,12 +22,12 @@ local SOUND_DATA = {
 		SoundId = "rbxasset://sounds/action_get_up.mp3",
 	},
 	Jumping = {
-		SoundId = "rbxassetid://9727811998",
-		Volume = 2
+		SoundId = "",
+		Volume = 0
 	},
 	DoubleJump = {
-		SoundId = "rbxassetid://9727811867",
-		Volume = 2
+		SoundId = "",
+		Volume = 0
 	},
 	Landing = {
 		SoundId = "rbxassetid://9727812069",

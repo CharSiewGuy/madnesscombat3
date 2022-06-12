@@ -3,6 +3,7 @@ local ContextActionService = game:GetService("ContextActionService")
 
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
+local Promise = require(Packages.Promise)
 local Janitor = require(Packages.Janitor)
 local Tween = require(Packages.TweenPromise)
 
@@ -131,7 +132,7 @@ function WeaponController:ShowDamageNumber(hum, num, braindamage)
 end
 
 function WeaponController:Climb(val)
-    if not self.currentViewmodel or not self.currentViewmodel.AnimationController or not self.currentModule then return end
+    --[[if not self.currentViewmodel or not self.currentViewmodel.AnimationController or not self.currentModule then return end
     self.isClimbing = true
     self.currentModule.lerpValues.climb:set(1)
     self.currentModule.equipped = false
@@ -145,16 +146,16 @@ function WeaponController:Climb(val)
     end
     climbAnim:Play(0)
     pcall(function()self.currentModule.loadedAnimations.hide:Play(0)end)
-    task.delay(self.loadedAnimations.midclimb.Length - 0.05, function()
+    self._janitor:AddPromise(Promise.delay(self.loadedAnimations.midclimb.Length - 0.05)):andThen(function()
         climbAnim:Stop(0)
         self.currentModule.lerpValues.climb:set(0)
         pcall(function()self.currentModule.loadedAnimations.hide:Stop(0)end)
-        self.currentModule.loadedAnimations.equip:Play(0)
-        task.delay(self.currentModule.loadedAnimations.equip.Length - 0.35, function()
+        pcall(function()self.currentModule.loadedAnimations.equip:Play(0)end)
+        self._janitor:AddPromise(Promise.delay(self.currentModule.loadedAnimations.equip.Length - 0.35)):andThen(function()
             self.isClimbing = false
             self.currentModule.equipped = true
         end)
-    end)
+    end)]]--
 end
 
 function WeaponController:Damage(humanoid, damage)

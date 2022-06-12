@@ -28,7 +28,7 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
     CastBehavior.RaycastParams = CastParams
     CastBehavior.MaxDistance = 800
     CastBehavior.HighFidelityBehavior = FastCast.HighFidelityBehavior.Default
-    CastBehavior.Acceleration = Vector3.new(0, -200, 0)
+    CastBehavior.Acceleration = Vector3.new(0, -350, 0)
     CastBehavior.AutoIgnoreContainer = true
 
     local directionCF = CFrame.new(Vector3.new(), direction)

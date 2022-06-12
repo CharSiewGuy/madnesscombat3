@@ -21,23 +21,19 @@ local WeaponController
 local WeaponService
 
 MovementController.normalSpeed = 14
-MovementController.sprintSpeed = 24
+MovementController.sprintSpeed = 23
 MovementController.loadedAnimations = {}
 MovementController.fovOffset = SmoothValue:create(0, 0, 5)
 
 function MovementController:Slide(hum, humanoidRootPart)
-    if humanoidRootPart.Velocity.Magnitude < 18 then return end
+    if humanoidRootPart.Velocity.Magnitude < 21 then return end
 
     self.isSliding = true
     self.canSlide = false
 
     local slideV = Instance.new("BodyVelocity")
     slideV.MaxForce = Vector3.new(1,0,1) * 30000
-    if humanoidRootPart.Velocity.Magnitude > 20 then
-        slideV.Velocity = humanoidRootPart.CFrame.LookVector * math.clamp(humanoidRootPart.Velocity.Magnitude * 3.5, 20, 100)
-    else
-        slideV.Velocity = humanoidRootPart.CFrame.LookVector * 50
-    end
+    slideV.Velocity = humanoidRootPart.CFrame.LookVector * math.clamp(humanoidRootPart.Velocity.Magnitude * 3.5, 20, 100)
     slideV.Name = "SlideVel"
     slideV:SetAttribute("Created", tick())
     slideV.Parent = humanoidRootPart
@@ -77,10 +73,10 @@ function MovementController:Slide(hum, humanoidRootPart)
     end)
 
     self.slideJanitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.5, 0)}))
-    Tween(slideV, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.CFrame.LookVector * 30})
+    Tween(slideV, TweenInfo.new(0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.CFrame.LookVector * 30})
     self.lastSlide = tick()
-    task.delay(0.7, function()
-        if tick() - self.lastSlide >= 0.69 then 
+    task.delay(0.65, function()
+        if tick() - self.lastSlide >= 0.64 then 
             self.isSliding = false
             slideV:Destroy()
             self.loadedAnimations.slide:Stop(0.2)
@@ -184,6 +180,7 @@ function MovementController:KnitStart()
                             self.loadedAnimations.sprint:Stop(0.3)
                         end)
                         self.crouchJanitor:Cleanup()
+                        self.slideJanitor:Cleanup()
                         HudController.crosshairOffset:set(80)
                     end
                 elseif inputState == Enum.UserInputState.End then
@@ -284,6 +281,17 @@ function MovementController:KnitStart()
                         if slideV then slideV:Destroy() end
                     end)
                 end
+                if not canDoubleJump then
+                    local s = ReplicatedStorage.Assets.Sounds.Jump:Clone()
+                    s.Parent = self.camera
+                    s:Destroy()
+                    WeaponService:PlaySound(nil, "Jump", true)
+                elseif canDoubleJump then
+                    local s = ReplicatedStorage.Assets.Sounds.DoubleJump:Clone()
+                    s.Parent = self.camera
+                    s:Destroy()
+                    WeaponService:PlaySound(nil, "DoubleJump", true)
+                end
             end
         end))
         
@@ -331,7 +339,8 @@ function MovementController:KnitStart()
 
             local v = character.HumanoidRootPart:FindFirstChild("SlideVel")
             if v then
-                if tick() - v:GetAttribute("Created") > 0.74 then
+                if tick() - v:GetAttribute("Created") > 0.7 then
+                    print("stopped slide")
                     v:Destroy()
                     self.isSliding = false
                     self.loadedAnimations.slide:Stop(0.2)
@@ -348,6 +357,11 @@ function MovementController:KnitStart()
             else
                 self.fallingSound.Volume = 0
             end
+
+            if hum:GetState() == Enum.HumanoidStateType.Climbing then 
+                hum.WalkSpeed *= 2
+            end
+
 
             self.camera.FieldOfView = WeaponController.baseFov:update(dt) + self.fovOffset:update(dt)
             HudController:SetVel(math.floor(humanoidRootPart.Velocity.Magnitude))
