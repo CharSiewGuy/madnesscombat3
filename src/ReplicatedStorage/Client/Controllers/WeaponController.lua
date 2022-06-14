@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContextActionService = game:GetService("ContextActionService")
+local RunService = game:GetService("RunService")
 
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
@@ -12,6 +13,7 @@ local SmoothValue = require(Modules.SmoothValue)
 
 local WeaponController = Knit.CreateController { Name = "WeaponController" }
 WeaponController._janitor = Janitor.new()
+WeaponController.charJanitor = Janitor.new()
 
 local WeaponService
 local HudController
@@ -53,12 +55,12 @@ function WeaponController:CreateImpactEffect(raycastResult, human)
     for _, v in pairs(fxFolder:GetChildren()) do
         local fxClone = v:Clone()
         fxClone.Parent = attachment
-        fxClone:Emit(12)
+        fxClone:Emit(8)
     end
 
     local soundClone = sound:Clone()
     soundClone.Parent = attachment
-    soundClone.PlaybackSpeed = math.random(9, 11)/10
+    soundClone.PlaybackSpeed = math.random(95, 105)/100
     soundClone:Destroy()
 end
 
@@ -132,10 +134,8 @@ function WeaponController:ShowDamageNumber(hum, num, braindamage)
 end
 
 function WeaponController:Climb(val)
-    --[[if not self.currentViewmodel or not self.currentViewmodel.AnimationController or not self.currentModule then return end
+    if not self.currentViewmodel or not self.currentViewmodel.AnimationController or not self.currentModule then return end
     self.isClimbing = true
-    self.currentModule.lerpValues.climb:set(1)
-    self.currentModule.equipped = false
     local climbAnim
     if val < -1 then
         climbAnim = self.loadedAnimations.highclimb
@@ -144,18 +144,11 @@ function WeaponController:Climb(val)
     else
         climbAnim = self.loadedAnimations.midclimb
     end
-    climbAnim:Play(0)
-    pcall(function()self.currentModule.loadedAnimations.hide:Play(0)end)
+    climbAnim:Play()
     self._janitor:AddPromise(Promise.delay(self.loadedAnimations.midclimb.Length - 0.05)):andThen(function()
-        climbAnim:Stop(0)
-        self.currentModule.lerpValues.climb:set(0)
-        pcall(function()self.currentModule.loadedAnimations.hide:Stop(0)end)
-        pcall(function()self.currentModule.loadedAnimations.equip:Play(0)end)
-        self._janitor:AddPromise(Promise.delay(self.currentModule.loadedAnimations.equip.Length - 0.35)):andThen(function()
-            self.isClimbing = false
-            self.currentModule.equipped = true
-        end)
-    end)]]--
+        climbAnim:Stop(0.25)
+        self.isClimbing = false
+    end)
 end
 
 function WeaponController:Damage(humanoid, damage)
@@ -176,6 +169,13 @@ function WeaponController:KnitStart()
 
     Knit.Player.CharacterAdded:Connect(function(character)
         local hum = character:WaitForChild("Humanoid")
+        self.charJanitor:Cleanup()
+        self.charJanitor:Add(RunService.Heartbeat:Connect(function()
+            if hum.Health <= 0 then
+                weaponModule:Unequip()
+                weaponModule2:Unequip()
+            end
+        end))
 
         if workspace.CurrentCamera:FindFirstChild("viewmodel") then
             workspace.CurrentCamera.viewmodel:Destroy()
@@ -243,6 +243,19 @@ function WeaponController:KnitStart()
         hum.HealthChanged:Connect(function(h)
             HudController:SetHealth(math.floor(h))
         end)
+
+        self._janitor:Add(WeaponService.ExplodeSignal:Connect(function(p)
+            local a = game.ReplicatedStorage.TntAtt.Attachment:Clone()
+            a.Parent = workspace.Terrain
+            a.WorldPosition = p
+            for _, v in pairs(a:GetChildren()) do
+                v:Emit(v:GetAttribute("EmitCount"))
+            end
+            task.delay(5, function()
+                a:Destroy()
+            end)
+        end))
+    
 
         self._janitor:Add(hum.Died:Connect(function()
             local s = ReplicatedStorage.Assets.Sounds.Death:Clone()

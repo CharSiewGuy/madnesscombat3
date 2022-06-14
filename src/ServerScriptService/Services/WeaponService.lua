@@ -1,3 +1,4 @@
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Packages = ReplicatedStorage.Packages
@@ -12,17 +13,33 @@ local WeaponService = Knit.CreateService {
         KillSignal = Knit.CreateSignal(),
         CreateBulletHoleSignal = Knit.CreateSignal(),
         CreateImpactEffectSignal = Knit.CreateSignal(),
-        OnDamagedSignal = Knit.CreateSignal()
+        OnDamagedSignal = Knit.CreateSignal(),
+        ExplodeSignal = Knit.CreateSignal()
     }
 }
+
+function WeaponService:FireExplodeSignal(pos)
+    self.Client.ExplodeSignal:FireAll(pos)
+end
+
+function WeaponService:RespawnTnt(c, v)
+    task.delay(v, function()
+        print('respawning')
+		local t = game.ServerStorage.TNT:Clone()
+		t.PrimaryPart.CFrame = c
+		t.Parent = workspace
+    end)
+end
 
 function WeaponService.Client:Damage(player, hum, damage)
     if hum.Health > 0 then
         if hum.Health - damage <= 0 then
             local can = player.Character and player.Character.Humanoid
             if not can then return end
-            player.Character.Humanoid.Health += 50
-            self.KillSignal:Fire(player, hum.Parent.Name)
+            if game.Players:GetPlayerFromCharacter(hum.Parent) then
+                player.Character.Humanoid.Health += 50
+                self.KillSignal:Fire(player, hum.Parent.Name)
+            end
         end
         hum:TakeDamage(damage)
         if game.Players:GetPlayerFromCharacter(hum.Parent) then

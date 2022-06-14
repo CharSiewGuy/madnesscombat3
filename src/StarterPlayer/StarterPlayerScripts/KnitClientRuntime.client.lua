@@ -6,6 +6,8 @@ local Promise = require(packages.Promise)
 
 Knit.AddControllers(client.Controllers)
 
+client.Controllers:Destroy()
+
 function Knit.OnComponentsLoaded()
     if Knit.ComponentsLoaded then
         return Promise.Resolve()

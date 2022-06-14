@@ -46,11 +46,11 @@ function HudController:KnitStart()
     workspace.ServerRegion.Changed:Connect(function(v)
         self.ScreenGui.Frame.Stats.ServerRegion.Text = v
     end)
-    
-    local StarterGui = game:GetService("StarterGui")
-    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
 
     game.Lighting.Atmosphere.Density = 0.55
+
+    local StarterGui = game:GetService("StarterGui")
+    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
 end
 
 function HudController:ExpandCrosshair()

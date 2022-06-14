@@ -123,7 +123,6 @@ function module:SetupAnimations(character, vm)
     local waistC0 = CFrame.new(0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0)
 
     self.janitor:Add(RunService.RenderStepped:Connect(function(dt)
-        if not vm.HumanoidRootPart then return end
         vm.HumanoidRootPart.CFrame = self.camera.CFrame
 
         local mouseDelta = UserInputService:GetMouseDelta()
@@ -139,10 +138,6 @@ function module:SetupAnimations(character, vm)
         local slideOffset = sprintOffset:Lerp(CFrame.new(-0.3,-0.7,-0.8) * CFrame.Angles(0, 0, 0.2), self.lerpValues.slide:update(dt))
         local aimOffset = slideOffset:Lerp(CFrame.new(0,0.03,0) * CFrame.Angles(0.01,0,0), self.lerpValues.aim:update(dt))
         local finalOffset = aimOffset
-        if WeaponController.isClimbing then
-            local climbOffset = aimOffset:Lerp(CFrame.new(0,0,0), self.lerpValues.climb:update(dt))
-            finalOffset = climbOffset
-        end
         vm.HumanoidRootPart.CFrame *= finalOffset
 
         if not self.isAiming then   
@@ -225,7 +220,6 @@ function module:SetupAnimations(character, vm)
     self.loadedAnimations.equip = vm.AnimationController:LoadAnimation(script.Parent.Animations.Equip)
     self.loadedAnimations.equipCam = vm.AnimationController:LoadAnimation(script.Parent.Animations.EquipCam)
     self.loadedAnimations.equip.Looped = false
-    self.loadedAnimations.equip.Priority = Enum.AnimationPriority.Action4
 
     self.loadedAnimations.scopeIdle.Looped = true
 
@@ -273,7 +267,9 @@ function module:ToggleAim(inputState, vm)
             self.isAiming = false
             self.scopedIn = false
             MovementController.canSprint = true
-            MovementController.canClimb = true
+            if not self.isReloading then
+                MovementController.canClimb = true
+            end
             if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController,self.loadedAnimations.scopeIn) then self.loadedAnimations.scopeIn:Stop() end
             if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController,self.loadedAnimations.scopeIdle) then self.loadedAnimations.scopeIdle:Stop() end
             self.loaded3PAnimations.scoped:Stop()
@@ -372,6 +368,10 @@ end
 
 
 function module:Equip(character, vm, bullets)
+    local can = character.Humanoid and character.Humanoid.Health > 0 and character.HumanoidRootPart and vm.HumanoidRootPart
+    if not can then return end
+
+    self.equipped = false
     WeaponController.baseFov:set(90)
 
     local Prime = script.Parent.Prime:Clone()
@@ -392,9 +392,9 @@ function module:Equip(character, vm, bullets)
     self.loadedAnimations.Idle.Looped = true
     self.loaded3PAnimations.Idle:Play(0)
 
+    self.loadedAnimations.equip.Priority = Enum.AnimationPriority.Action4
     self.loadedAnimations.equip:Play(0)
     self.loadedAnimations.equipCam:Play(0)
-    self.loadedAnimations.equip.Priority = Enum.AnimationPriority.Action4
     self.janitor:AddPromise(Promise.delay(self.loadedAnimations.equip.Length - 0.3)):andThen(function()
         self.loadedAnimations.equip.Priority = Enum.AnimationPriority.Idle
         self.equipped = true
@@ -414,7 +414,6 @@ function module:Equip(character, vm, bullets)
     end)
 
     self.canFire = true
-    self.equipped = false
     HudController:SetBullets(self.bullets, self.maxBullets)
     HudController.crosshairOffsetMultiplier = 2
     self.isReloading = false

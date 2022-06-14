@@ -26,23 +26,21 @@ MovementController.loadedAnimations = {}
 MovementController.fovOffset = SmoothValue:create(0, 0, 5)
 
 function MovementController:Slide(hum, humanoidRootPart)
-    if humanoidRootPart.Velocity.Magnitude < 21 then return end
+    if humanoidRootPart.Velocity.Magnitude < 18 then return end
 
     self.isSliding = true
     self.canSlide = false
 
     local slideV = Instance.new("BodyVelocity")
     slideV.MaxForce = Vector3.new(1,0,1) * 30000
-    slideV.Velocity = humanoidRootPart.CFrame.LookVector * math.clamp(humanoidRootPart.Velocity.Magnitude * 3.5, 20, 100)
+    slideV.Velocity = humanoidRootPart.CFrame.LookVector * math.clamp(humanoidRootPart.Velocity.Magnitude/18 * 80, 20, 150)
     slideV.Name = "SlideVel"
     slideV:SetAttribute("Created", tick())
     slideV.Parent = humanoidRootPart
     self.fovOffset:set(10)
     self.slideJanitor:Add(function()
         self.isSliding = false
-        task.delay(0.05, function()
-            slideV:Destroy()
-        end)        
+        slideV:Destroy()
         self.loadedAnimations.slide:Stop(0.2)
         if not self.isCrouching then
             Tween(hum, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(0, 0, 0)})
@@ -57,7 +55,6 @@ function MovementController:Slide(hum, humanoidRootPart)
     local sound = ReplicatedStorage.Assets.Sounds[randSound]:Clone()
     sound.Parent = self.camera
     sound:Play()
-    WeaponController.loadedAnimations.slideCamera:Play()
 
     self.slideJanitor:Add(function()
         self.slideJanitor:AddPromise(Tween(sound, TweenInfo.new(0.2), {Volume = 0}))
@@ -69,7 +66,6 @@ function MovementController:Slide(hum, humanoidRootPart)
         end)
         WeaponService:StopSound(randSound)
         self.lastSlide = tick()
-        WeaponController.loadedAnimations.slideCamera:Stop()
     end)
 
     self.slideJanitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.5, 0)}))
@@ -113,6 +109,8 @@ function MovementController:KnitInit()
     HudController = Knit.GetController("HudController")
     WeaponController = Knit.GetController("WeaponController")
     WeaponService = Knit.GetService("WeaponService")
+
+    self.airborneTime = 0
 end
 
 function MovementController:KnitStart()
@@ -270,17 +268,6 @@ function MovementController:KnitStart()
             elseif new == Enum.HumanoidStateType.Jumping then
                 self.crouchJanitor:Cleanup()
                 self.slideJanitor:Cleanup()
-                if humanoidRootPart:FindFirstChild("SlideVel") then
-                    local slideV = Instance.new("BodyVelocity")
-                    slideV.Name = "SlideJumpVel"
-                    slideV.MaxForce = Vector3.new(1,0,1) * 20000
-                    slideV.Velocity = humanoidRootPart.SlideVel.Velocity * 5                 
-                    slideV.Parent = humanoidRootPart
-                    Tween(slideV, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.SlideVel.Velocity * 2})
-                    task.delay(0.5, function()
-                        if slideV then slideV:Destroy() end
-                    end)
-                end
                 if not canDoubleJump then
                     local s = ReplicatedStorage.Assets.Sounds.Jump:Clone()
                     s.Parent = self.camera
@@ -318,7 +305,6 @@ function MovementController:KnitStart()
                     local raycastResult = workspace:Raycast(character.Head.Position - Vector3.new(0,i,0), (character.Head.CFrame.LookVector - Vector3.new(0,i,0)).Unit * 3, raycastParams)
                     if raycastResult and raycastResult.Instance and raycastResult.Instance.CanCollide and not raycastResult.Instance:IsA("TrussPart") then
                         if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 3 then 
-                            if humanoidRootPart:FindFirstChild("SlideJumpVel") then humanoidRootPart.SlideJumpVel:Destroy() end 
                             if humanoidRootPart:FindFirstChild("SlideVel") then humanoidRootPart.SlideVel:Destroy() end 
                             local climbV = Instance.new("BodyVelocity")
                             climbV.MaxForce = Vector3.new(1,1,1) * 50000
@@ -349,14 +335,16 @@ function MovementController:KnitStart()
                 end
             end 
 
-            if hum:GetState() == Enum.HumanoidStateType.Freefall then
+            if hum.FloorMaterial == Enum.Material.Air then
                 local yVel = humanoidRootPart.Velocity.Magnitude
-                if yVel > 40 then
-                    self.fallingSound.Volume = math.clamp((yVel)/160 - 0.25, 0, 1)
+                if yVel > 45 then
+                    self.airborneTime += 0.01
                 end
             else
-                self.fallingSound.Volume = 0
+                self.airborneTime = 0
             end
+
+            self.fallingSound.Volume = math.clamp(self.airborneTime, 0, 2)
 
             if hum:GetState() == Enum.HumanoidStateType.Climbing then 
                 hum.WalkSpeed *= 2
