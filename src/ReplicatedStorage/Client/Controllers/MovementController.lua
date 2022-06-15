@@ -12,6 +12,7 @@ local HumanoidAnimatorUtils = require(Packages.HumanoidAnimatorUtils)
 
 local Modules = ReplicatedStorage.Modules
 local SmoothValue = require(Modules.SmoothValue)
+local Spring4 = require(Modules.Spring4)
 
 local MovementController = Knit.CreateController { Name = "MovementController" }
 MovementController.janitor = Janitor.new()
@@ -24,6 +25,9 @@ MovementController.normalSpeed = 14
 MovementController.sprintSpeed = 23
 MovementController.loadedAnimations = {}
 MovementController.fovOffset = SmoothValue:create(0, 0, 5)
+MovementController.jumpCamSpring = Spring4.new(Vector3.new())
+MovementController.jumpCamSpring.Speed = 4
+MovementController.jumpCamSpring.Damper = 1
 
 function MovementController:Slide(hum, humanoidRootPart)
     if humanoidRootPart.Velocity.Magnitude < 18 then return end
@@ -33,7 +37,7 @@ function MovementController:Slide(hum, humanoidRootPart)
 
     local slideV = Instance.new("BodyVelocity")
     slideV.MaxForce = Vector3.new(1,0,1) * 30000
-    slideV.Velocity = humanoidRootPart.CFrame.LookVector * math.clamp(humanoidRootPart.Velocity.Magnitude/18 * 80, 20, 150)
+    slideV.Velocity = humanoidRootPart.CFrame.LookVector * math.clamp(Vector3.new(humanoidRootPart.Velocity.X, humanoidRootPart.Velocity.Y * 1.5, humanoidRootPart.Velocity.Z).Magnitude/18 * 80, 20, 150)
     slideV.Name = "SlideVel"
     slideV:SetAttribute("Created", tick())
     slideV.Parent = humanoidRootPart
@@ -43,7 +47,7 @@ function MovementController:Slide(hum, humanoidRootPart)
         slideV:Destroy()
         self.loadedAnimations.slide:Stop(0.2)
         if not self.isCrouching then
-            Tween(hum, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(0, 0, 0)})
+            Tween(hum, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(0, 0, 0)})
         end
         self.fovOffset:set(0)
     end)
@@ -68,7 +72,7 @@ function MovementController:Slide(hum, humanoidRootPart)
         self.lastSlide = tick()
     end)
 
-    self.slideJanitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.5, 0)}))
+    self.slideJanitor:AddPromise(Tween(hum, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -2, 0)}))
     Tween(slideV, TweenInfo.new(0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.CFrame.LookVector * 30})
     self.lastSlide = tick()
     task.delay(0.65, function()
@@ -95,10 +99,10 @@ end
 function MovementController:Crouch(hum)
     self.isCrouching = true
     self.canSlide = false
-    self.crouchJanitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.5, 0)}))
+    self.crouchJanitor:AddPromise(Tween(hum, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -2, 0)}))
     self.loadedAnimations.crouch:Play(0.2)
     self.crouchJanitor:Add(function()
-        Tween(hum, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(0, 0, 0)})
+        Tween(hum, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(0, 0, 0)})
         self.isCrouching = false
         self.canSlide = true
         self.loadedAnimations.crouch:Stop(0.2)
@@ -262,6 +266,7 @@ function MovementController:KnitStart()
                 hasDoubleJumped = false
                 canClimb = true
                 hum.JumpPower = oldPower
+                self.jumpCamSpring:Impulse(Vector3.new(-math.clamp((math.abs(humanoidRootPart.Velocity.Y)/40) - 1, .5, 7),0,0))
             elseif new == Enum.HumanoidStateType.Freefall then
                 task.wait(TIME_BETWEEN_JUMPS)
                 canDoubleJump = true
@@ -279,12 +284,15 @@ function MovementController:KnitStart()
                     s:Destroy()
                     WeaponService:PlaySound(nil, "DoubleJump", true)
                 end
+                self.jumpCamSpring:Impulse(Vector3.new(-1,0,0))
             end
         end))
         
         self.janitor:Add(UserInputService.JumpRequest:Connect(onJumpRequest))
         
-        self.janitor:Add(RunService.Heartbeat:Connect(function(dt)
+        local camoffset = CFrame.new()
+
+        self.janitor:Add(RunService.RenderStepped:Connect(function(dt)
             if self.isSliding then
                 hum.WalkSpeed = 0
                 HudController.crosshairOffset:set(20)
@@ -304,13 +312,15 @@ function MovementController:KnitStart()
                 for i = 0, 0.5, 0.1 do
                     local raycastResult = workspace:Raycast(character.Head.Position - Vector3.new(0,i,0), (character.Head.CFrame.LookVector - Vector3.new(0,i,0)).Unit * 3, raycastParams)
                     if raycastResult and raycastResult.Instance and raycastResult.Instance.CanCollide and not raycastResult.Instance:IsA("TrussPart") then
-                        if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 3 then 
+                        if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) - 1 and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 3 then 
                             if humanoidRootPart:FindFirstChild("SlideVel") then humanoidRootPart.SlideVel:Destroy() end 
-                            local climbV = Instance.new("BodyVelocity")
-                            climbV.MaxForce = Vector3.new(1,1,1) * 50000
-                            climbV.Velocity = humanoidRootPart.CFrame.LookVector * 40 + Vector3.new(0,35,0)
+                            local climbV = Instance.new("AlignPosition")
+                            climbV.Mode = Enum.PositionAlignmentMode.OneAttachment
+                            climbV.Attachment0 = humanoidRootPart.RootAttachment
+                            climbV.Responsiveness = 50
+                            climbV.Position = (humanoidRootPart.CFrame*CFrame.new(0, 4, -2)).Position
                             climbV.Parent = humanoidRootPart
-                            task.delay(0.03, function()climbV:Destroy()end)
+                            task.delay(.1, function()climbV:Destroy()end)
                             canClimb = false
                             WeaponController:Climb(character.Head.Position.Y - (raycastResult.Instance.Position.Y + raycastResult.Instance.Size.Y / 2))
 
@@ -326,7 +336,6 @@ function MovementController:KnitStart()
             local v = character.HumanoidRootPart:FindFirstChild("SlideVel")
             if v then
                 if tick() - v:GetAttribute("Created") > 0.7 then
-                    print("stopped slide")
                     v:Destroy()
                     self.isSliding = false
                     self.loadedAnimations.slide:Stop(0.2)
@@ -350,6 +359,10 @@ function MovementController:KnitStart()
                 hum.WalkSpeed *= 2
             end
 
+            self.jumpCamSpring:TimeSkip(dt)
+            local newoffset = CFrame.Angles(self.jumpCamSpring.p.x,self.jumpCamSpring.p.y,self.jumpCamSpring.p.z)
+            self.camera.CFrame = self.camera.CFrame * camoffset:Inverse() * newoffset
+            camoffset = newoffset
 
             self.camera.FieldOfView = WeaponController.baseFov:update(dt) + self.fovOffset:update(dt)
             HudController:SetVel(math.floor(humanoidRootPart.Velocity.Magnitude))

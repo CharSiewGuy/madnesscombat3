@@ -24,7 +24,6 @@ end
 
 function WeaponService:RespawnTnt(c, v)
     task.delay(v, function()
-        print('respawning')
 		local t = game.ServerStorage.TNT:Clone()
 		t.PrimaryPart.CFrame = c
 		t.Parent = workspace

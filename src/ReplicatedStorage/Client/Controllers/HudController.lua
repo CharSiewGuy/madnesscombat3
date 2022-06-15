@@ -47,7 +47,7 @@ function HudController:KnitStart()
         self.ScreenGui.Frame.Stats.ServerRegion.Text = v
     end)
 
-    game.Lighting.Atmosphere.Density = 0.55
+    game.Lighting.Atmosphere.Density = 0.45
 
     local StarterGui = game:GetService("StarterGui")
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)

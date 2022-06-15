@@ -63,7 +63,6 @@ function module:SetupAnimations(character, vm)
     self.springs.sway = Spring.create()
 
     self.springs.jump = Spring.create(1, 10, 0, 1.8)
-    self.springs.jumpCam = Spring3.new()
     self.springs.fire = Spring3.new()
     self.springs.speed = Spring2.spring.new()
     self.springs.speed.s = 16
@@ -78,17 +77,10 @@ function module:SetupAnimations(character, vm)
             task.delay(0.2, function()
                 self.springs.jump:shove(Vector3.new(0, -0.5))
             end)
-            self.springs.jumpCam:shove(Vector3.new(0, -0.1))
-            task.delay(0.1, function()
-                self.springs.jumpCam:shove(Vector3.new(0, 0.1))
-            end)        elseif newState == Enum.HumanoidStateType.Landed then
+        elseif newState == Enum.HumanoidStateType.Landed then
             self.springs.jump:shove(Vector3.new(0, -0.5))
             task.delay(0.15, function()
                 self.springs.jump:shove(Vector3.new(0, 0.5))
-            end)
-            self.springs.jumpCam:shove(Vector3.new(0, -0.1))
-            task.delay(0.1, function()
-                self.springs.jumpCam:shove(Vector3.new(0, 0.1))
             end)
         end
         
@@ -190,9 +182,6 @@ function module:SetupAnimations(character, vm)
         local recoil = self.springs.fire:update(dt)
         self.camera.CFrame *= CFrame.Angles(math.rad(recoil.x), math.rad(recoil.y), math.rad(recoil.z) * 2)
 
-        local jumpCam = self.springs.jumpCam:update(dt)
-        self.camera.CFrame *= CFrame.Angles(jumpCam.y, 0, 0)
-
         local waist = character.HumanoidRootPart.RootJoint
 		waist.C0 = waistC0 * CFrame.fromEulerAnglesYXZ(math.asin(self.camera.CFrame.LookVector.y) * -0.8, 0, 0)
 
@@ -208,6 +197,7 @@ function module:SetupAnimations(character, vm)
         self.OldCamCF = NewCamCF
     end))
 
+    HumanoidAnimatorUtils.stopAnimations(vm.AnimationController, 0)
     
     self.loadedAnimations.Idle = vm.AnimationController:LoadAnimation(script.Parent.Animations.Idle)
     self.loadedAnimations.Shoot = vm.AnimationController:LoadAnimation(script.Parent.Animations.Shoot)
@@ -591,7 +581,6 @@ function module:Equip(character, vm, bullets)
     self.janitor:Add(function()
         self.loadedAnimations = {}
         self.loaded3PAnimations.Idle:Stop(0)
-        HumanoidAnimatorUtils.stopAnimations(vm.AnimationController, 0)
 
         ContextActionService:UnbindAction("PrimeShoot")
         ContextActionService:UnbindAction("PrimeAim")

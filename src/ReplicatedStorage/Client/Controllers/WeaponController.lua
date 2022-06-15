@@ -7,6 +7,7 @@ local Knit = require(Packages.Knit)
 local Promise = require(Packages.Promise)
 local Janitor = require(Packages.Janitor)
 local Tween = require(Packages.TweenPromise)
+local Shake = require(Packages.Shake)
 
 local Modules = ReplicatedStorage.Modules
 local SmoothValue = require(Modules.SmoothValue)
@@ -185,9 +186,9 @@ function WeaponController:KnitStart()
         viewmodel.Parent = workspace.CurrentCamera
         self.currentViewmodel = viewmodel
         local ac = viewmodel:WaitForChild("AnimationController")
-        self.loadedAnimations.highclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.HighClimb)
-        self.loadedAnimations.lowclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.LowClimb)
-        self.loadedAnimations.midclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.MidClimb)
+        self.loadedAnimations.highclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.Climb)
+        self.loadedAnimations.lowclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.Climb)
+        self.loadedAnimations.midclimb = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.Climb)
         self.loadedAnimations.highclimb.Priority = Enum.AnimationPriority.Action3
         self.loadedAnimations.lowclimb.Priority = Enum.AnimationPriority.Action3 
         self.loadedAnimations.midclimb.Priority = Enum.AnimationPriority.Action3
@@ -253,6 +254,17 @@ function WeaponController:KnitStart()
             end
             task.delay(5, function()
                 a:Destroy()
+            end)
+
+            local shake = Shake.new()
+            shake.FadeInTime = 0
+            shake.Frequency = 0.1
+            shake.Amplitude = math.clamp(50/(character.HumanoidRootPart.Position - p).Magnitude - 1, 0, 5)
+            shake.RotationInfluence = Vector3.new(0.2, 0.2, 0.2)
+
+            shake:Start()
+            shake:BindToRenderStep(Shake.NextRenderName(), Enum.RenderPriority.Last.Value, function(pos, rot, _)
+                workspace.CurrentCamera.CFrame *= CFrame.new(pos) * CFrame.Angles(rot.X, rot.Y, rot.Z)
             end)
         end))
     

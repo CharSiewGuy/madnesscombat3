@@ -14,7 +14,6 @@ function ExplosiveComponent:Construct()
 end
 
 function ExplosiveComponent:Start()
-	print("time to explode")
 	self.hum.HealthChanged:Connect(function(h)
 		if h <= 0 then
 			self.Instance:Destroy()

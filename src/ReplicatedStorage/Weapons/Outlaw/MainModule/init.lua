@@ -59,21 +59,14 @@ function module:SetupAnimations(character, vm)
 
     self.janitor:Add(character.Humanoid.StateChanged:Connect(function(_, newState)
         if newState == Enum.HumanoidStateType.Jumping then
-            self.springs.jump:shove(Vector3.new(0, 0.5))
+            self.springs.jump:shove(Vector3.new(0, 0.4))
             task.delay(0.2, function()
-                self.springs.jump:shove(Vector3.new(0, -0.5))
+                self.springs.jump:shove(Vector3.new(0, -0.4))
             end)
-            self.springs.jumpCam:shove(Vector3.new(0, -0.1))
-            task.delay(0.1, function()
-                self.springs.jumpCam:shove(Vector3.new(0, 0.1))
-            end)        elseif newState == Enum.HumanoidStateType.Landed then
+        elseif newState == Enum.HumanoidStateType.Landed then
             self.springs.jump:shove(Vector3.new(0, -0.5))
             task.delay(0.15, function()
                 self.springs.jump:shove(Vector3.new(0, 0.5))
-            end)
-            self.springs.jumpCam:shove(Vector3.new(0, -0.1))
-            task.delay(0.1, function()
-                self.springs.jumpCam:shove(Vector3.new(0, 0.1))
             end)
         end
         
@@ -144,12 +137,12 @@ function module:SetupAnimations(character, vm)
                 gunbobcf = CFrame.new(0,0,0)
             else
                 gunbobcf = gunbobcf:Lerp(CFrame.new(
-                    0.1 * math.clamp((self.charspeed/4), 0, 80) * math.sin(tick() * 10),
-                    0.2 * math.clamp((self.charspeed/4), 0, 80) * math.cos(tick() * 20),
+                    0.1 * math.clamp((self.charspeed/4), 0, 40) * math.sin(tick() * 10),
+                    0.2 * math.clamp((self.charspeed/4), 0, 40) * math.cos(tick() * 20),
                     0
                     ) * CFrame.Angles(
-                        math.rad(5 * math.clamp((self.charspeed/4), 0, 80) * math.sin(tick() * 20)), 
-                        math.rad(7 * math.clamp((self.charspeed/4), 0, 80) * math.cos(tick() * 10)), 
+                        math.rad(5 * math.clamp((self.charspeed/4), 0, 40) * math.sin(tick() * 20)), 
+                        math.rad(7 * math.clamp((self.charspeed/4), 0, 40) * math.cos(tick() * 10)), 
                         math.rad(0)
                     ), 0.1)
             end
@@ -192,7 +185,6 @@ function module:SetupAnimations(character, vm)
 		waist.C0 = waistC0 * CFrame.fromEulerAnglesYXZ(math.asin(self.camera.CFrame.LookVector.y) * -0.8, 0, 0)
 
         WeaponService:Tilt(waist.C0)
-
         
         local NewCamCF = vm.FakeCamera.CFrame:ToObjectSpace(vm.HumanoidRootPart.CFrame)
         if self.OldCamCF then
@@ -203,6 +195,7 @@ function module:SetupAnimations(character, vm)
         self.OldCamCF = NewCamCF
     end))
 
+    HumanoidAnimatorUtils.stopAnimations(vm.AnimationController, 0)
     
     self.loadedAnimations.Idle = vm.AnimationController:LoadAnimation(script.Parent.Animations.Idle)
     self.loadedAnimations.Shoot = vm.AnimationController:LoadAnimation(script.Parent.Animations.Shoot)
@@ -567,7 +560,6 @@ function module:Equip(character, vm, bullets)
     self.janitor:Add(function()
         self.loadedAnimations = {}
         self.loaded3PAnimations.Idle:Stop(0)
-        HumanoidAnimatorUtils.stopAnimations(vm.AnimationController, 0)
 
         ContextActionService:UnbindAction("OutlawShoot")
         ContextActionService:UnbindAction("OutlawAim")
