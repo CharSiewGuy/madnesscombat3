@@ -111,12 +111,12 @@ function module:SetupAnimations(character, vm)
         vm.HumanoidRootPart.CFrame = self.camera.CFrame
 
         local mouseDelta = UserInputService:GetMouseDelta()
-        self.springs.sway:shove(Vector3.new(math.clamp(mouseDelta.X, 0, 100)/300,math.clamp(mouseDelta.Y, 0, 100)/300))
+        self.springs.sway:shove(Vector3.new(mouseDelta.X/250,mouseDelta.Y/250))
         local sway = self.springs.sway:update(dt)
 
         local gunbobcf = CFrame.new(0,0,0)
         local jump = self.springs.jump:update(dt)
-        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/10))
+        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/15))
 
         local idleOffset = CFrame.new(0.5,-0.5,-0.6)
         local sprintOffset = idleOffset:Lerp(CFrame.new(1,-2.2,-1) * CFrame.Angles(1,0,0), self.lerpValues.sprint:update(dt))
@@ -137,12 +137,12 @@ function module:SetupAnimations(character, vm)
                 gunbobcf = CFrame.new(0,0,0)
             else
                 gunbobcf = gunbobcf:Lerp(CFrame.new(
-                    0.1 * math.clamp((self.charspeed/4), 0, 40) * math.sin(tick() * 10),
-                    0.2 * math.clamp((self.charspeed/4), 0, 40) * math.cos(tick() * 20),
+                    0.1 * math.clamp((self.charspeed/4), 0, 10) * math.sin(tick() * 10),
+                    0.2 * math.clamp((self.charspeed/4), 0, 10) * math.cos(tick() * 20),
                     0
                     ) * CFrame.Angles(
-                        math.rad(5 * math.clamp((self.charspeed/4), 0, 40) * math.sin(tick() * 20)), 
-                        math.rad(7 * math.clamp((self.charspeed/4), 0, 40) * math.cos(tick() * 10)), 
+                        math.rad(5 * math.clamp((self.charspeed/4), 0, 10) * math.sin(tick() * 20)), 
+                        math.rad(7 * math.clamp((self.charspeed/4), 0, 10) * math.cos(tick() * 10)), 
                         math.rad(0)
                     ), 0.1)
             end
@@ -216,6 +216,12 @@ function module:SetupAnimations(character, vm)
     self.loaded3PAnimations.shoot = animator:LoadAnimation(script.Parent["3PAnimations"].Shoot)
     self.loaded3PAnimations.scopedShoot = animator:LoadAnimation(script.Parent["3PAnimations"].ScopedShoot)
     self.loaded3PAnimations.reload = animator:LoadAnimation(script.Parent["3PAnimations"].Reload)
+
+    self.janitor:Add(function()
+        for _, v in pairs(self.loaded3PAnimations) do
+            v:Stop(0)
+        end
+    end)
 end
 
 
@@ -223,7 +229,7 @@ module.aimJanitor = Janitor.new()
 module.isAiming = false
 module.scopedIn = false
 module.isFiring = false
-module.fireRate = 0.16
+module.fireRate = 0.14
 module.scopeOutPromise = nil
 
 function module:ToggleAim(inputState, vm)
@@ -244,11 +250,13 @@ function module:ToggleAim(inputState, vm)
 
         if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.scopeOut) then self.loadedAnimations.scopeOut:Stop(0) end
         if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.scoped) then self.loadedAnimations.scoped:Stop(0) end
+        pcall(function()MovementController.sprintJanitor:Cleanup()end)
 
         WeaponController.baseFov:set(65)
         game:GetService("UserInputService").MouseDeltaSensitivity = 65/90 * WeaponController.initialMouseSens
         HudController:ShowVignette(true, 0.2)
-        HudController:ShowCrosshair(false, 0.2)
+        HudController.crosshairTransparency:set(1)
+        HudController.dotTransparency:set(1)
 
         self.aimJanitor:Add(function()
             self.isAiming = false
@@ -264,7 +272,8 @@ function module:ToggleAim(inputState, vm)
             WeaponController.baseFov:set(90)
             game:GetService("UserInputService").MouseDeltaSensitivity = WeaponController.initialMouseSens
             HudController:ShowVignette(false, 0.2)
-            HudController:ShowCrosshair(true, 0.2)
+            HudController.crosshairTransparency:set(0)
+            HudController.dotTransparency:set(0)
             HudController.isAiming = false
             HudController.crosshairOffset:set(20)
             pcall(function() self.loadedAnimations.scopedShoot:Stop(0) end)
@@ -273,8 +282,6 @@ function module:ToggleAim(inputState, vm)
         if self.scopeOutPromise then
             self.scopeOutPromise:cancel()
         end
-
-        pcall(function()MovementController.sprintJanitor:Cleanup()end)
         
         HudController.isAiming = true
         self.lerpValues.aim:set(1)
@@ -403,7 +410,11 @@ function module:Equip(character, vm, bullets)
         self.equipped = true
     end)
 
-    task.delay(0.05, function()
+    local s = script.Parent.Sounds.Equip:Clone()
+    s.Parent = self.camera
+    s:Destroy()
+
+    self.janitor:AddPromise(Promise.delay(0.06)):andThen(function()
         for _, v in pairs(vm.Outlaw:GetDescendants()) do 
             if v:IsA("BasePart") then 
                 v.Transparency = 0 
@@ -412,9 +423,6 @@ function module:Equip(character, vm, bullets)
             end
         end
         for _, v in pairs(vm.speedloader:GetDescendants()) do if v:IsA("BasePart") then v.Transparency = 0 end end
-        local s = script.Parent.Sounds.Equip:Clone()
-        s.Parent = self.camera
-        s:Destroy()
     end)
 
     self.canFire = true

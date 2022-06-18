@@ -32,6 +32,9 @@ function WeaponController:KnitInit()
 end
 
 function WeaponController:CreateImpactEffect(raycastResult, human)
+    local can = (not raycastResult.Instance.Transparency or raycastResult.Instance.Transparency < 1)
+    if not can then return end
+
     local attachment = Instance.new("Attachment")
     attachment.CFrame = CFrame.new(raycastResult.Position, raycastResult.Position + raycastResult.Normal)
     attachment.Parent = workspace.Terrain
@@ -66,7 +69,13 @@ function WeaponController:CreateImpactEffect(raycastResult, human)
 end
 
 function WeaponController:CreateBulletHole(raycastResult)
+    local can = (not raycastResult.Instance.Transparency or raycastResult.Instance.Transparency < 1)
+    if not can then return end    
+    
     local part = Instance.new("Part")
+    task.delay(8, function()
+        part:Destroy()
+    end)
     part.Size = Vector3.new(1, 1, 0.1)
     part.Transparency = 1
     part.CastShadow = false
@@ -86,9 +95,6 @@ function WeaponController:CreateBulletHole(raycastResult)
 
     local fxClone = bulletHole:Clone()
     fxClone.Parent = part
-    task.delay(8, function()
-        part:Destroy()
-    end)
 end
 
 function WeaponController:ShowDamageNumber(hum, num, braindamage)
@@ -210,6 +216,9 @@ function WeaponController:KnitStart()
         local function handleAction(actionName, inputState)
             local can = not equipDebounce and (hum.Health > 0 and character.HumanoidRootPart and viewmodel.HumanoidRootPart)
             if not can then return end
+            for _, v in pairs(workspace.Projectiles:GetChildren()) do
+                if v.Name == Knit.Player.UserId then v:Destroy() end
+            end
             if actionName == "Equip" and not weapon1Equipped and weapon2Equipped then
                 if inputState == Enum.UserInputState.Begin then
                     equipDebounce = true

@@ -16,6 +16,8 @@ function HudController:KnitInit()
     HudController.crosshairOffset2 = SmoothValue:create(0,0,20)
     HudController.isAiming = false
     HudController.crosshairOffsetMultiplier = 2
+    HudController.crosshairTransparency = SmoothValue:create(0,0,4)
+    HudController.dotTransparency = SmoothValue:create(0,0,15)
 end
 
 function HudController:KnitStart()
@@ -32,6 +34,12 @@ function HudController:KnitStart()
         self.Overlay.Crosshair.Right.Position = UDim2.new(0.5, self.crosshairOffset:update(dt) * self.crosshairOffsetMultiplier + self.crosshairOffset2:update(dt), 0.5, 0)
         self.Overlay.Crosshair.Left.Position = UDim2.new(0.5, -self.crosshairOffset:update(dt)* self.crosshairOffsetMultiplier - self.crosshairOffset2:update(dt), 0.5, 0)
 
+        self.Overlay.Crosshair.Bottom.BackgroundTransparency = self.crosshairTransparency:update(dt)
+        self.Overlay.Crosshair.Top.BackgroundTransparency = self.crosshairTransparency:update(dt)
+        self.Overlay.Crosshair.Right.BackgroundTransparency = self.crosshairTransparency:update(dt)
+        self.Overlay.Crosshair.Left.BackgroundTransparency = self.crosshairTransparency:update(dt)
+        self.Overlay.Crosshair.Dot.BackgroundTransparency = self.dotTransparency:update(dt)
+
         for _, v in pairs(self.Overlay.DamageIndicators:GetChildren()) do
             local myPosition = workspace.CurrentCamera.CFrame.Position
             local enemyPosition = v:GetAttribute("Pos")
@@ -41,10 +49,6 @@ function HudController:KnitStart()
             local rot = math.atan2(travel.Z, travel.X)
             v.Rotation = math.deg(rot) + 90
         end
-    end)
-
-    workspace.ServerRegion.Changed:Connect(function(v)
-        self.ScreenGui.Frame.Stats.ServerRegion.Text = v
     end)
 
     game.Lighting.Atmosphere.Density = 0.45
@@ -64,8 +68,8 @@ end
 
 function HudController:SetBullets(num, max)
     if not self.ScreenGui then return end
-    self.ScreenGui.Frame.Bullets.Cur.Text = num
-    if max then self.ScreenGui.Frame.Bullets.Max.Text = max end
+    self.ScreenGui.Frame.WeaponStats.Bullets.Cur.Text = num
+    if max then self.ScreenGui.Frame.WeaponStats.Bullets.Max.Text = max end
 end
 
 HudController.lastShownHitmarker = tick()
@@ -126,23 +130,35 @@ function HudController:ShowVignette(val, time)
     end
 end
 
-function HudController:ShowCrosshair(val, time)
-    for _, v in pairs(self.Overlay.Crosshair:GetChildren()) do
-        if v:IsA("Frame") and v.Name ~= "Hitmarker" then
-            if val then
-                Tween(v, TweenInfo.new(time), {BackgroundTransparency = 0})
-            else
-                Tween(v, TweenInfo.new(time, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1})
-            end
-        end
-    end
-end
-
 HudController.BloodTweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+HudController.LastChangedHealth = 0
+HudController.HealthJanitor = Janitor.new()
 
 function HudController:SetHealth(h)
+    self.HealthJanitor:Cleanup()
+    self.LastChangedHealth = tick()
+    self.ScreenGui.Frame.HealthBar.Health.Health.Text = math.floor(h)
+    if h ~= 100 then
+        self.ScreenGui.Frame.HealthBar.BackgroundTransparency = 0.5
+        self.ScreenGui.Frame.HealthBar.Bar.BackgroundTransparency = 0
+    end
+    task.delay(1, function()
+        if tick() - self.LastChangedHealth >= 1 then
+            self.HealthJanitor:AddPromise(Tween(self.ScreenGui.Frame.HealthBar, TweenInfo.new(.5), {BackgroundTransparency = 1}))
+            self.HealthJanitor:AddPromise(Tween(self.ScreenGui.Frame.HealthBar.Bar, TweenInfo.new(.5), {BackgroundTransparency = 1}))
+        end
+    end)
+    if h > 70 then
+        self.ScreenGui.Frame.HealthBar.Health.ImageLabel.ImageColor3   = Color3.fromRGB(255,255,255)
+        self.ScreenGui.Frame.HealthBar.Health.Health.TextColor3   = Color3.fromRGB(255,255,255)
+    elseif h > 30 then
+        self.ScreenGui.Frame.HealthBar.Health.ImageLabel.ImageColor3   = Color3.fromRGB(243, 203, 0)
+        self.ScreenGui.Frame.HealthBar.Health.Health.TextColor3   = Color3.fromRGB(243, 203, 0)
+    else
+        self.ScreenGui.Frame.HealthBar.Health.ImageLabel.ImageColor3   = Color3.fromRGB(247, 70, 0)
+        self.ScreenGui.Frame.HealthBar.Health.Health.TextColor3   = Color3.fromRGB(247, 70, 0)
+    end
     Tween(self.ScreenGui.Frame.HealthBar.Bar, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.fromScale(h/100, 1)})
-    self.ScreenGui.Frame.HealthBar.Health.Text = h
     Tween(self.Overlay.Blood, self.BloodTweenInfo, {ImageTransparency = h/100})
     Tween(self.Overlay.Blood2, self.BloodTweenInfo, {ImageTransparency = h/100})
     Tween(self.Overlay.Vignette2, self.BloodTweenInfo, {ImageTransparency = h/100})
@@ -169,10 +185,6 @@ function HudController:SetHealth(h)
     end
 end
 
-function HudController:SetVel(v)
-    self.ScreenGui.Frame.Stats.Velocity.Text = v
-end
-
 function HudController:PromptKill(name)
     self:ShowHitmarker(true)
     for _, v in pairs(self.ScreenGui.KillPromptArea:GetChildren()) do
@@ -191,8 +203,10 @@ function HudController:PromptKill(name)
     end)
 end
 
+local damageDirDur = 0.5
+
 function HudController:ShowDamageDir(playerName, pos)
-    local can = self.Overlay.DamageIndicators:FindFirstChild(playerName) and tick() - self.Overlay.DamageIndicators[playerName]:GetAttribute("t") < 0.3
+    local can = self.Overlay.DamageIndicators:FindFirstChild(playerName) and tick() - self.Overlay.DamageIndicators[playerName]:GetAttribute("t") < damageDirDur
     local d
     if can then
         d = self.Overlay.DamageIndicators[playerName]
@@ -203,10 +217,10 @@ function HudController:ShowDamageDir(playerName, pos)
     end
     d:SetAttribute("t", tick())
     d:SetAttribute("Pos", pos)
-    task.delay(0.3, function()
-        if d and tick() - d:GetAttribute("t") > 0.3 then
-            Tween(d, TweenInfo.new(0.3), {ImageTransparency = 1})
-            task.delay(0.3, function()
+    task.delay(damageDirDur, function()
+        if d and tick() - d:GetAttribute("t") > damageDirDur then
+            Tween(d, TweenInfo.new(damageDirDur), {ImageTransparency = 1})
+            task.delay(damageDirDur, function()
                 d:Destroy()
             end)
         end

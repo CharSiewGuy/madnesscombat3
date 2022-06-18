@@ -41,14 +41,14 @@ function module:Fire(character, direction)
 
     local CastBehavior = FastCast.newBehavior()
     CastBehavior.RaycastParams = CastParams
-    CastBehavior.MaxDistance = 500
+    CastBehavior.MaxDistance = 800
     CastBehavior.HighFidelityBehavior = FastCast.HighFidelityBehavior.Default
     CastBehavior.CosmeticBulletContainer = workspace.Projectiles
     CastBehavior.CosmeticBulletTemplate = script.Parent.BulletPart
-    CastBehavior.Acceleration = Vector3.new(0, -5, 0)
+    CastBehavior.Acceleration = Vector3.new(0, -350, 0)
     CastBehavior.AutoIgnoreContainer = true
 
-    self.mainCaster:Fire(character.Prime.Handle.MuzzleBack.WorldPosition, direction, 350, CastBehavior)
+    self.mainCaster:Fire(character.Prime.Handle.MuzzleBack.WorldPosition, direction, 800, CastBehavior)
 
     if not character.Prime.Handle.Muzzle then return end
 

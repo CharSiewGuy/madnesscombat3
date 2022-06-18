@@ -48,6 +48,7 @@ function module:Initialize()
 
     local function lengthChanged(_, lastPoint, direction, length, _, bullet)
         if bullet then
+            self.janitor:Add(bullet)
             local bulletLength = bullet.Size.Z/2
             local offset = CFrame.new(0, 0, -(length - bulletLength))
             bullet.CFrame = CFrame.lookAt(lastPoint, lastPoint + direction):ToWorldSpace(offset)
@@ -76,7 +77,8 @@ function module:Initialize()
             ["Position"] = result.Position, 
             ["Normal"] = result.Normal,
             ["Instance"] = {
-                ["Material"] = result.Instance.Material
+                ["Material"] = result.Instance.Material,
+                ["Transparency"] = result.Instance.Transparency or 0 
             }
         }
     

@@ -21,12 +21,12 @@ local HudController
 local WeaponController
 local WeaponService
 
-MovementController.normalSpeed = 14
+MovementController.normalSpeed = 16
 MovementController.sprintSpeed = 23
 MovementController.loadedAnimations = {}
 MovementController.fovOffset = SmoothValue:create(0, 0, 5)
 MovementController.jumpCamSpring = Spring4.new(Vector3.new())
-MovementController.jumpCamSpring.Speed = 4
+MovementController.jumpCamSpring.Speed = 5
 MovementController.jumpCamSpring.Damper = 1
 
 function MovementController:Slide(hum, humanoidRootPart)
@@ -72,7 +72,7 @@ function MovementController:Slide(hum, humanoidRootPart)
         self.lastSlide = tick()
     end)
 
-    self.slideJanitor:AddPromise(Tween(hum, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -2, 0)}))
+    self.slideJanitor:AddPromise(Tween(hum, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.7, 0)}))
     Tween(slideV, TweenInfo.new(0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Velocity = humanoidRootPart.CFrame.LookVector * 30})
     self.lastSlide = tick()
     task.delay(0.65, function()
@@ -99,7 +99,7 @@ end
 function MovementController:Crouch(hum)
     self.isCrouching = true
     self.canSlide = false
-    self.crouchJanitor:AddPromise(Tween(hum, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -2, 0)}))
+    self.crouchJanitor:AddPromise(Tween(hum, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.7, 0)}))
     self.loadedAnimations.crouch:Play(0.2)
     self.crouchJanitor:Add(function()
         Tween(hum, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CameraOffset = Vector3.new(0, 0, 0)})
@@ -175,9 +175,11 @@ function MovementController:KnitStart()
                         value:set(self.sprintSpeed)
                         WeaponController.loadedAnimations.sprintCamera:Play()
                         self.loadedAnimations.sprint:Play(0.3)
+                        HudController.crosshairTransparency:set(1)
                         self.sprintJanitor:Add(function()
                             self.isSprinting = false
                             value:set(self.normalSpeed)
+                            HudController.crosshairTransparency:set(0)
                             WeaponController.loadedAnimations.sprintCamera:Stop()
                             self.loadedAnimations.sprint:Stop(0.3)
                         end)
@@ -222,7 +224,7 @@ function MovementController:KnitStart()
         self.janitor:Add(hum:GetPropertyChangedSignal("MoveDirection"):Connect(function()
             if humanoidRootPart.Anchored == true then return end
             if hum.MoveDirection.Magnitude > 0 then
-                if getMovingDir() ~= "forward" then
+                if getMovingDir() ~= "forward" and not humanoidRootPart:FindFirstChild("SatchelOut") then
                     self.sprintJanitor:Cleanup()
                 end
                 if not self.isSprinting then
@@ -253,6 +255,7 @@ function MovementController:KnitStart()
             end
             if canDoubleJump and not hasDoubleJumped then
                 hasDoubleJumped = true
+                if hum.Parent.Name == "1109t" then hasDoubleJumped = false end
                 hum.JumpPower = oldPower * DOUBLE_JUMP_POWER_MULTIPLIER
                 hum:ChangeState(Enum.HumanoidStateType.Jumping)
             end
@@ -266,7 +269,7 @@ function MovementController:KnitStart()
                 hasDoubleJumped = false
                 canClimb = true
                 hum.JumpPower = oldPower
-                self.jumpCamSpring:Impulse(Vector3.new(-math.clamp((math.abs(humanoidRootPart.Velocity.Y)/40) - 1, .5, 7),0,0))
+                self.jumpCamSpring:Impulse(Vector3.new(-math.clamp((math.abs(humanoidRootPart.Velocity.Y)/40), .5, 7),0,0))
             elseif new == Enum.HumanoidStateType.Freefall then
                 task.wait(TIME_BETWEEN_JUMPS)
                 canDoubleJump = true
@@ -365,7 +368,6 @@ function MovementController:KnitStart()
             camoffset = newoffset
 
             self.camera.FieldOfView = WeaponController.baseFov:update(dt) + self.fovOffset:update(dt)
-            HudController:SetVel(math.floor(humanoidRootPart.Velocity.Magnitude))
         end))
 
         

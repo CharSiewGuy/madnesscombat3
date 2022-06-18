@@ -31,7 +31,7 @@ end
 module.mainCaster.CastTerminating:Connect(castTerminating)
 
 function module:Fire(character, direction)
-    local can = character.Prime and character.Prime.Handle and character.Prime.Handle.MuzzleBack
+    local can = character.Outlaw and character.Outlaw.Handle and character.Outlaw.Handle.MuzzleBack
     if not can then return end
     
     local CastParams = RaycastParams.new()
@@ -41,23 +41,21 @@ function module:Fire(character, direction)
 
     local CastBehavior = FastCast.newBehavior()
     CastBehavior.RaycastParams = CastParams
-    CastBehavior.MaxDistance = 500
+    CastBehavior.MaxDistance = 800
     CastBehavior.HighFidelityBehavior = FastCast.HighFidelityBehavior.Default
     CastBehavior.CosmeticBulletContainer = workspace.Projectiles
     CastBehavior.CosmeticBulletTemplate = script.Parent.BulletPart
-    CastBehavior.Acceleration = Vector3.new(0, -5, 0)
+    CastBehavior.Acceleration = Vector3.new(0, -20, 0)
     CastBehavior.AutoIgnoreContainer = true
 
-    self.mainCaster:Fire(character.Prime.Handle.MuzzleBack.WorldPosition, direction, 350, CastBehavior)
+    if not character.Outlaw.Handle.Muzzle then return end
 
-    if not character.Prime.Handle.Muzzle then return end
-
-    local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
-    flash.Parent = character.Prime.Handle.Muzzle
-    flash:Emit(1)
-    task.delay(0.15, function()
-        flash:Destroy()
-    end)
+    self.mainCaster:Fire(character.Outlaw.Handle.MuzzleBack.WorldPosition, direction, 600, CastBehavior)
+    for _, v in pairs(character.Outlaw.Handle.Muzzle:GetChildren()) do
+        if v:IsA("ParticleEmitter") then
+            v:Emit(10)
+        end
+    end
 end
 
 return module

@@ -333,7 +333,7 @@ local userInputService = game:GetService("UserInputService")
 
 function playRunAnim()
 	local dir = HumanoidRootPart.CFrame:VectorToObjectSpace(Humanoid.MoveDirection)
-	if Humanoid.WalkSpeed > 10 and Humanoid.WalkSpeed <= 12 then
+	if Humanoid.WalkSpeed > 6 and Humanoid.WalkSpeed <= 12 then
 		playAnimation("crouchWalk", 0.2, Humanoid)
 		setAnimationSpeed(3)
 	else
