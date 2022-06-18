@@ -206,6 +206,8 @@ function WeaponController:KnitStart()
         until character:FindFirstChild("HumanoidRootPart") and viewmodel:FindFirstChild("HumanoidRootPart")
         
         weaponModule:Equip(character, viewmodel, weaponModule.maxBullets)
+        WeaponService:SetCurWeapon("Prime")
+        HudController:SetCurWeapon("Prime")
 
         weaponModule.bullets = weaponModule.maxBullets
         weaponModule2.bullets = weaponModule2.maxBullets
@@ -230,6 +232,8 @@ function WeaponController:KnitStart()
                     task.delay(0.2, function()
                         equipDebounce = false
                     end)
+                    WeaponService:SetCurWeapon("Prime")
+                    HudController:SetCurWeapon("Prime")
                 end
             elseif actionName == "Equip2" and not weapon2Equipped and weapon1Equipped then
                 if inputState == Enum.UserInputState.Begin then
@@ -242,6 +246,8 @@ function WeaponController:KnitStart()
                     task.delay(0.2, function()
                         equipDebounce = false
                     end)
+                    WeaponService:SetCurWeapon("Outlaw")
+                    HudController:SetCurWeapon("Outlaw")
                 end
             end
         end

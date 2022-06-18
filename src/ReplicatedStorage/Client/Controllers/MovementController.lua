@@ -370,7 +370,23 @@ function MovementController:KnitStart()
             self.camera.FieldOfView = WeaponController.baseFov:update(dt) + self.fovOffset:update(dt)
         end))
 
-        
+        self.janitor:Add(function()
+            for _, v in pairs(character:GetDescendants()) do
+                if v:IsA("Motor6D") and not v:FindFirstAncestor("Weapons") and v.Name ~= "Handle" then
+                    local Att0, Att1 = Instance.new("Attachment"), Instance.new("Attachment")
+                    Att0.CFrame = v.C0
+                    Att1.CFrame = v.C1
+                    Att0.Parent = v.Part0
+                    Att1.Parent = v.Part1
+                    local BSC = Instance.new("BallSocketConstraint")
+                    BSC.Attachment0 = Att0
+                    BSC.Attachment1 = Att1
+                    BSC.Parent = v.Part0
+                    v:Destroy()
+                end
+            end
+        end)
+
         self.janitor:Add(hum.Died:Connect(function()
             self.janitor:Cleanup()
         end))

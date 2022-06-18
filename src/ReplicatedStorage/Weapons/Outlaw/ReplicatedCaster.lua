@@ -31,7 +31,7 @@ end
 module.mainCaster.CastTerminating:Connect(castTerminating)
 
 function module:Fire(character, direction)
-    local can = character.Outlaw and character.Outlaw.Handle and character.Outlaw.Handle.MuzzleBack
+    local can = character.Weapons.Outlaw and character.Weapons.Outlaw.Handle and character.Weapons.Outlaw.Handle.MuzzleBack
     if not can then return end
     
     local CastParams = RaycastParams.new()
@@ -48,10 +48,10 @@ function module:Fire(character, direction)
     CastBehavior.Acceleration = Vector3.new(0, -20, 0)
     CastBehavior.AutoIgnoreContainer = true
 
-    if not character.Outlaw.Handle.Muzzle then return end
+    if not character.Weapons.Outlaw.Handle.Muzzle then return end
 
-    self.mainCaster:Fire(character.Outlaw.Handle.MuzzleBack.WorldPosition, direction, 600, CastBehavior)
-    for _, v in pairs(character.Outlaw.Handle.Muzzle:GetChildren()) do
+    self.mainCaster:Fire(character.Weapons.Outlaw.Handle.MuzzleBack.WorldPosition, direction, 600, CastBehavior)
+    for _, v in pairs(character.Weapons.Outlaw.Handle.Muzzle:GetChildren()) do
         if v:IsA("ParticleEmitter") then
             v:Emit(10)
         end

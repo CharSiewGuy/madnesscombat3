@@ -4,6 +4,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 
+local pvpOnly = false
+
 local WeaponService = Knit.CreateService {
     Name = "WeaponService", 
     Client = {
@@ -35,7 +37,7 @@ function WeaponService.Client:Damage(player, hum, damage)
         if hum.Health - damage <= 0 then
             local can = player.Character and player.Character.Humanoid
             if not can then return end
-            if game.Players:GetPlayerFromCharacter(hum.Parent) then
+            if game.Players:GetPlayerFromCharacter(hum.Parent) or not pvpOnly then
                 player.Character.Humanoid.Health += 50
                 self.KillSignal:Fire(player, hum.Parent.Name)
             end
@@ -75,13 +77,34 @@ function WeaponService.Client:Tilt(player, c0)
 	end
 end
 
+function WeaponService.Client:SetCurWeapon(player, weaponName)
+    if not player.Character then return end
+    if not player.Character.Weapons:FindFirstChild(weaponName) then return end
+    for _, weapon in pairs(player.Character.Weapons:GetChildren()) do
+        if weapon.Name == weaponName then
+            for _, v in pairs(weapon:GetDescendants()) do 
+                if v:IsA("BasePart") then 
+                    v.Transparency = 0 
+                elseif v:IsA("Texture") then
+                    v.Transparency = tonumber(v.Name)
+                end
+            end
+        else
+            for _, v in pairs(weapon:GetDescendants()) do 
+                if v:IsA("BasePart") or v:IsA("Texture") then 
+                    v.Transparency = 1 
+                end 
+            end
+         end
+    end
+end
+
 function WeaponService.Client:CreateBulletHole(player, raycastResult)
     self.CreateBulletHoleSignal:FireExcept(player, raycastResult)
 end
 
 function WeaponService.Client:CreateImpactEffect(player, raycastResult, human)
     self.CreateImpactEffectSignal:FireExcept(player, raycastResult, human)
-    
 end
 
 return WeaponService

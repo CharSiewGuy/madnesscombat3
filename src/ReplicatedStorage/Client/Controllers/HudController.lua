@@ -66,6 +66,16 @@ function HudController:ExpandCrosshair()
     end)
 end
 
+function HudController:SetCurWeapon(weaponName)
+    local weaponStats = self.ScreenGui.Frame.WeaponStats
+    if weaponStats:FindFirstChild("WeaponIcon") then weaponStats.WeaponIcon:Destroy() end
+    local icon = ReplicatedStorage.Weapons[weaponName].WeaponIcon
+    if icon then
+        local c = icon:Clone()
+        c.Parent = weaponStats
+    end
+end
+
 function HudController:SetBullets(num, max)
     if not self.ScreenGui then return end
     self.ScreenGui.Frame.WeaponStats.Bullets.Cur.Text = num
@@ -188,16 +198,20 @@ end
 function HudController:PromptKill(name)
     self:ShowHitmarker(true)
     for _, v in pairs(self.ScreenGui.KillPromptArea:GetChildren()) do
-        Tween(v, TweenInfo.new(0.1, Enum.EasingStyle.Linear), {Position = UDim2.fromScale(0, v.Position.Y.Scale + 0.5)})
+        v.Position = UDim2.fromScale(0, v.Position.Y.Scale + 0.6)
     end
     local killPrompt = ReplicatedStorage.Assets.KillPrompt:Clone()
     killPrompt.PlayerName.Text = '<i><font color = "#FFFFFF">' .. "KILLED " .. "</font>" .. string.upper(name) .. "</i>"
+    killPrompt.Position = UDim2.fromScale(0, 0)
+    killPrompt.PlayerName.Size = UDim2.fromScale(1, 1.1)
     killPrompt.Parent = self.ScreenGui.KillPromptArea
-    killPrompt.Position = UDim2.fromScale(0, -0.5)
-    Tween(killPrompt, TweenInfo.new(0.1, Enum.EasingStyle.Linear), {Position = UDim2.fromScale(0, 0)})
+    Tween(killPrompt.PlayerName, TweenInfo.new(.05, Enum.EasingStyle.Linear), {Size = UDim2.fromScale(1, 1.3)}):andThen(function()
+        Tween(killPrompt.PlayerName, TweenInfo.new(.1, Enum.EasingStyle.Quad), {Size = UDim2.fromScale(1, 1)})
+    end)
     task.delay(1.5, function()
-        Tween(killPrompt.PlayerName, TweenInfo.new(1, Enum.EasingStyle.Linear), {TextTransparency = 1, TextStrokeTransparency = 1})
-        task.delay(1, function()
+        Tween(killPrompt.PlayerName, TweenInfo.new(.1), {TextTransparency = 1, TextStrokeTransparency = 1})
+        Tween(killPrompt.Bg, TweenInfo.new(.1), {ImageTransparency = 1})
+        task.delay(.2, function()
             killPrompt:Destroy()
         end)
     end)
