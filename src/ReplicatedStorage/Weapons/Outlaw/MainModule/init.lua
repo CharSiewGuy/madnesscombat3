@@ -111,7 +111,7 @@ function module:SetupAnimations(character, vm)
         vm.HumanoidRootPart.CFrame = self.camera.CFrame
 
         local mouseDelta = UserInputService:GetMouseDelta()
-        self.springs.sway:shove(Vector3.new(mouseDelta.X/250,mouseDelta.Y/250))
+        self.springs.sway:shove(Vector3.new(mouseDelta.X/200,mouseDelta.Y/200))
         local sway = self.springs.sway:update(dt)
 
         local gunbobcf = CFrame.new(0,0,0)
@@ -331,7 +331,7 @@ function module:Reload()
             self.isReloading = false
             MovementController.canClimb = true
             self.bullets = self.maxBullets
-            HudController:SetBullets(self.bullets)
+            HudController:SetBullets(self.bullets, self.maxBullets)
             self.speedloader.Wheel1.Transparency = 1
             self.speedloader.Wheel2.Transparency = 1
         end)
@@ -433,7 +433,7 @@ function module:Equip(character, vm, bullets)
 
     if bullets then
         self.bullets = bullets
-        HudController:SetBullets(bullets)
+        HudController:SetBullets(bullets, self.maxBullets)
     end
 
     local function handleAction(actionName, inputState)
@@ -513,7 +513,7 @@ function module:Equip(character, vm, bullets)
                 task.delay(sound.TimeLength, function()
                     sound:Destroy()
                 end)   
-                WeaponService:PlaySound("Outlaw", "Shoot", true) 
+                WeaponService:PlaySound("Outlaw", randSound, true) 
 
                 if not self.isAiming then
                     self.loadedAnimations.scopeOut.Priority = Enum.AnimationPriority.Idle
@@ -556,7 +556,7 @@ function module:Equip(character, vm, bullets)
 
                 HudController:ExpandCrosshair()
                 self.bullets = self.bullets - 1
-                HudController:SetBullets(self.bullets)
+                HudController:SetBullets(self.bullets, self.maxBullets)
 
                 pcall(function()MovementController.sprintJanitor:Cleanup()end)
             end

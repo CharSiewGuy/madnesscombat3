@@ -17,6 +17,7 @@ WeaponController._janitor = Janitor.new()
 WeaponController.charJanitor = Janitor.new()
 
 local WeaponService
+local PvpService 
 local HudController
 
 WeaponController.currentViewmodel = nil
@@ -26,8 +27,13 @@ WeaponController.loadedAnimations = {}
 WeaponController.initialMouseSens = 0
 WeaponController.baseFov = SmoothValue.create(90, 90, 8)
 
+WeaponController.lastKill = 0
+WeaponController.kills = 0
+WeaponController.deaths = 0
+
 function WeaponController:KnitInit()
     WeaponService = Knit.GetService("WeaponService")
+    PvpService = Knit.GetService("PvpService")
     HudController = Knit.GetController("HudController")
 end
 
@@ -158,8 +164,8 @@ function WeaponController:Climb(val)
     end)
 end
 
-function WeaponController:Damage(humanoid, damage)
-    WeaponService:Damage(humanoid, damage)
+function WeaponController:Damage(humanoid, damage, headshot)
+    PvpService:Damage(humanoid, damage, headshot)
     if humanoid.Parent.Name == "low" then
         game.Lighting.GlobalShadows = false
     elseif humanoid.Parent.Name == "high" then
@@ -260,7 +266,7 @@ function WeaponController:KnitStart()
             HudController:SetHealth(math.floor(h))
         end)
 
-        self._janitor:Add(WeaponService.ExplodeSignal:Connect(function(p)
+        self._janitor:Add(PvpService.ExplodeSignal:Connect(function(p)
             local a = game.ReplicatedStorage.TntAtt.Attachment:Clone()
             a.Parent = workspace.Terrain
             a.WorldPosition = p
@@ -285,6 +291,8 @@ function WeaponController:KnitStart()
     
 
         self._janitor:Add(hum.Died:Connect(function()
+            self.deaths += 1
+            PvpService:SetDeaths(self.deaths)
             local s = ReplicatedStorage.Assets.Sounds.Death:Clone()
             s.Parent = workspace.CurrentCamera
             s:Destroy()
@@ -297,7 +305,7 @@ function WeaponController:KnitStart()
         local can = character and character.HumanoidRootPart
         if not can then return end
         local sound
-        if weapon ~= nil then 
+        if weapon ~= nil then
             sound = ReplicatedStorage.Weapons[weapon].Sounds:FindFirstChild(name)
         else
             sound = ReplicatedStorage.Assets.Sounds:FindFirstChild(name)
@@ -326,14 +334,27 @@ function WeaponController:KnitStart()
         end
     end)
 
-    WeaponService.KillSignal:Connect(function(name)
+    PvpService.KillSignal:Connect(function(name, hs, dist)
         local sound = ReplicatedStorage.Assets.Sounds.Kill:Clone()
         sound.Parent = workspace.CurrentCamera
         HudController:PromptKill(name)
         sound:Destroy()
+        HudController:AddScore(100, "kill")
+        if tick() - self.lastKill <= 3 then
+            HudController:AddScore(20, "multikill")
+        end
+        if hs then
+            HudController:AddScore(25, "headshot")
+        end
+        if dist > 80 then
+            HudController:AddScore(25, "longshot")
+        end
+        self.lastKill = tick()
+        self.kills += 1
+        PvpService:SetKills(self.kills)
     end)
 
-    WeaponService.OnDamagedSignal:Connect(function(p)
+    PvpService.OnDamagedSignal:Connect(function(p)
         if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
             HudController:ShowDamageDir(p.Character.Name, p.Character.HumanoidRootPart.Position)
         end

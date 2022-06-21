@@ -12,42 +12,10 @@ local WeaponService = Knit.CreateService {
         PlaySignal = Knit.CreateSignal(), 
         StopSignal = Knit.CreateSignal(),
         FireSignal = Knit.CreateSignal(),
-        KillSignal = Knit.CreateSignal(),
         CreateBulletHoleSignal = Knit.CreateSignal(),
         CreateImpactEffectSignal = Knit.CreateSignal(),
-        OnDamagedSignal = Knit.CreateSignal(),
-        ExplodeSignal = Knit.CreateSignal()
     }
 }
-
-function WeaponService:FireExplodeSignal(pos)
-    self.Client.ExplodeSignal:FireAll(pos)
-end
-
-function WeaponService:RespawnTnt(c, v)
-    task.delay(v, function()
-		local t = game.ServerStorage.TNT:Clone()
-		t.PrimaryPart.CFrame = c
-		t.Parent = workspace
-    end)
-end
-
-function WeaponService.Client:Damage(player, hum, damage)
-    if hum.Health > 0 then
-        if hum.Health - damage <= 0 then
-            local can = player.Character and player.Character.Humanoid
-            if not can then return end
-            if game.Players:GetPlayerFromCharacter(hum.Parent) or not pvpOnly then
-                player.Character.Humanoid.Health += 50
-                self.KillSignal:Fire(player, hum.Parent.Name)
-            end
-        end
-        hum:TakeDamage(damage)
-        if game.Players:GetPlayerFromCharacter(hum.Parent) then
-            self.OnDamagedSignal:Fire(game.Players:GetPlayerFromCharacter(hum.Parent), player)
-        end
-    end
-end
 
 function WeaponService.Client:PlaySound(player, weapon, soundName, playOnRemove)
     if not player.Character then return end

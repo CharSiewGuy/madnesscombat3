@@ -104,7 +104,7 @@ function module:Initialize()
             end
 
             if humanoid.Health > 0 then
-                WeaponController:Damage(humanoid, damage)
+                WeaponController:Damage(humanoid, damage, headshot)
                 
                 local sound
                 if headshot then

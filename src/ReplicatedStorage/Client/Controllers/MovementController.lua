@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 local ContextActionService = game:GetService("ContextActionService")
 local UserInputService = game:GetService("UserInputService")
@@ -307,10 +308,10 @@ function MovementController:KnitStart()
 
             local can = character and character.Humanoid and character.Humanoid.Health > 0 and character.Head
             if not can then return end
-            
+                
             if hum.FloorMaterial == Enum.Material.Air and canClimb and self.canClimb then
                 local raycastParams = RaycastParams.new()
-                raycastParams.FilterDescendantsInstances = {character, self.camera}
+                raycastParams.FilterDescendantsInstances = {character, self.camera, CollectionService:GetTagged("Unclimbable")}
                 raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
                 for i = 0, 0.5, 0.1 do
                     local raycastResult = workspace:Raycast(character.Head.Position - Vector3.new(0,i,0), (character.Head.CFrame.LookVector - Vector3.new(0,i,0)).Unit * 3, raycastParams)

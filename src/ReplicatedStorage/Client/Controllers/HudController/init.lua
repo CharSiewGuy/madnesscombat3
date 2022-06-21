@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ContextActionService = game:GetService("ContextActionService")
 
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
@@ -11,13 +12,19 @@ local SmoothValue = require(game.ReplicatedStorage.Modules.SmoothValue)
 local HudController = Knit.CreateController { Name = "HudController" }
 HudController._janitor = Janitor.new()
 
+local PvpService
+
 function HudController:KnitInit()
+    PvpService = Knit.GetService("PvpService")
+
     HudController.crosshairOffset = SmoothValue:create(20, 20, 4)
     HudController.crosshairOffset2 = SmoothValue:create(0,0,20)
     HudController.isAiming = false
     HudController.crosshairOffsetMultiplier = 2
     HudController.crosshairTransparency = SmoothValue:create(0,0,4)
     HudController.dotTransparency = SmoothValue:create(0,0,15)
+    
+    HudController.score = 0
 end
 
 function HudController:KnitStart()
@@ -49,12 +56,35 @@ function HudController:KnitStart()
             local rot = math.atan2(travel.Z, travel.X)
             v.Rotation = math.deg(rot) + 90
         end
+
+        for _, v in pairs(self.ScreenGui.Scoreboard.InnerFrame.Frame:GetChildren()) do
+            if v.Name ~= "0" then v:Destroy() end
+        end
+        local playerT = {}
+        for _, v in pairs(game.Players:GetPlayers()) do
+            playerT[v.Name] = v:GetAttribute("Score")
+        end
     end)
 
     game.Lighting.Atmosphere.Density = 0.45
 
     local StarterGui = game:GetService("StarterGui")
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
+    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+
+    ContextActionService:BindAction("Scoreboard", function(action, inputState)
+        if action == "Scoreboard" then
+            if inputState == Enum.UserInputState.Begin then
+                Tween(game.Lighting.ScoreboardBlur, TweenInfo.new(0.2), {Size = 12})
+                self.Overlay.Crosshair.Visible = false
+                self.ScreenGui.Frame.Scoreboard.Visible = true
+            elseif inputState == Enum.UserInputState.End then
+                Tween(game.Lighting.ScoreboardBlur, TweenInfo.new(0.2), {Size = 0})
+                self.Overlay.Crosshair.Visible = true
+                self.ScreenGui.Frame.Scoreboard.Visible = false
+            end
+        end
+    end, true, Enum.KeyCode.Tab)
 end
 
 function HudController:ExpandCrosshair()
@@ -79,6 +109,11 @@ end
 function HudController:SetBullets(num, max)
     if not self.ScreenGui then return end
     self.ScreenGui.Frame.WeaponStats.Bullets.Cur.Text = num
+    if max/num >= 3 then
+        self.ScreenGui.Frame.WeaponStats.Bullets.Cur.TextColor3 = Color3.fromRGB(247, 70, 0)
+    else
+        self.ScreenGui.Frame.WeaponStats.Bullets.Cur.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end
     if max then self.ScreenGui.Frame.WeaponStats.Bullets.Max.Text = max end
 end
 
@@ -195,23 +230,78 @@ function HudController:SetHealth(h)
     end
 end
 
+HudController.lastChangedScore = 0
+
+function HudController:AddScore(scoreNum, reason)
+    self.lastChangedScore = tick()
+
+    local score = self.Overlay.Score:FindFirstChild("Score")
+    if not score then score = ReplicatedStorage.Assets.Score:Clone() end
+    score.TextTransparency = 1
+    score.TextStrokeTransparency = 1
+    score.Size = UDim2.fromScale(0.3, 0.4)
+    Tween(score, TweenInfo.new(0.2), {Size = UDim2.fromScale(0.3, 0.15), TextTransparency = 0, TextStrokeTransparency = 0.8})
+    score.Text = "+" .. score:GetAttribute("num") + scoreNum
+    score:SetAttribute("num", score:GetAttribute("num") + scoreNum)
+    score.Parent = self.Overlay.Score
+
+    local scoreBg = self.Overlay.Score:FindFirstChild("ScoreBg")
+    if not scoreBg then scoreBg = ReplicatedStorage.Assets.ScoreBg:Clone() end
+    scoreBg.TextTransparency = 1
+    scoreBg.Size = UDim2.fromScale(0.3, 0.4)
+    Tween(scoreBg, TweenInfo.new(0.2), {Size = UDim2.fromScale(0.3, 0.15), TextTransparency = 0.5})
+    scoreBg.Text = "+" .. scoreBg:GetAttribute("num") + scoreNum
+    scoreBg:SetAttribute("num", scoreBg:GetAttribute("num") + scoreNum)
+    scoreBg.Parent = self.Overlay.Score
+
+    task.delay(1, function()
+        if tick() - self.lastChangedScore >= 1 then
+            Tween(score, TweenInfo.new(0.3), {TextTransparency = 1, TextStrokeTransparency = 1})
+            Tween(scoreBg, TweenInfo.new(0.3), {TextTransparency = 1})
+            task.delay(0.3, function()
+                if tick() - self.lastChangedScore >= 1.3 then
+                    score:Destroy()
+                    scoreBg:Destroy()
+                end
+            end)
+        end
+    end)
+
+    local scoreText = ReplicatedStorage.Assets.ScoreText:Clone()
+    scoreText.Text = string.upper(reason)
+    scoreText.Parent = self.Overlay.Score.Frame
+    task.delay(1, function()
+        Tween(scoreText, TweenInfo.new(0.3), {TextTransparency = 1, TextStrokeTransparency = 1})
+        task.delay(0.3, function()
+            scoreText:Destroy()
+        end)
+    end)
+
+    self.score += scoreNum
+    PvpService:SetScore(self.score)
+end
+
 function HudController:PromptKill(name)
     self:ShowHitmarker(true)
     for _, v in pairs(self.ScreenGui.KillPromptArea:GetChildren()) do
         v.Position = UDim2.fromScale(0, v.Position.Y.Scale + 0.6)
     end
     local killPrompt = ReplicatedStorage.Assets.KillPrompt:Clone()
-    killPrompt.PlayerName.Text = '<i><font color = "#FFFFFF">' .. "KILLED " .. "</font>" .. string.upper(name) .. "</i>"
+    killPrompt.PlayerName.Text = '<font color = "#FFFFFF">' .. "KILLED " .. "</font>" .. string.upper(name)
     killPrompt.Position = UDim2.fromScale(0, 0)
-    killPrompt.PlayerName.Size = UDim2.fromScale(1, 1.1)
+    killPrompt.PlayerName.Size = UDim2.fromScale(1, 1)
     killPrompt.Parent = self.ScreenGui.KillPromptArea
-    Tween(killPrompt.PlayerName, TweenInfo.new(.05, Enum.EasingStyle.Linear), {Size = UDim2.fromScale(1, 1.3)}):andThen(function()
-        Tween(killPrompt.PlayerName, TweenInfo.new(.1, Enum.EasingStyle.Quad), {Size = UDim2.fromScale(1, 1)})
-    end)
     task.delay(1.5, function()
-        Tween(killPrompt.PlayerName, TweenInfo.new(.1), {TextTransparency = 1, TextStrokeTransparency = 1})
-        Tween(killPrompt.Bg, TweenInfo.new(.1), {ImageTransparency = 1})
-        task.delay(.2, function()
+        Tween(killPrompt.PlayerName, TweenInfo.new(.3), {TextTransparency = 1, TextStrokeTransparency = 1})
+        Tween(killPrompt.Bg, TweenInfo.new(.3), {ImageTransparency = 1})
+        task.spawn(function()
+            local fx = require(ReplicatedStorage.Modules.GlitchEffect)
+            for _, v in pairs(fx) do
+                killPrompt.Fx.Image = v
+                task.wait()
+            end
+        end)
+        task.delay(.6, function()
             killPrompt:Destroy()
         end)
     end)
