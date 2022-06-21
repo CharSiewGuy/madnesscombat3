@@ -53,14 +53,17 @@ function PvpService.Client:Damage(player, hum, damage, headshot)
 end
 
 function PvpService.Client:SetScore(player, num)
+    if typeof(num) ~= "number" then return end
     player:SetAttribute("Score", num)
 end
 
 function PvpService.Client:SetKills(player, num)
+    if typeof(num) ~= "number" then return end
     player:SetAttribute("Kills", num)
 end
 
 function PvpService.Client:SetDeaths(player, num)
+    if typeof(num) ~= "number" then return end
     player:SetAttribute("Deaths", num)
 end
 

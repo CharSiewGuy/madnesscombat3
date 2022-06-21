@@ -57,12 +57,25 @@ function HudController:KnitStart()
             v.Rotation = math.deg(rot) + 90
         end
 
-        for _, v in pairs(self.ScreenGui.Scoreboard.InnerFrame.Frame:GetChildren()) do
-            if v.Name ~= "0" then v:Destroy() end
+        for _, v in pairs(self.ScreenGui.Frame.Scoreboard.InnerFrame.Frame:GetChildren()) do
+            if v:IsA("Frame") then v:Destroy() end
         end
         local playerT = {}
         for _, v in pairs(game.Players:GetPlayers()) do
             playerT[v.Name] = v:GetAttribute("Score")
+        end
+        table.sort(playerT)
+        local count = 0
+        for i, v in pairs(playerT) do
+            count += 1
+            local playerFrame = ReplicatedStorage.Assets.ScoreboardPlayerFrame:Clone()
+            playerFrame.Name = count
+            local player = game.Players:FindFirstChild(i)
+            playerFrame.PlayerName.Text = string.upper(player.Name)
+            playerFrame.Kills.Text = player:GetAttribute("Kills")
+            playerFrame.Deaths.Text = player:GetAttribute("Deaths")
+            playerFrame.Score.Text = v
+            playerFrame.Parent = self.ScreenGui.Frame.Scoreboard.InnerFrame.Frame
         end
     end)
 
