@@ -6,6 +6,7 @@ local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
 local Promise = require(Packages.Promise)
 local Tween = require(Packages.TweenPromise)
+local Timer = require(Packages.Timer)
 
 local SmoothValue = require(game.ReplicatedStorage.Modules.SmoothValue)
 
@@ -56,25 +57,38 @@ function HudController:KnitStart()
             local rot = math.atan2(travel.Z, travel.X)
             v.Rotation = math.deg(rot) + 90
         end
+    end)
 
+    Timer.Simple(0.1, function()
         for _, v in pairs(self.ScreenGui.Frame.Scoreboard.InnerFrame.Frame:GetChildren()) do
             if v:IsA("Frame") then v:Destroy() end
         end
-        local playerT = {}
+
+        local array = {}
         for _, v in pairs(game.Players:GetPlayers()) do
-            playerT[v.Name] = v:GetAttribute("Score")
+            array[#array+1] = {key = v.Name, value = tonumber(v:GetAttribute("Score"))}
         end
-        table.sort(playerT)
-        local count = 0
-        for i, v in pairs(playerT) do
-            count += 1
+        table.sort(array, function(a, b)
+            return a.value > b.value
+        end)
+
+        for i, v in ipairs(array) do
             local playerFrame = ReplicatedStorage.Assets.ScoreboardPlayerFrame:Clone()
-            playerFrame.Name = count
-            local player = game.Players:FindFirstChild(i)
-            playerFrame.PlayerName.Text = string.upper(player.Name)
+            playerFrame.Name = string.char(i + 64)
+            local player = game.Players:FindFirstChild(v.key)
+            playerFrame.PlayerName.Text = string.upper(v.key)
             playerFrame.Kills.Text = player:GetAttribute("Kills")
             playerFrame.Deaths.Text = player:GetAttribute("Deaths")
-            playerFrame.Score.Text = v
+            playerFrame.Score.Text = v.value
+            if v.key ~= Knit.Player.Name then
+                if i % 2 == 0 then
+                    playerFrame.BackgroundTransparency = 1
+                else
+                    playerFrame.BackgroundTransparency = 0.5
+                    playerFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+                end
+                for _, text in pairs(playerFrame:GetChildren()) do text.TextColor3 = Color3.fromRGB(255,255,255) end
+            end
             playerFrame.Parent = self.ScreenGui.Frame.Scoreboard.InnerFrame.Frame
         end
     end)
