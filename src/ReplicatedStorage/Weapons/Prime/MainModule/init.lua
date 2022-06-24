@@ -33,7 +33,7 @@ module.loadedAnimations = {}
 module.loaded3PAnimations = {}
 module.springs = {}
 module.lerpValues = {}
-module.lerpValues.sprint = SmoothValue:create(0, 0, 12)
+module.lerpValues.sprint = SmoothValue:create(0, 0, 9)
 module.lerpValues.slide = SmoothValue:create(0, 0, 10)
 module.lerpValues.aim = SmoothValue:create(0, 0, 18)
 module.lerpValues.climb = SmoothValue:create(0, 0, 20)
@@ -126,7 +126,7 @@ function module:SetupAnimations(character, vm)
         HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/15))
 
         local idleOffset = CFrame.new(0.8,-0.8,-0.7)
-        local sprintOffset = idleOffset:Lerp(CFrame.new(0.5,-1.3,-1.2) * CFrame.Angles(0,1,0.2), self.lerpValues.sprint:update(dt))
+        local sprintOffset = idleOffset:Lerp(CFrame.new(0.5,-1.5,-1.2) * CFrame.Angles(0,1,0.2), self.lerpValues.sprint:update(dt))
         local slideOffset = sprintOffset:Lerp(CFrame.new(-0.3,-0.7,-0.8) * CFrame.Angles(0, 0, 0.2), self.lerpValues.slide:update(dt))
         local aimOffset = slideOffset:Lerp(CFrame.new(0,0.03,0) * CFrame.Angles(0.01,0,0), self.lerpValues.aim:update(dt))
         local finalOffset = aimOffset
@@ -147,8 +147,8 @@ function module:SetupAnimations(character, vm)
                     0.2 * (self.charspeed/4) * math.cos(tick() * 10),
                     0
                     ) * CFrame.Angles(
-                        math.rad(5 *  math.clamp((self.charspeed/4), 0, 10) * math.sin(tick() * 20)), 
-                        math.rad(7 *  math.clamp((self.charspeed/4), 0, 10) * math.cos(tick() * 10)), 
+                        math.rad(7 *  math.clamp((self.charspeed/4), 0, 10) * math.sin(tick() * 20)), 
+                        math.rad(11 *  math.clamp((self.charspeed/4), 0, 10) * math.cos(tick() * 10)), 
                         math.rad(0)
                     ), 0.1)
             end
@@ -169,10 +169,10 @@ function module:SetupAnimations(character, vm)
 
         if not MovementController.isSprinting then
             if self.isAiming then
-                vm.HumanoidRootPart.CFrame *= UtilModule:viewmodelBob(0.3, 0.15, character.Humanoid.WalkSpeed)
+                vm.HumanoidRootPart.CFrame *= UtilModule:viewmodelBob(0.15, 0.2, character.Humanoid.WalkSpeed)
                 vm.HumanoidRootPart.CFrame *= UtilModule:ViewmodelBreath(0.8)
             else
-                vm.HumanoidRootPart.CFrame *= UtilModule:viewmodelBob(0.8, 0.4, character.Humanoid.WalkSpeed)
+                vm.HumanoidRootPart.CFrame *= UtilModule:viewmodelBob(0.5, 1, character.Humanoid.WalkSpeed)
                 vm.HumanoidRootPart.CFrame *= UtilModule:ViewmodelBreath(0)
             end
         end

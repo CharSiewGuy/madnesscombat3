@@ -174,14 +174,12 @@ function MovementController:KnitStart()
                     if hum.MoveDirection.Magnitude > 0 and getMovingDir() == "forward" then
                         self.isSprinting = true
                         value:set(self.sprintSpeed)
-                        WeaponController.loadedAnimations.sprintCamera:Play()
                         self.loadedAnimations.sprint:Play(0.3)
                         HudController.crosshairTransparency:set(1)
                         self.sprintJanitor:Add(function()
                             self.isSprinting = false
                             value:set(self.normalSpeed)
                             HudController.crosshairTransparency:set(0)
-                            WeaponController.loadedAnimations.sprintCamera:Stop()
                             self.loadedAnimations.sprint:Stop(0.3)
                         end)
                         self.crouchJanitor:Cleanup()

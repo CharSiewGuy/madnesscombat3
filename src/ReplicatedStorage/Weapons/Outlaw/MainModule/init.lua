@@ -34,7 +34,7 @@ module.loadedAnimations = {}
 module.loaded3PAnimations = {}
 module.springs = {}
 module.lerpValues = {}
-module.lerpValues.sprint = SmoothValue:create(0, 0, 12)
+module.lerpValues.sprint = SmoothValue:create(0, 0, 9)
 module.lerpValues.slide = SmoothValue:create(0, 0, 10)
 module.lerpValues.aim = SmoothValue:create(0, 0, 18)
 module.lerpValues.climb = SmoothValue:create(0, 0, 20)
@@ -118,8 +118,8 @@ function module:SetupAnimations(character, vm)
         local jump = self.springs.jump:update(dt)
         HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/15))
 
-        local idleOffset = CFrame.new(0.5,-0.5,-0.6)
-        local sprintOffset = idleOffset:Lerp(CFrame.new(1,-2.2,-1) * CFrame.Angles(1,0,0), self.lerpValues.sprint:update(dt))
+        local idleOffset = CFrame.new(0.5,-0.5,-.9)
+        local sprintOffset = idleOffset:Lerp(CFrame.new(1,-1.8,-.6) * CFrame.Angles(1,0,0), self.lerpValues.sprint:update(dt))
         local slideOffset = sprintOffset:Lerp(CFrame.new(-0.3,-1,-1) * CFrame.Angles(0, 0, 0.6), self.lerpValues.slide:update(dt))
         local aimOffset = slideOffset:Lerp(CFrame.new(0,0.01,0) * CFrame.Angles(0,0,0), self.lerpValues.aim:update(dt))
         local finalOffset = aimOffset
@@ -163,10 +163,10 @@ function module:SetupAnimations(character, vm)
 
         if not MovementController.isSprinting then
             if self.isAiming then
-                vm.HumanoidRootPart.CFrame *= UtilModule:viewmodelBob(0.15, 0.1, character.Humanoid.WalkSpeed)
+                vm.HumanoidRootPart.CFrame *= UtilModule:viewmodelBob(0.1, 0.15, character.Humanoid.WalkSpeed)
                 vm.HumanoidRootPart.CFrame *= UtilModule:ViewmodelBreath(1)
             else
-                vm.HumanoidRootPart.CFrame *= UtilModule:viewmodelBob(0.8, 0.4, character.Humanoid.WalkSpeed)
+                vm.HumanoidRootPart.CFrame *= UtilModule:viewmodelBob(0.6, 1.2, character.Humanoid.WalkSpeed)
                 vm.HumanoidRootPart.CFrame *= UtilModule:ViewmodelBreath(0)
             end
         end

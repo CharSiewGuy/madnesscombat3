@@ -59,7 +59,7 @@ function WeaponController:CreateImpactEffect(raycastResult, human)
         sound = ReplicatedStorage.Assets.Sounds.BulletImpact:FindFirstChild(raycastResult.Instance.Material.Name)
     end
 
-    local can = fxFolder and sound
+    can = fxFolder and sound
     if not can then return end
 
     for _, v in pairs(fxFolder:GetChildren()) do
@@ -180,6 +180,10 @@ function WeaponController:KnitStart()
 
     self.initialMouseSens = game:GetService("UserInputService").MouseDeltaSensitivity
 
+    local projectilesFolder = Instance.new("Folder")
+    projectilesFolder.Name = "Projectiles"
+    projectilesFolder.Parent = workspace
+
     Knit.Player.CharacterAdded:Connect(function(character)
         local hum = character:WaitForChild("Humanoid")
         self.charJanitor:Cleanup()
@@ -205,7 +209,6 @@ function WeaponController:KnitStart()
         self.loadedAnimations.lowclimb.Priority = Enum.AnimationPriority.Action3 
         self.loadedAnimations.midclimb.Priority = Enum.AnimationPriority.Action3
         self.loadedAnimations.slideCamera = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.SlideCamera)
-        self.loadedAnimations.sprintCamera = ac:LoadAnimation(ReplicatedStorage.Assets.Animations.SprintCamera)
 
         repeat
             task.wait()
