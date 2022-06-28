@@ -2,7 +2,6 @@
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local FootstepsSoundGroup = game:GetService("SoundService"):WaitForChild("Footsteps")
 local L_1_ = game.Players.LocalPlayer
 local L_2_ = L_1_.Character
 
@@ -163,12 +162,6 @@ local function initializeSoundSystem(player, humanoid, rootPart)
 			end
 		end,
 
-		[Enum.HumanoidStateType.Running] = function()
-			stopPlayingLoopedSounds(sounds.Running)
-			sounds.Running.Playing = true
-			playingLoopedSounds[sounds.Running] = true
-		end,
-
 		[Enum.HumanoidStateType.Climbing] = function()
 			local sound = sounds.Climbing
 			if math.abs(rootPart.Velocity.Y) > 0.1 then
@@ -202,29 +195,7 @@ local function initializeSoundSystem(player, humanoid, rootPart)
 			else
 				sound.Volume = 0
 			end
-		end,
-
-		[sounds.Running] = function(_, sound, vel)				
-			sound.SoundId = FootstepsSoundGroup:WaitForChild(humanoid.FloorMaterial).SoundId 
-			sound.PlaybackSpeed = FootstepsSoundGroup:WaitForChild(humanoid.FloorMaterial).PlaybackSpeed * (vel.Magnitude/20)
-			if vel.Magnitude > 13 and vel.Magnitude < 24 then
-				sound.Volume = FootstepsSoundGroup:WaitForChild(humanoid.FloorMaterial).Volume * (vel.Magnitude/12)
-			elseif vel.Magnitude > 4 then
-				sound.Volume = 0.1
-			end
-			if humanoid.WalkSpeed <= 0 then
-				sound.Volume = 0
-			end
-			sound.EmitterSize = FootstepsSoundGroup:WaitForChild(humanoid.FloorMaterial).Volume * (vel.Magnitude/12) * 50 
-			
-				
-			if FootstepsSoundGroup:FindFirstChild(humanoid.FloorMaterial) == nil then
-				sound.SoundId = FootstepsSoundGroup:WaitForChild("nil Sound").SoundId
-				sound.PlaybackSpeed = FootstepsSoundGroup:WaitForChild("nil Sound").PlaybackSpeed
-				sound.EmitterSize = FootstepsSoundGroup:WaitForChild("nil Sound").Volume
-				sound.Volume = FootstepsSoundGroup:WaitForChild("nil Sound").Volume
-			end
-		end,
+		end
 	}
 
 	-- state substitutions to avoid duplicating entries in the state table
@@ -349,17 +320,9 @@ until game.Players.LocalPlayer.Character
 
 local Character = game.Players.LocalPlayer.Character
 local Head = Character:WaitForChild("Head")
-local RunningSound = Head:WaitForChild("Running")
 local Humanoid = Character:WaitForChild("Humanoid")
 local vel = 0
 
 Humanoid.Changed:Connect(function(property)
 	
-end)
-
-Humanoid.Running:connect(function(a)
-		RunningSound.PlaybackSpeed		 	= FootstepsSoundGroup:WaitForChild(Humanoid.FloorMaterial).PlaybackSpeed * (a/20) * (math.random(30,50)/40)
-		RunningSound.Volume 		= FootstepsSoundGroup:WaitForChild(Humanoid.FloorMaterial).Volume * (vel/12)
-		RunningSound.EmitterSize 	= FootstepsSoundGroup:WaitForChild(Humanoid.FloorMaterial).Volume * (vel/12) * 50
-		vel 						= a
 end)

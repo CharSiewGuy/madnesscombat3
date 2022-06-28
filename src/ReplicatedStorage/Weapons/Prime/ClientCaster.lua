@@ -28,7 +28,7 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
     CastBehavior.RaycastParams = CastParams
     CastBehavior.MaxDistance = 800
     CastBehavior.HighFidelityBehavior = FastCast.HighFidelityBehavior.Default
-    CastBehavior.Acceleration = Vector3.new(0, -350, 0)
+    CastBehavior.Acceleration = Vector3.new(0, -200, 0)
     CastBehavior.AutoIgnoreContainer = true
 
     local directionCF = CFrame.new(Vector3.new(), direction)
@@ -95,11 +95,11 @@ function module:Initialize()
                 end
             else
                 if distance < 30 then
-                    damage = 20
+                    damage = 24
                 elseif distance < 50 then
-                    damage = 18
+                    damage = 20
                 else
-                    damage = 15
+                    damage = 17
                 end            
             end
 

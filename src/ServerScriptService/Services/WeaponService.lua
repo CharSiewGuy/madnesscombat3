@@ -1,31 +1,17 @@
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 
-local pvpOnly = false
 
 local WeaponService = Knit.CreateService {
     Name = "WeaponService", 
     Client = {
-        PlaySignal = Knit.CreateSignal(), 
-        StopSignal = Knit.CreateSignal(),
         FireSignal = Knit.CreateSignal(),
         CreateBulletHoleSignal = Knit.CreateSignal(),
         CreateImpactEffectSignal = Knit.CreateSignal(),
     }
 }
-
-function WeaponService.Client:PlaySound(player, weapon, soundName, playOnRemove)
-    if not player.Character then return end
-    self.PlaySignal:FireExcept(player, player.Character, weapon, soundName, playOnRemove)
-end
-
-function WeaponService.Client:StopSound(player, soundName)
-    if not player.Character then return end
-    self.StopSignal:FireExcept(player, player.Character, soundName)
-end
 
 function WeaponService.Client:CastProjectile(player, weapon, direction)
     if not player.Character then return end

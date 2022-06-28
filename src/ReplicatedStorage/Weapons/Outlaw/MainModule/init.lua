@@ -10,7 +10,6 @@ local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
 local Promise = require(Packages.Promise)
 local HumanoidAnimatorUtils = require(Packages.HumanoidAnimatorUtils)
-local Tween = require(Packages.TweenPromise)
 
 local Modules = ReplicatedStorage.Modules
 local Spring = require(Modules.Spring)
@@ -20,6 +19,7 @@ local Spring4 = require(Modules.Spring4)
 local SmoothValue = require(Modules.SmoothValue)
 
 local WeaponService
+local SoundService
 
 local WeaponController
 local HudController
@@ -46,7 +46,6 @@ function module:SetupAnimations(character, vm)
     self.springs.sway = Spring.create()
 
     self.springs.jump = Spring.create(1, 10, 0, 1.8)
-    self.springs.jumpCam = Spring3.new()
     self.springs.fire = Spring4.new(Vector3.new())
     self.springs.fire.Speed = 8
     self.springs.fire.Damper = 0.6
@@ -116,7 +115,7 @@ function module:SetupAnimations(character, vm)
 
         local gunbobcf = CFrame.new(0,0,0)
         local jump = self.springs.jump:update(dt)
-        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/15))
+        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/8))
 
         local idleOffset = CFrame.new(0.5,-0.5,-.9)
         local sprintOffset = idleOffset:Lerp(CFrame.new(1,-1.8,-.6) * CFrame.Angles(1,0,0), self.lerpValues.sprint:update(dt))
@@ -137,12 +136,12 @@ function module:SetupAnimations(character, vm)
                 gunbobcf = CFrame.new(0,0,0)
             else
                 gunbobcf = gunbobcf:Lerp(CFrame.new(
-                    0.1 * math.clamp((self.charspeed/4), 0, 10) * math.sin(tick() * 10),
-                    0.2 * math.clamp((self.charspeed/4), 0, 10) * math.cos(tick() * 20),
+                    0.2 * math.clamp((self.charspeed/2.5), 0, 10) * math.sin(tick() * 10),
+                    0.1 * math.clamp((self.charspeed/2.5), 0, 10) * math.cos(tick() * 20),
                     0
                     ) * CFrame.Angles(
-                        math.rad(5 * math.clamp((self.charspeed/4), 0, 10) * math.sin(tick() * 20)), 
-                        math.rad(7 * math.clamp((self.charspeed/4), 0, 10) * math.cos(tick() * 10)), 
+                        math.rad(4 * math.clamp((self.charspeed/2.5), 0, 10) * math.sin(tick() * 20)), 
+                        math.rad(6 * math.clamp((self.charspeed/2.5), 0, 10) * math.cos(tick() * 10)), 
                         math.rad(0)
                     ), 0.1)
             end
@@ -150,7 +149,7 @@ function module:SetupAnimations(character, vm)
 
         local RelativeVelocity
         if MovementController.isSliding then
-            RelativeVelocity = CFrame.new().VectorToObjectSpace(character.HumanoidRootPart.CFrame, character.HumanoidRootPart.Velocity/3)
+            RelativeVelocity = CFrame.new().VectorToObjectSpace(character.HumanoidRootPart.CFrame, character.HumanoidRootPart.Velocity/2)
         else
             RelativeVelocity = CFrame.new().VectorToObjectSpace(character.HumanoidRootPart.CFrame, character.HumanoidRootPart.Velocity)
         end
@@ -161,7 +160,7 @@ function module:SetupAnimations(character, vm)
 		UtilModule.distance = UtilModule.distance + dt * self.springs.speed.p
 		UtilModule.velocity = self.springs.velocity.p
 
-        if not MovementController.isSprinting then
+        if not MovementController.isSprinting and character.Humanoid.WalkSpeed > 0 then
             if self.isAiming then
                 vm.HumanoidRootPart.CFrame *= UtilModule:viewmodelBob(0.1, 0.15, character.Humanoid.WalkSpeed)
                 vm.HumanoidRootPart.CFrame *= UtilModule:ViewmodelBreath(1)
@@ -177,9 +176,6 @@ function module:SetupAnimations(character, vm)
         local newoffset = CFrame.Angles(self.springs.fire.p.x,self.springs.fire.p.y,self.springs.fire.p.z)
         self.camera.CFrame = self.camera.CFrame * camoffset:Inverse() * newoffset
         camoffset = newoffset
-
-        local jumpCam = self.springs.jumpCam:update(dt)
-        self.camera.CFrame *= CFrame.Angles(jumpCam.y, 0, 0)
 
         local waist = character.HumanoidRootPart.RootJoint
 		waist.C0 = waistC0 * CFrame.fromEulerAnglesYXZ(math.asin(self.camera.CFrame.LookVector.y) * -0.8, 0, 0)
@@ -216,6 +212,8 @@ function module:SetupAnimations(character, vm)
     self.loaded3PAnimations.shoot = animator:LoadAnimation(script.Parent["3PAnimations"].Shoot)
     self.loaded3PAnimations.scopedShoot = animator:LoadAnimation(script.Parent["3PAnimations"].ScopedShoot)
     self.loaded3PAnimations.reload = animator:LoadAnimation(script.Parent["3PAnimations"].Reload)
+
+    MovementController.loadedAnimations.sprint = animator:LoadAnimation(script.Parent["3PAnimations"].Sprint)
 
     self.janitor:Add(function()
         for _, v in pairs(self.loaded3PAnimations) do
@@ -339,9 +337,7 @@ function module:Reload()
         local sound = script.Parent.Sounds.Reload:Clone()
         sound.Parent = self.camera
         sound:Play(0)
-        if WeaponService then
-            WeaponService:PlaySound("Outlaw", "Reload", false)
-        end
+        SoundService:PlaySound("Outlaw", "Reload", false)
         
         self.janitor:Add(sound.Ended:Connect(function()
             sound:Destroy()
@@ -359,7 +355,7 @@ function module:Reload()
             self.isReloading = false
             MovementController.canClimb = true
             sound:Destroy()
-            WeaponService:StopSound("Reload")
+            SoundService:StopSound("Reload")
         end)
     end
 end
@@ -414,7 +410,7 @@ function module:Equip(character, vm, bullets)
     s.Parent = self.camera
     s:Destroy()
 
-    self.janitor:AddPromise(Promise.delay(0.06)):andThen(function()
+    self.janitor:AddPromise(Promise.delay(0.03)):andThen(function()
         for _, v in pairs(vm.Outlaw:GetDescendants()) do 
             if v:IsA("BasePart") then 
                 v.Transparency = 0 
@@ -466,7 +462,6 @@ function module:Equip(character, vm, bullets)
 
     self.janitor:Add(RunService.Heartbeat:Connect(function()
         if MovementController.isSprinting and not self.isReloading then 
-            self.isFiring = false
             self.lerpValues.sprint:set(1)
             self.lerpValues.slide:set(0)
         elseif MovementController.isSliding or MovementController.isCrouching and not self.isReloading then
@@ -513,7 +508,7 @@ function module:Equip(character, vm, bullets)
                 task.delay(sound.TimeLength, function()
                     sound:Destroy()
                 end)   
-                WeaponService:PlaySound("Outlaw", randSound, true) 
+                SoundService:PlaySound("Outlaw", randSound, true) 
 
                 if not self.isAiming then
                     self.loadedAnimations.scopeOut.Priority = Enum.AnimationPriority.Idle
@@ -540,7 +535,7 @@ function module:Equip(character, vm, bullets)
                     end
                 end
                 vm.Outlaw.Handle.Muzzle.PointLight.Enabled = true
-                self.janitor:AddPromise(Promise.delay(.05)):andThen(function()
+                self.janitor:AddPromise(Promise.delay(.06)):andThen(function()
                     vm.Outlaw.Handle.Muzzle.PointLight.Enabled = false
                 end)   
 
@@ -588,6 +583,7 @@ Knit.OnStart():andThen(function()
     HudController = Knit.GetController("HudController")
     MovementController = Knit.GetController("MovementController")
     WeaponService = Knit.GetService("WeaponService")
+    SoundService = Knit.GetService("SoundService")
 end)
 
 

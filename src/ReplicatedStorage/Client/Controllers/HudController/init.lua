@@ -93,7 +93,7 @@ function HudController:KnitStart()
         end
     end)
 
-    game.Lighting.Atmosphere.Density = 0.45
+    game.Lighting.Atmosphere.Density = 0.33
 
     local StarterGui = game:GetService("StarterGui")
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
@@ -262,7 +262,7 @@ HudController.lastChangedScore = 0
 function HudController:AddScore(scoreNum, reason)
     self.lastChangedScore = tick()
 
-    local score = self.Overlay.Score:FindFirstChild("Score")
+    local score = self.ScreenGui.Frame.Score:FindFirstChild("Score")
     if not score then score = ReplicatedStorage.Assets.Score:Clone() end
     score.TextTransparency = 1
     score.TextStrokeTransparency = 1
@@ -270,16 +270,16 @@ function HudController:AddScore(scoreNum, reason)
     Tween(score, TweenInfo.new(0.2), {Size = UDim2.fromScale(0.3, 0.15), TextTransparency = 0, TextStrokeTransparency = 0.8})
     score.Text = "+" .. score:GetAttribute("num") + scoreNum
     score:SetAttribute("num", score:GetAttribute("num") + scoreNum)
-    score.Parent = self.Overlay.Score
+    score.Parent = self.ScreenGui.Frame.Score
 
-    local scoreBg = self.Overlay.Score:FindFirstChild("ScoreBg")
+    local scoreBg = self.ScreenGui.Frame.Score:FindFirstChild("ScoreBg")
     if not scoreBg then scoreBg = ReplicatedStorage.Assets.ScoreBg:Clone() end
     scoreBg.TextTransparency = 1
     scoreBg.Size = UDim2.fromScale(0.3, 0.4)
     Tween(scoreBg, TweenInfo.new(0.2), {Size = UDim2.fromScale(0.3, 0.15), TextTransparency = 0.5})
     scoreBg.Text = "+" .. scoreBg:GetAttribute("num") + scoreNum
     scoreBg:SetAttribute("num", scoreBg:GetAttribute("num") + scoreNum)
-    scoreBg.Parent = self.Overlay.Score
+    scoreBg.Parent = self.ScreenGui.Frame.Score
 
     task.delay(1, function()
         if tick() - self.lastChangedScore >= 1 then
@@ -296,7 +296,7 @@ function HudController:AddScore(scoreNum, reason)
 
     local scoreText = ReplicatedStorage.Assets.ScoreText:Clone()
     scoreText.Text = string.upper(reason)
-    scoreText.Parent = self.Overlay.Score.Frame
+    scoreText.Parent = self.ScreenGui.Frame.Score.Frame
     task.delay(1, function()
         Tween(scoreText, TweenInfo.new(0.3), {TextTransparency = 1, TextStrokeTransparency = 1})
         task.delay(0.3, function()
@@ -310,14 +310,14 @@ end
 
 function HudController:PromptKill(name)
     self:ShowHitmarker(true)
-    for _, v in pairs(self.ScreenGui.KillPromptArea:GetChildren()) do
+    for _, v in pairs(self.ScreenGui.Frame.KillPromptArea:GetChildren()) do
         v.Position = UDim2.fromScale(0, v.Position.Y.Scale + 0.6)
     end
     local killPrompt = ReplicatedStorage.Assets.KillPrompt:Clone()
     killPrompt.PlayerName.Text = '<font color = "#FFFFFF">' .. "KILLED " .. "</font>" .. string.upper(name)
     killPrompt.Position = UDim2.fromScale(0, 0)
     killPrompt.PlayerName.Size = UDim2.fromScale(1, 1)
-    killPrompt.Parent = self.ScreenGui.KillPromptArea
+    killPrompt.Parent = self.ScreenGui.Frame.KillPromptArea
     task.delay(1.5, function()
         Tween(killPrompt.PlayerName, TweenInfo.new(.3), {TextTransparency = 1, TextStrokeTransparency = 1})
         Tween(killPrompt.Bg, TweenInfo.new(.3), {ImageTransparency = 1})

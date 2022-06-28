@@ -3,12 +3,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage.Packages
 local FastCast = require(Packages.FastCastRedux)
 
-local Knit = require(Packages.Knit)
-local WeaponController
-Knit.OnStart():andThen(function()
-    WeaponController = Knit.GetController("WeaponController")
-end)
-
 local module = {}
 
 module.mainCaster = FastCast.new()
@@ -45,7 +39,7 @@ function module:Fire(character, direction)
     CastBehavior.HighFidelityBehavior = FastCast.HighFidelityBehavior.Default
     CastBehavior.CosmeticBulletContainer = workspace.Projectiles
     CastBehavior.CosmeticBulletTemplate = script.Parent.BulletPart
-    CastBehavior.Acceleration = Vector3.new(0, -350, 0)
+    CastBehavior.Acceleration = Vector3.new(0, -200, 0)
     CastBehavior.AutoIgnoreContainer = true
 
     self.mainCaster:Fire(character.Weapons.Prime.Handle.MuzzleBack.WorldPosition, direction, 800, CastBehavior)
@@ -57,6 +51,10 @@ function module:Fire(character, direction)
     flash:Emit(1)
     task.delay(0.15, function()
         flash:Destroy()
+    end)
+    character.Weapons.Prime.Handle.Muzzle.PointLight.Enabled = true
+    task.delay(0.06, function()
+        character.Weapons.Prime.Handle.Muzzle.PointLight.Enabled = false
     end)
 end
 

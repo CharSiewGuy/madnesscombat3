@@ -3,7 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 
-local pvpOnly = false
+local pvpOnly = true
 
 local PvpService = Knit.CreateService {
     Name = "PvpService", 
@@ -41,7 +41,6 @@ function PvpService.Client:Damage(player, hum, damage, headshot)
             local can = player.Character and player.Character.Humanoid
             if not can then return end
             if game.Players:GetPlayerFromCharacter(hum.Parent) or not pvpOnly then
-                player.Character.Humanoid.Health += 50
                 self.KillSignal:Fire(player, hum.Parent.Name, headshot, (player.Character.HumanoidRootPart.Position - hum.Parent.HumanoidRootPart.Position).Magnitude)
             end
         end

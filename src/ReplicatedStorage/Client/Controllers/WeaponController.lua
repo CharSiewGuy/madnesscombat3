@@ -270,6 +270,32 @@ function WeaponController:KnitStart()
         end)
 
         self._janitor:Add(PvpService.ExplodeSignal:Connect(function(p)
+            local dist = (character.HumanoidRootPart.Position - p).Magnitude
+			if dist < 25 then
+				local bv = Instance.new("BodyVelocity")
+				bv.Name = "SatchelOut"
+				bv.MaxForce = Vector3.new(1,0.55,1) * 20000
+				local lv = CFrame.new(Vector3.new(p.X, 0, p.Z), Vector3.new(character.HumanoidRootPart.Position.X, 0, character.HumanoidRootPart.Position.Z)).LookVector
+				local m = 1
+				if dist < 7 then
+					bv.Velocity = lv * 100 * m  + Vector3.new(0,50,0)
+					PvpService:Damage(hum, 40, false)
+				elseif dist < 12 then
+					bv.Velocity = lv * 80 * m + Vector3.new(0,40,0)
+					PvpService:Damage(hum, 37, false)
+				elseif dist < 20 then
+					bv.Velocity = lv * 60 * m + Vector3.new(0,30,0)
+					PvpService:Damage(hum, 30, false)
+				elseif dist < 25 then
+					bv.Velocity = lv * 40 * m + Vector3.new(0,20,0)
+					PvpService:Damage(hum, 25, false)
+				end
+				bv.Parent = character.HumanoidRootPart
+				task.delay(1 * m, function()
+					if bv then bv:Destroy() end
+				end)
+			end
+
             local a = game.ReplicatedStorage.TntAtt.Attachment:Clone()
             a.Parent = workspace.Terrain
             a.WorldPosition = p
@@ -282,9 +308,10 @@ function WeaponController:KnitStart()
 
             local shake = Shake.new()
             shake.FadeInTime = 0
+            shake.FadeOutTime = 0.6
             shake.Frequency = 0.1
             shake.Amplitude = math.clamp(50/(character.HumanoidRootPart.Position - p).Magnitude - 1, 0, 5)
-            shake.RotationInfluence = Vector3.new(0.2, 0.2, 0.2)
+            shake.RotationInfluence = Vector3.new(0.15, 0.15, 0.15)
 
             shake:Start()
             shake:BindToRenderStep(Shake.NextRenderName(), Enum.RenderPriority.Last.Value, function(pos, rot, _)
@@ -302,39 +329,6 @@ function WeaponController:KnitStart()
             self.currentModule:Unequip(character)
             self._janitor:Cleanup()
         end))
-    end)
-
-    WeaponService.PlaySignal:Connect(function(character, weapon, name, playOnRemove)
-        local can = character and character.HumanoidRootPart
-        if not can then return end
-        local sound
-        if weapon ~= nil then
-            sound = ReplicatedStorage.Weapons[weapon].Sounds:FindFirstChild(name)
-        else
-            sound = ReplicatedStorage.Assets.Sounds:FindFirstChild(name)
-        end
-        if sound then
-            local soundClone = sound:Clone()
-            soundClone.Parent = character.HumanoidRootPart
-            if playOnRemove then
-                soundClone:Destroy()
-            else
-                soundClone:Play()
-                task.delay(soundClone.TimeLength, function()
-                    if soundClone then
-                        soundClone:Destroy()
-                    end
-                end)
-            end
-        end
-    end)
-
-    WeaponService.StopSignal:Connect(function(character, name)
-        if not character.HumanoidRootPart then return end
-        local sound = character.HumanoidRootPart:FindFirstChild(name)
-        if sound then
-            sound:Destroy()
-        end
     end)
 
     PvpService.KillSignal:Connect(function(name, hs, dist)

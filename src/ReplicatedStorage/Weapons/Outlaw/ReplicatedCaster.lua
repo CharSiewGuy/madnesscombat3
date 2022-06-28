@@ -3,12 +3,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Packages = ReplicatedStorage.Packages
 local FastCast = require(Packages.FastCastRedux)
 
-local Knit = require(Packages.Knit)
-local WeaponController
-Knit.OnStart():andThen(function()
-    WeaponController = Knit.GetController("WeaponController")
-end)
-
 local module = {}
 
 module.mainCaster = FastCast.new()
@@ -56,6 +50,10 @@ function module:Fire(character, direction)
             v:Emit(10)
         end
     end
+    character.Weapons.Outlaw.Handle.Muzzle.PointLight.Enabled = true
+    task.delay(0.06, function()
+        character.Weapons.Outlaw.Handle.Muzzle.PointLight.Enabled = false
+    end)
 end
 
 return module
