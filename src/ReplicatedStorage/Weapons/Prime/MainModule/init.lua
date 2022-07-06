@@ -177,6 +177,12 @@ function module:SetupAnimations(character, vm)
             end
         end
 
+        if self.isAiming then
+            vm.HumanoidRootPart.CFrame *= UtilModule:ViewmodelBreath(0.8)
+        else
+            vm.HumanoidRootPart.CFrame *= UtilModule:ViewmodelBreath(0)
+        end
+
         vm.HumanoidRootPart.CFrame *= gunbobcf
 
         local recoil = self.springs.fire:update(dt)
@@ -370,6 +376,13 @@ function module:Equip(character, vm, bullets)
 
     self.equipped = false
     WeaponController.baseFov:set(90)
+    MovementController.normalSpeed = 15
+    MovementController.sprintSpeed = 23
+    if MovementController.isSprinting then 
+        MovementController.value:set(MovementController.sprintSpeed)
+    else
+        MovementController.value:set(MovementController.normalSpeed)
+    end
 
     local Prime = script.Parent.Prime:Clone()
     for _, v in pairs(Prime:GetDescendants()) do if v:IsA("BasePart") or v:IsA("Texture") then v.Transparency = 1 end end
@@ -392,7 +405,7 @@ function module:Equip(character, vm, bullets)
     self.loadedAnimations.equip.Priority = Enum.AnimationPriority.Action4
     self.loadedAnimations.equip:Play(0)
     self.loadedAnimations.equipCam:Play(0)
-    self.janitor:AddPromise(Promise.delay(self.loadedAnimations.equip.Length - 0.3)):andThen(function()
+    self.janitor:AddPromise(Promise.delay(self.loadedAnimations.equip.Length - 0.5)):andThen(function()
         self.loadedAnimations.equip.Priority = Enum.AnimationPriority.Idle
         self.equipped = true
     end)
@@ -513,6 +526,8 @@ function module:Equip(character, vm, bullets)
                 emptyClipSound.Volume = (30/self.bullets)/2
                 emptyClipSound:Destroy()
 
+                if self.loadedAnimations.equip.IsPlaying then self.loadedAnimations.equip:Stop(0) end
+
                 if not self.isAiming then
                     self.loadedAnimations.Shoot:Play()
                     self.loaded3PAnimations.shoot:Play()
@@ -582,6 +597,7 @@ function module:Equip(character, vm, bullets)
     self.janitor:Add(function()
         self.loadedAnimations = {}
         self.loaded3PAnimations.Idle:Stop(0)
+        HumanoidAnimatorUtils.stopAnimations(vm.AnimationController, 0)
 
         ContextActionService:UnbindAction("PrimeShoot")
         ContextActionService:UnbindAction("PrimeAim")

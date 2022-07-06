@@ -57,8 +57,8 @@ function WeaponService.Client:CreateBulletHole(player, raycastResult)
     self.CreateBulletHoleSignal:FireExcept(player, raycastResult)
 end
 
-function WeaponService.Client:CreateImpactEffect(player, raycastResult, human)
-    self.CreateImpactEffectSignal:FireExcept(player, raycastResult, human)
+function WeaponService.Client:CreateImpactEffect(player, raycastResult, human, fxCFrame)
+    self.CreateImpactEffectSignal:FireExcept(player, raycastResult, human, fxCFrame)
 end
 
 return WeaponService

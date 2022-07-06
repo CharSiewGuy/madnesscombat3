@@ -28,7 +28,7 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
 
     local CastBehavior = FastCast.newBehavior()
     CastBehavior.RaycastParams = CastParams
-    CastBehavior.MaxDistance = 800
+    CastBehavior.MaxDistance = 1600
     CastBehavior.HighFidelityBehavior = FastCast.HighFidelityBehavior.Default
     CastBehavior.Acceleration = Vector3.new(0, -20, 0)
     CastBehavior.AutoIgnoreContainer = true
@@ -37,10 +37,10 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
     local spreadDirection = CFrame.fromOrientation(0, 0, math.random(0, math.pi * 2))
     local spreadAngle = CFrame.fromOrientation(math.rad(math.random(0, spreadMagnitude)), 0, 0)
     local finalDirection = (directionCF * spreadDirection * spreadAngle).LookVector
-    self.mainCaster:Fire(workspace.CurrentCamera.CFrame.Position, finalDirection, 600, CastBehavior)
+    self.mainCaster:Fire(workspace.CurrentCamera.CFrame.Position, finalDirection, 800, CastBehavior)
     CastBehavior.CosmeticBulletContainer = workspace.Projectiles
     CastBehavior.CosmeticBulletTemplate = script.Parent.BulletPart
-    self.cosmeticCaster:Fire(origin, finalDirection, 600, CastBehavior)
+    self.cosmeticCaster:Fire(origin, finalDirection, 800, CastBehavior)
     WeaponService:CastProjectile("Outlaw", finalDirection)
 end
 

@@ -37,12 +37,16 @@ function WeaponController:KnitInit()
     HudController = Knit.GetController("HudController")
 end
 
-function WeaponController:CreateImpactEffect(raycastResult, human)
+function WeaponController:CreateImpactEffect(raycastResult, human, fxCFrame)
     local can = (not raycastResult.Instance.Transparency or raycastResult.Instance.Transparency < 1)
     if not can then return end
 
     local attachment = Instance.new("Attachment")
-    attachment.CFrame = CFrame.new(raycastResult.Position, raycastResult.Position + raycastResult.Normal)
+    if fxCFrame then 
+        attachment.CFrame = fxCFrame
+    else
+        attachment.CFrame = CFrame.new(raycastResult.Position, raycastResult.Position + raycastResult.Normal)
+    end
     attachment.Parent = workspace.Terrain
     task.delay(1, function()
         attachment:Destroy()
@@ -65,7 +69,11 @@ function WeaponController:CreateImpactEffect(raycastResult, human)
     for _, v in pairs(fxFolder:GetChildren()) do
         local fxClone = v:Clone()
         fxClone.Parent = attachment
-        fxClone:Emit(8)
+        if human then
+            fxClone:Emit(15)
+        else
+            fxClone:Emit(8)
+        end
     end
 
     local soundClone = sound:Clone()
@@ -176,6 +184,7 @@ end
 function WeaponController:KnitStart()
     local weaponModule = require(ReplicatedStorage.Weapons.Prime.MainModule)
     local weaponModule2 = require(ReplicatedStorage.Weapons.Outlaw.MainModule)
+    local weaponModule3 = require(ReplicatedStorage.Weapons.Katana.MainModule)
     self.currentModule = weaponModule
 
     self.initialMouseSens = game:GetService("UserInputService").MouseDeltaSensitivity
@@ -191,6 +200,7 @@ function WeaponController:KnitStart()
             if hum.Health <= 0 then
                 weaponModule:Unequip()
                 weaponModule2:Unequip()
+                weaponModule3:Unequip()
             end
         end))
 
@@ -222,6 +232,7 @@ function WeaponController:KnitStart()
         weaponModule2.bullets = weaponModule2.maxBullets
         local weapon1Equipped = true
         local weapon2Equipped = false
+        local weapon3Equipped = false
         local equipDebounce = false
         
         local function handleAction(actionName, inputState)
@@ -230,43 +241,67 @@ function WeaponController:KnitStart()
             for _, v in pairs(workspace.Projectiles:GetChildren()) do
                 if v.Name == Knit.Player.UserId then v:Destroy() end
             end
-            if actionName == "Equip" and not weapon1Equipped and weapon2Equipped then
+            if actionName == "Equip" and not weapon1Equipped and (weapon2Equipped or weapon3Equipped) then
                 if inputState == Enum.UserInputState.Begin then
                     equipDebounce = true
                     weaponModule2:Unequip()
+                    weaponModule3:Unequip()
                     weaponModule:Equip(character, viewmodel)
                     self.currentModule = weaponModule
                     weapon1Equipped = true
                     weapon2Equipped = false
+                    weapon3Equipped = false
                     task.delay(0.2, function()
                         equipDebounce = false
                     end)
                     WeaponService:SetCurWeapon("Prime")
                     HudController:SetCurWeapon("Prime")
+                    PvpService:SetMaxHealth(100)
                 end
-            elseif actionName == "Equip2" and not weapon2Equipped and weapon1Equipped then
+            elseif actionName == "Equip2" and not weapon2Equipped and (weapon1Equipped or weapon3Equipped) then
                 if inputState == Enum.UserInputState.Begin then
                     equipDebounce = true
                     weaponModule:Unequip()
+                    weaponModule3:Unequip()
                     weaponModule2:Equip(character, viewmodel)
                     self.currentModule = weaponModule2
                     weapon2Equipped = true
                     weapon1Equipped = false
+                    weapon3Equipped = false
                     task.delay(0.2, function()
                         equipDebounce = false
                     end)
                     WeaponService:SetCurWeapon("Outlaw")
                     HudController:SetCurWeapon("Outlaw")
+                    PvpService:SetMaxHealth(100)
                 end
-            end
+            elseif actionName == "Equip3" and not weapon3Equipped and (weapon1Equipped or weapon2Equipped) then
+                if inputState == Enum.UserInputState.Begin then
+                    equipDebounce = true
+                    weaponModule:Unequip()
+                    weaponModule2:Unequip()
+                    weaponModule3:Equip(character, viewmodel)
+                    self.currentModule = weaponModule3
+                    weapon3Equipped = true
+                    weapon2Equipped = false
+                    weapon1Equipped = false
+                    task.delay(0.2, function()
+                        equipDebounce = false
+                    end)
+                    WeaponService:SetCurWeapon("Katana")
+                    HudController:SetCurWeapon("Katana")
+                    PvpService:SetMaxHealth(100)
+                end
+            end        
         end
         
         ContextActionService:BindAction("Equip", handleAction, true, Enum.KeyCode.One)
         ContextActionService:BindAction("Equip2", handleAction, true, Enum.KeyCode.Two)
+        ContextActionService:BindAction("Equip3", handleAction, true, Enum.KeyCode.Three)
 
-        HudController:SetHealth(100)
+        HudController:SetHealth(100, 100)
         hum.HealthChanged:Connect(function(h)
-            HudController:SetHealth(math.floor(h))
+            HudController:SetHealth(math.floor(h), hum.MaxHealth)
         end)
 
         self._janitor:Add(PvpService.ExplodeSignal:Connect(function(p)
@@ -370,8 +405,8 @@ function WeaponController:KnitStart()
         self:CreateBulletHole(r)
     end)
 
-    WeaponService.CreateImpactEffectSignal:Connect(function(r, h)
-        self:CreateImpactEffect(r, h)
+    WeaponService.CreateImpactEffectSignal:Connect(function(r, h, f)
+        self:CreateImpactEffect(r, h, f)
     end)
 end
 return WeaponController

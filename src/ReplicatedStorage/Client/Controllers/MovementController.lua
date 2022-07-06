@@ -116,6 +116,7 @@ function MovementController:KnitInit()
     SoundService = Knit.GetService("SoundService")
 
     self.airborneTime = 0
+    self.value = SmoothValue:create(self.normalSpeed, self.normalSpeed, 2)
 end
 
 function MovementController:KnitStart()
@@ -167,7 +168,6 @@ function MovementController:KnitStart()
         self.canSlide = true
         self.canZipline = true
 
-        local value = SmoothValue:create(self.normalSpeed, self.normalSpeed, 2)
         self.fovOffset.value = 0
         self.fovOffset.target = 0
 
@@ -200,7 +200,7 @@ function MovementController:KnitStart()
                 canClimb = true
                 hum.JumpPower = oldPower
                 self.zipJumpMultiplier = 1
-                self.jumpCamSpring:Impulse(Vector3.new(-math.clamp((math.abs(humanoidRootPart.Velocity.Y)/40), .5, 7),0,0))
+                self.jumpCamSpring:Impulse(Vector3.new(-math.clamp(((math.abs(humanoidRootPart.Velocity.Y)/30) ^ 2), .5, 10),0,0))
             elseif new == Enum.HumanoidStateType.Freefall then
                 task.wait(TIME_BETWEEN_JUMPS)
                 canDoubleJump = true
@@ -230,12 +230,12 @@ function MovementController:KnitStart()
                 if inputState == Enum.UserInputState.Begin then
                     if hum.MoveDirection.Magnitude > 0 and hum.WalkSpeed > 0 and getMovingDir() == "forward" then
                         self.isSprinting = true
-                        value:set(self.sprintSpeed)
+                        self.value:set(self.sprintSpeed)
                         self.loadedAnimations.sprint:Play(0.3)
                         HudController.crosshairTransparency:set(1)
                         self.sprintJanitor:Add(function()
                             self.isSprinting = false
-                            value:set(self.normalSpeed)
+                            self.value:set(self.normalSpeed)
                             HudController.crosshairTransparency:set(0)
                             self.loadedAnimations.sprint:Stop(0.3)
                         end)
@@ -256,14 +256,11 @@ function MovementController:KnitStart()
                         end
                     else
                         if self.canCrouch and not self.isSliding then
-                            if self.isCrouching then
-                                self.crouchJanitor:Cleanup()
-                            else
-                                self:Crouch(hum, humanoidRootPart)
-                            end
+                            self:Crouch(hum, humanoidRootPart)
                         end
                     end
                 elseif inputState == Enum.UserInputState.End then
+                    self.crouchJanitor:Cleanup()
                     self.slideJanitor:Cleanup()
                 end
             elseif actionName == "Zipline" then
@@ -328,7 +325,7 @@ function MovementController:KnitStart()
                             zipJumpVel.Position = (humanoidRootPart.CFrame*CFrame.new(0, 6 * self.zipJumpMultiplier, -8 * self.zipJumpMultiplier)).Position
                             zipJumpVel.Parent = humanoidRootPart
                             task.delay(.1, function() if zipJumpVel then zipJumpVel:Destroy() end end)
-                            self.zipJumpMultiplier *= 0.7
+                            self.zipJumpMultiplier *= 0.6
                             math.clamp(self.zipJumpMultiplier, 0, 1)
                         end
 
@@ -360,11 +357,7 @@ function MovementController:KnitStart()
                     self.sprintJanitor:Cleanup()
                 end
                 if not self.isSprinting then
-                    if self.isCrouching then
-                        HudController.crosshairOffset:set(30)
-                    else
-                        HudController.crosshairOffset:set(40)
-                    end
+                    HudController.crosshairOffset:set(40)
                 else
                     HudController.crosshairOffset:set(80)
                 end
@@ -385,7 +378,7 @@ function MovementController:KnitStart()
             elseif self.isCrouching then
                 hum.WalkSpeed = 8
             else
-                hum.WalkSpeed = value:update(dt)
+                hum.WalkSpeed = self.value:update(dt)
             end
 
             --CLIMBING
@@ -397,7 +390,7 @@ function MovementController:KnitStart()
                     raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
                     for i = 0, 0.5, 0.1 do
                         local raycastResult = workspace:Raycast(character.Head.Position - Vector3.new(0,i,0), (character.Head.CFrame.LookVector - Vector3.new(0,i,0)).Unit * 3, raycastParams)
-                        if raycastResult and raycastResult.Instance and raycastResult.Instance.CanCollide and not raycastResult.Instance:IsA("TrussPart") then
+                        if raycastResult and raycastResult.Instance and raycastResult.Instance.CanCollide and not raycastResult.Instance:IsA("TrussPart") and not raycastResult.Instance.Parent:FindFirstChild("Humanoid") then
                             if character.Head.Position.Y >= (raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2)) - 1 and character.Head.Position.Y <= raycastResult.Instance.Position.Y + (raycastResult.Instance.Size.Y / 2) + 3 then 
                                 if humanoidRootPart:FindFirstChild("SlideVel") then humanoidRootPart.SlideVel:Destroy() end 
                                 local climbV = Instance.new("AlignPosition")
@@ -436,7 +429,7 @@ function MovementController:KnitStart()
             if hum.FloorMaterial == Enum.Material.Air then
                 local yVel = humanoidRootPart.Velocity.Magnitude
                 if yVel > 50 then
-                    self.airborneTime += 0.01
+                    self.airborneTime += 0.005
                 end
             else
                 self.airborneTime = 0
@@ -453,7 +446,7 @@ function MovementController:KnitStart()
             op.FilterDescendantsInstances = {self.camera, character}
             op.FilterType = Enum.RaycastFilterType.Blacklist
             self.nearestZipline = nil
-            for _, part in ipairs(workspace:GetPartBoundsInBox(character.HumanoidRootPart.CFrame, Vector3.new(12, 8, 12), op)) do
+            for _, part in ipairs(workspace:GetPartBoundsInBox(character.HumanoidRootPart.CFrame, Vector3.new(14, 16, 14), op)) do
                 if part.Parent == workspace.Ziplines and part.Name == "Zipline" then self.nearestZipline = part end
             end
             if not self.nearestZipline then

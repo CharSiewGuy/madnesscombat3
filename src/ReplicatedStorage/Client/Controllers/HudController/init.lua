@@ -98,6 +98,7 @@ function HudController:KnitStart()
     local StarterGui = game:GetService("StarterGui")
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 
     ContextActionService:BindAction("Scoreboard", function(action, inputState)
         if action == "Scoreboard" then
@@ -206,7 +207,7 @@ HudController.BloodTweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.Ea
 HudController.LastChangedHealth = 0
 HudController.HealthJanitor = Janitor.new()
 
-function HudController:SetHealth(h)
+function HudController:SetHealth(h, mh)
     self.HealthJanitor:Cleanup()
     self.LastChangedHealth = tick()
     self.ScreenGui.Frame.HealthBar.Health.Health.Text = math.floor(h)
@@ -230,10 +231,10 @@ function HudController:SetHealth(h)
         self.ScreenGui.Frame.HealthBar.Health.ImageLabel.ImageColor3   = Color3.fromRGB(247, 70, 0)
         self.ScreenGui.Frame.HealthBar.Health.Health.TextColor3   = Color3.fromRGB(247, 70, 0)
     end
-    Tween(self.ScreenGui.Frame.HealthBar.Bar, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.fromScale(h/100, 1)})
-    Tween(self.Overlay.Blood, self.BloodTweenInfo, {ImageTransparency = h/100})
-    Tween(self.Overlay.Blood2, self.BloodTweenInfo, {ImageTransparency = h/100})
-    Tween(self.Overlay.Vignette2, self.BloodTweenInfo, {ImageTransparency = h/100})
+    Tween(self.ScreenGui.Frame.HealthBar.Bar, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.fromScale(h/mh, 1)})
+    Tween(self.Overlay.Blood, self.BloodTweenInfo, {ImageTransparency = h/mh})
+    Tween(self.Overlay.Blood2, self.BloodTweenInfo, {ImageTransparency = h/mh})
+    Tween(self.Overlay.Vignette2, self.BloodTweenInfo, {ImageTransparency = h/mh})
     if h < 50 then
         if h < 10 then
             game.Lighting.ColorCorrection.Saturation = -0.8

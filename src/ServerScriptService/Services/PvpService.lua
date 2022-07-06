@@ -35,6 +35,7 @@ function PvpService:RespawnTnt(c, v)
 end
 
 function PvpService.Client:Damage(player, hum, damage, headshot)
+    if damage > 120 then player:Kick() end
     if not player.Character or not player.Character.Humanoid or player.Character.Humanoid.Health <= 0 then return end
     if hum.Health > 0 then
         if hum.Health - damage <= 0 then
@@ -48,6 +49,14 @@ function PvpService.Client:Damage(player, hum, damage, headshot)
         if game.Players:GetPlayerFromCharacter(hum.Parent) then
             self.OnDamagedSignal:Fire(game.Players:GetPlayerFromCharacter(hum.Parent), player)
         end
+    end
+end
+
+function PvpService.Client:SetMaxHealth(player, num)
+    if num > 160 then player:Kick() end
+    if player.Character and player.Character.Humanoid then
+        player.Character.Humanoid.MaxHealth = num
+        if player.Character.Humanoid.Health > num then player.Character.Humanoid.Health = num end
     end
 end
 

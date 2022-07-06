@@ -35,7 +35,7 @@ function module:Fire(character, direction)
 
     local CastBehavior = FastCast.newBehavior()
     CastBehavior.RaycastParams = CastParams
-    CastBehavior.MaxDistance = 800
+    CastBehavior.MaxDistance = 1600
     CastBehavior.HighFidelityBehavior = FastCast.HighFidelityBehavior.Default
     CastBehavior.CosmeticBulletContainer = workspace.Projectiles
     CastBehavior.CosmeticBulletTemplate = script.Parent.BulletPart
@@ -44,7 +44,7 @@ function module:Fire(character, direction)
 
     if not character.Weapons.Outlaw.Handle.Muzzle then return end
 
-    self.mainCaster:Fire(character.Weapons.Outlaw.Handle.MuzzleBack.WorldPosition, direction, 600, CastBehavior)
+    self.mainCaster:Fire(character.Weapons.Outlaw.Handle.MuzzleBack.WorldPosition, direction, 800, CastBehavior)
     for _, v in pairs(character.Weapons.Outlaw.Handle.Muzzle:GetChildren()) do
         if v:IsA("ParticleEmitter") then
             v:Emit(10)

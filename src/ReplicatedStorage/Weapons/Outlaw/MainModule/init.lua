@@ -102,11 +102,6 @@ function module:SetupAnimations(character, vm)
     local camoffset = CFrame.new()
 
     self.janitor:Add(RunService.RenderStepped:Connect(function(dt)
-        local can
-        local success = pcall(function() can = vm.HumanoidRootPart end)
-        if not success then self.janitor:Cleanup() end
-        if not can then return end
-
         vm.HumanoidRootPart.CFrame = self.camera.CFrame
 
         local mouseDelta = UserInputService:GetMouseDelta()
@@ -169,6 +164,12 @@ function module:SetupAnimations(character, vm)
                 vm.HumanoidRootPart.CFrame *= UtilModule:ViewmodelBreath(0)
             end
         end
+        
+        if self.isAiming then
+            vm.HumanoidRootPart.CFrame *= UtilModule:ViewmodelBreath(1)
+        else
+            vm.HumanoidRootPart.CFrame *= UtilModule:ViewmodelBreath(0)
+        end
 
         vm.HumanoidRootPart.CFrame *= gunbobcf
 
@@ -190,8 +191,6 @@ function module:SetupAnimations(character, vm)
         end
         self.OldCamCF = NewCamCF
     end))
-
-    HumanoidAnimatorUtils.stopAnimations(vm.AnimationController, 0)
     
     self.loadedAnimations.Idle = vm.AnimationController:LoadAnimation(script.Parent.Animations.Idle)
     self.loadedAnimations.Shoot = vm.AnimationController:LoadAnimation(script.Parent.Animations.Shoot)
@@ -368,6 +367,13 @@ function module:Equip(character, vm, bullets)
 
     self.equipped = false
     WeaponController.baseFov:set(90)
+    MovementController.normalSpeed = 16
+    MovementController.sprintSpeed = 24
+    if MovementController.isSprinting then 
+        MovementController.value:set(MovementController.sprintSpeed)
+    else
+        MovementController.value:set(MovementController.normalSpeed)
+    end
 
     local Outlaw = script.Parent.Outlaw:Clone()
     for _, v in pairs(Outlaw:GetDescendants()) do if v:IsA("BasePart") or v:IsA("Texture") then v.Transparency = 1 end end
@@ -410,16 +416,14 @@ function module:Equip(character, vm, bullets)
     s.Parent = self.camera
     s:Destroy()
 
-    self.janitor:AddPromise(Promise.delay(0.03)):andThen(function()
-        for _, v in pairs(vm.Outlaw:GetDescendants()) do 
-            if v:IsA("BasePart") then 
-                v.Transparency = 0 
-            elseif v:IsA("Texture") then
-                v.Transparency = tonumber(v.Name)
-            end
+    for _, v in pairs(vm.Outlaw:GetDescendants()) do 
+        if v:IsA("BasePart") then 
+            v.Transparency = 0 
+        elseif v:IsA("Texture") then
+            v.Transparency = tonumber(v.Name)
         end
-        for _, v in pairs(vm.speedloader:GetDescendants()) do if v:IsA("BasePart") then v.Transparency = 0 end end
-    end)
+    end
+    for _, v in pairs(vm.speedloader:GetDescendants()) do if v:IsA("BasePart") then v.Transparency = 0 end end
 
     self.canFire = true
     HudController:SetBullets(self.bullets, self.maxBullets)
@@ -510,6 +514,8 @@ function module:Equip(character, vm, bullets)
                 end)   
                 SoundService:PlaySound("Outlaw", randSound, true) 
 
+                if self.loadedAnimations.equip.IsPlaying then self.loadedAnimations.equip:Stop(0) end
+
                 if not self.isAiming then
                     self.loadedAnimations.scopeOut.Priority = Enum.AnimationPriority.Idle
                     self.loadedAnimations.Shoot:Play()
@@ -563,6 +569,7 @@ function module:Equip(character, vm, bullets)
     self.janitor:Add(function()
         self.loadedAnimations = {}
         self.loaded3PAnimations.Idle:Stop(0)
+        HumanoidAnimatorUtils.stopAnimations(vm.AnimationController, 0)
 
         ContextActionService:UnbindAction("OutlawShoot")
         ContextActionService:UnbindAction("OutlawAim")

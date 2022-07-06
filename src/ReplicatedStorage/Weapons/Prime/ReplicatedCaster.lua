@@ -35,7 +35,7 @@ function module:Fire(character, direction)
 
     local CastBehavior = FastCast.newBehavior()
     CastBehavior.RaycastParams = CastParams
-    CastBehavior.MaxDistance = 800
+    CastBehavior.MaxDistance = 1200
     CastBehavior.HighFidelityBehavior = FastCast.HighFidelityBehavior.Default
     CastBehavior.CosmeticBulletContainer = workspace.Projectiles
     CastBehavior.CosmeticBulletTemplate = script.Parent.BulletPart
@@ -46,12 +46,8 @@ function module:Fire(character, direction)
 
     if not character.Weapons.Prime.Handle.Muzzle then return end
 
-    local flash = ReplicatedStorage.Assets.Particles.ElectricMuzzleFlash:Clone()
-    flash.Parent = character.Weapons.Prime.Handle.Muzzle
-    flash:Emit(1)
-    task.delay(0.15, function()
-        flash:Destroy()
-    end)
+    character.Weapons.Prime.Handle.MuzzleFlash1.Flash:Emit(1)
+    character.Weapons.Prime.Handle.MuzzleFlash2.Flash:Emit(1)
     character.Weapons.Prime.Handle.Muzzle.PointLight.Enabled = true
     task.delay(0.06, function()
         character.Weapons.Prime.Handle.Muzzle.PointLight.Enabled = false
