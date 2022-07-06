@@ -30,9 +30,21 @@ end
 
 function HudController:KnitStart()
     self.ScreenGui = Knit.Player.PlayerGui:WaitForChild("ScreenGui")
-    self.ScreenGui:WaitForChild("Frame").Visible = true
+    self.ScreenGui.Frame.Visible = true
     self.Overlay = Knit.Player.PlayerGui:WaitForChild("Overlay")
-    self.Overlay.Crosshair.Visible = true
+    self.Tutorial = Knit.Player.PlayerGui:WaitForChild("Tutorial")
+    self.Tutorial.Frame.Visible = true
+    game.Lighting.TutorialBlur.Enabled = true
+
+    self.Tutorial.Frame.InnerFrame.TextButton.MouseButton1Click:Connect(function()
+        Tween(game.Lighting.TutorialBlur, TweenInfo.new(0.2), {Size = 0}):andThen(function()
+            game.Lighting.TutorialBlur:Destroy()
+        end)
+        self.Tutorial:Destroy()
+        Knit.GetController("InputController").mouseLocked = true
+        self.Overlay.Crosshair.Visible = true
+    end)
+
     game:GetService("RunService").Heartbeat:Connect(function(dt)
         if self.isAiming then
             self.crosshairOffset:set(5)
@@ -211,8 +223,9 @@ function HudController:SetHealth(h, mh)
     self.HealthJanitor:Cleanup()
     self.LastChangedHealth = tick()
     self.ScreenGui.Frame.HealthBar.Health.Health.Text = math.floor(h)
+    self.ScreenGui.Frame.HealthBar.HealthDS.Health.Text = math.floor(h)
     if h ~= 100 then
-        self.ScreenGui.Frame.HealthBar.BackgroundTransparency = 0.5
+        self.ScreenGui.Frame.HealthBar.BackgroundTransparency = 0.6
         self.ScreenGui.Frame.HealthBar.Bar.BackgroundTransparency = 0
     end
     task.delay(1, function()
@@ -223,27 +236,34 @@ function HudController:SetHealth(h, mh)
     end)
     if h > 70 then
         self.ScreenGui.Frame.HealthBar.Health.ImageLabel.ImageColor3   = Color3.fromRGB(255,255,255)
-        self.ScreenGui.Frame.HealthBar.Health.Health.TextColor3   = Color3.fromRGB(255,255,255)
-    elseif h > 30 then
+        self.ScreenGui.Frame.HealthBar.Health.Health.TextColor3 = Color3.fromRGB(255,255,255)
+        self.ScreenGui.Frame.HealthBar.Bar.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    elseif h > 35 then
         self.ScreenGui.Frame.HealthBar.Health.ImageLabel.ImageColor3   = Color3.fromRGB(243, 203, 0)
         self.ScreenGui.Frame.HealthBar.Health.Health.TextColor3   = Color3.fromRGB(243, 203, 0)
+        self.ScreenGui.Frame.HealthBar.Bar.BackgroundColor3   = Color3.fromRGB(243, 203, 0)
     else
         self.ScreenGui.Frame.HealthBar.Health.ImageLabel.ImageColor3   = Color3.fromRGB(247, 70, 0)
         self.ScreenGui.Frame.HealthBar.Health.Health.TextColor3   = Color3.fromRGB(247, 70, 0)
+        self.ScreenGui.Frame.HealthBar.Bar.BackgroundColor3   = Color3.fromRGB(247, 70, 0)
     end
     Tween(self.ScreenGui.Frame.HealthBar.Bar, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.fromScale(h/mh, 1)})
     Tween(self.Overlay.Blood, self.BloodTweenInfo, {ImageTransparency = h/mh})
     Tween(self.Overlay.Blood2, self.BloodTweenInfo, {ImageTransparency = h/mh})
     Tween(self.Overlay.Vignette2, self.BloodTweenInfo, {ImageTransparency = h/mh})
+    --yanderedev
     if h < 50 then
-        if h < 10 then
-            game.Lighting.ColorCorrection.Saturation = -0.8
+        if h <= 0 then
+            self.Overlay.Heartbeat.Volume = 0
+            game.Lighting.ColorCorrection.Saturation = -0.6
+        elseif h < 10 then
+            game.Lighting.ColorCorrection.Saturation = -0.5
             self.Overlay.Heartbeat.Volume = 1
         elseif h < 20 then
-            game.Lighting.ColorCorrection.Saturation = -0.6
+            game.Lighting.ColorCorrection.Saturation = -0.4
             self.Overlay.Heartbeat.Volume = 0.8
         elseif h < 30 then
-            game.Lighting.ColorCorrection.Saturation = -0.4
+            game.Lighting.ColorCorrection.Saturation = -0.3
             self.Overlay.Heartbeat.Volume = 0.6
         elseif h < 40 then
             game.Lighting.ColorCorrection.Saturation = -0.2
@@ -319,9 +339,9 @@ function HudController:PromptKill(name)
     killPrompt.Position = UDim2.fromScale(0, 0)
     killPrompt.PlayerName.Size = UDim2.fromScale(1, 1)
     killPrompt.Parent = self.ScreenGui.Frame.KillPromptArea
-    task.delay(1.5, function()
-        Tween(killPrompt.PlayerName, TweenInfo.new(.3), {TextTransparency = 1, TextStrokeTransparency = 1})
-        Tween(killPrompt.Bg, TweenInfo.new(.3), {ImageTransparency = 1})
+    task.delay(2.5, function()
+        Tween(killPrompt.PlayerName, TweenInfo.new(0.3), {TextTransparency = 1, TextStrokeTransparency = 1})
+        Tween(killPrompt.Bg, TweenInfo.new(0.3), {ImageTransparency = 1})
         task.spawn(function()
             local fx = require(ReplicatedStorage.Modules.GlitchEffect)
             for _, v in pairs(fx) do

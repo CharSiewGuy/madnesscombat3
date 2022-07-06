@@ -122,7 +122,7 @@ function WeaponController:ShowDamageNumber(hum, num, braindamage)
         end
     end
 
-    local can = hum.Parent.HumanoidRootPart:FindFirstChild("DamageNumber") and tick() - highest < 0.31    
+    local can = hum.Parent.HumanoidRootPart:FindFirstChild("DamageNumber") and tick() - highest < 0.61    
 
     if can then
         dmgNum = hum.Parent.HumanoidRootPart.DamageNumber
@@ -141,8 +141,8 @@ function WeaponController:ShowDamageNumber(hum, num, braindamage)
     
     dmgNum:SetAttribute("t", tick())
 
-    task.delay(0.3, function()
-        if tick() - dmgNum:GetAttribute("t") > 0.29 then
+    task.delay(0.6, function()
+        if tick() - dmgNum:GetAttribute("t") > 0.59 then
             task.delay(0.2, function()
                 if dmgNum then dmgNum:Destroy() end
             end)
@@ -344,9 +344,9 @@ function WeaponController:KnitStart()
             local shake = Shake.new()
             shake.FadeInTime = 0
             shake.FadeOutTime = 0.6
-            shake.Frequency = 0.1
+            shake.Frequency = 0.05
             shake.Amplitude = math.clamp(50/(character.HumanoidRootPart.Position - p).Magnitude - 1, 0, 5)
-            shake.RotationInfluence = Vector3.new(0.15, 0.15, 0.15)
+            shake.RotationInfluence = Vector3.new(0.2, 0.2, 0.2)
 
             shake:Start()
             shake:BindToRenderStep(Shake.NextRenderName(), Enum.RenderPriority.Last.Value, function(pos, rot, _)
@@ -384,12 +384,6 @@ function WeaponController:KnitStart()
         self.lastKill = tick()
         self.kills += 1
         PvpService:SetKills(self.kills)
-    end)
-
-    PvpService.OnDamagedSignal:Connect(function(p)
-        if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            HudController:ShowDamageDir(p.Character.Name, p.Character.HumanoidRootPart.Position)
-        end
     end)
 
     local casters = {

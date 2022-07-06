@@ -14,7 +14,6 @@ local HumanoidAnimatorUtils = require(Packages.HumanoidAnimatorUtils)
 local Modules = ReplicatedStorage.Modules
 local Spring = require(Modules.Spring)
 local Spring2 = require(Modules.Spring2)
-local Spring3 = require(Modules.Spring3)
 local Spring4 = require(Modules.Spring4)
 local SmoothValue = require(Modules.SmoothValue)
 
@@ -110,7 +109,7 @@ function module:SetupAnimations(character, vm)
 
         local gunbobcf = CFrame.new(0,0,0)
         local jump = self.springs.jump:update(dt)
-        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/8))
+        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/5))
 
         local idleOffset = CFrame.new(0.5,-0.5,-.9)
         local sprintOffset = idleOffset:Lerp(CFrame.new(1,-1.8,-.6) * CFrame.Angles(1,0,0), self.lerpValues.sprint:update(dt))
@@ -416,14 +415,16 @@ function module:Equip(character, vm, bullets)
     s.Parent = self.camera
     s:Destroy()
 
-    for _, v in pairs(vm.Outlaw:GetDescendants()) do 
-        if v:IsA("BasePart") then 
-            v.Transparency = 0 
-        elseif v:IsA("Texture") then
-            v.Transparency = tonumber(v.Name)
+    task.delay(0.03, function()
+        for _, v in pairs(vm.Outlaw:GetDescendants()) do 
+            if v:IsA("BasePart") then 
+                v.Transparency = 0 
+            elseif v:IsA("Texture") then
+                v.Transparency = tonumber(v.Name)
+            end
         end
-    end
-    for _, v in pairs(vm.speedloader:GetDescendants()) do if v:IsA("BasePart") then v.Transparency = 0 end end
+        for _, v in pairs(vm.speedloader:GetDescendants()) do if v:IsA("BasePart") then v.Transparency = 0 end end    
+    end)
 
     self.canFire = true
     HudController:SetBullets(self.bullets, self.maxBullets)

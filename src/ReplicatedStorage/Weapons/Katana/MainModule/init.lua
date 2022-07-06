@@ -104,7 +104,7 @@ function module:SetupAnimations(character, vm)
         local sway = self.springs.sway:update(dt)
 
         local jump = self.springs.jump:update(dt)
-        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/8)) 
+        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/5)) 
 
         vm.HumanoidRootPart.CFrame *= CFrame.Angles(jump.y,-sway.x,sway.y)
 
@@ -164,8 +164,6 @@ function module:SetupAnimations(character, vm)
     self.loadedAnimations.equipCam = vm.AnimationController:LoadAnimation(script.Parent.Animations.EquipCam)
     self.loadedAnimations.attack1 = vm.AnimationController:LoadAnimation(script.Parent.Animations.Attack1)
     self.loadedAnimations.attack2 = vm.AnimationController:LoadAnimation(script.Parent.Animations.Attack2)
-    self.loadedAnimations.attack3 = vm.AnimationController:LoadAnimation(script.Parent.Animations.Attack3)
-    self.loadedAnimations.attack4 = vm.AnimationController:LoadAnimation(script.Parent.Animations.Attack4)
 
     local animator = HumanoidAnimatorUtils.getOrCreateAnimator(character.Humanoid)
     self.loaded3PAnimations.Idle = animator:LoadAnimation(script.Parent["3PAnimations"].Idle)
@@ -208,26 +206,28 @@ function module:Equip(character, vm)
     hitbox.OnHit:Connect(function(hit, hitHum)
         hitbox:HitStop()
         if hitHum.Health > 0 then
-            if hitHum.Health - 55 <= 0 then
-                self.killstreak += 1
-                if self.killstreak > 3 then
-                    MovementController.normalSpeed = 20
-                    MovementController.sprintSpeed = 34
-                    PvpService:SetMaxHealth(160)
-                elseif self.killstreak > 2 then
-                    MovementController.normalSpeed = 20
-                    MovementController.sprintSpeed = 32
-                    PvpService:SetMaxHealth(145)
-                elseif self.killstreak > 1 then
-                    MovementController.normalSpeed = 19
-                    MovementController.sprintSpeed = 30
-                    PvpService:SetMaxHealth(130)
-                else
-                    MovementController.normalSpeed = 18
-                    MovementController.sprintSpeed = 28
-                    PvpService:SetMaxHealth(115)
+            if game.Players:GetPlayerFromCharacter(hitHum.Parent) then
+                if hitHum.Health - 55 <= 0 then
+                    self.killstreak += 1
+                    if self.killstreak > 3 then
+                        MovementController.normalSpeed = 20
+                        MovementController.sprintSpeed = 34
+                        PvpService:SetMaxHealth(160)
+                    elseif self.killstreak > 2 then
+                        MovementController.normalSpeed = 20
+                        MovementController.sprintSpeed = 32
+                        PvpService:SetMaxHealth(145)
+                    elseif self.killstreak > 1 then
+                        MovementController.normalSpeed = 19
+                        MovementController.sprintSpeed = 30
+                        PvpService:SetMaxHealth(130)
+                    else
+                        MovementController.normalSpeed = 18
+                        MovementController.sprintSpeed = 28
+                        PvpService:SetMaxHealth(115)
+                    end
+                    if MovementController.isSprinting then MovementController.value:set(MovementController.sprintSpeed) else MovementController.value:set(MovementController.normalSpeed) end
                 end
-                if MovementController.isSprinting then MovementController.value:set(MovementController.sprintSpeed) else MovementController.value:set(MovementController.normalSpeed) end
             end
 
             WeaponController:Damage(hitHum, 55, false)
@@ -307,6 +307,7 @@ function module:Equip(character, vm)
                         if self.loadedAnimations["attack1"].IsPlaying then self.loadedAnimations["attack1"]:Stop(0) end
                     end
                     attackAnim:Play()
+                    attackAnim:AdjustSpeed(0.9)
                     hitbox:HitStart()
                     self.janitor:AddPromise(Promise.delay(attackAnim.Length - 0.3)):andThen(function()
                         self.isAttacking = false
