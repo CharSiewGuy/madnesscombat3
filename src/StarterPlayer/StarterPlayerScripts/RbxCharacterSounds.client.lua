@@ -11,7 +11,7 @@ local SOUND_DATA = {
 		Looped = true,
 	},
 	Died = {
-		SoundId = "rbxasset://sounds/uuhhh.mp3",
+		SoundId = "",
 	},
 	FreeFalling = {
 		SoundId = "rbxasset://sounds/action_falling.mp3",

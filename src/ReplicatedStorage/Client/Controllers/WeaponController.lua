@@ -182,6 +182,8 @@ function WeaponController:Damage(humanoid, damage, headshot)
 end
 
 function WeaponController:KnitStart()
+    repeat task.wait() until Knit.Player:GetAttribute("Class")
+
     local weaponModule = require(ReplicatedStorage.Weapons.Prime.MainModule)
     local weaponModule2 = require(ReplicatedStorage.Weapons.Outlaw.MainModule)
     local weaponModule3 = require(ReplicatedStorage.Weapons.Katana.MainModule)

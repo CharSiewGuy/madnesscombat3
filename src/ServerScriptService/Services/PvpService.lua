@@ -1,24 +1,36 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
+local Zone = require(Packages.Zone)
 
 local pvpOnly = true
+local safeZone = Zone.new(workspace.SafeZones)
 
 local PvpService = Knit.CreateService {
     Name = "PvpService", 
     Client = {
         KillSignal = Knit.CreateSignal(),
         OnDamagedSignal = Knit.CreateSignal(),
-        ExplodeSignal = Knit.CreateSignal()
+        ExplodeSignal = Knit.CreateSignal(),
+        NewKillSignal = Knit.CreateSignal()
     }
 }
 
 function PvpService:KnitStart()
-    game.Players.PlayerAdded:Connect(function(p)
+    Players.PlayerAdded:Connect(function(p)
         p:SetAttribute("Deaths", 0)
         p:SetAttribute("Kills", 0)
         p:SetAttribute("Score", 0)
+        p.CharacterAdded:Connect(function(char)
+            if not p:GetAttribute("Class") then return end
+            local randSpawn = math.random(1, #workspace.Spawns:GetChildren())
+            task.defer(function()
+                repeat task.wait() until char.HumanoidRootPart
+                char:MoveTo(workspace.Spawns:GetChildren()[randSpawn].Position)
+            end)
+        end)
     end)
 end
 
@@ -35,19 +47,24 @@ function PvpService:RespawnTnt(c, v)
 end
 
 function PvpService.Client:Damage(player, hum, damage, headshot)
-    if damage > 120 then player:Kick() end
-    if not player.Character or not player.Character.Humanoid or player.Character.Humanoid.Health <= 0 then return end
-    if hum.Health > 0 then
-        if hum.Health - damage <= 0 then
-            local can = player.Character and player.Character.Humanoid
-            if not can then return end
-            if game.Players:GetPlayerFromCharacter(hum.Parent) or not pvpOnly then
-                self.KillSignal:Fire(player, hum.Parent.Name, headshot, (player.Character.HumanoidRootPart.Position - hum.Parent.HumanoidRootPart.Position).Magnitude)
+    if safeZone:findPlayer(player) then return end
+    if not hum.Parent then return end
+    if not Players:GetPlayerFromCharacter(hum.Parent) or not safeZone:findPlayer(Players:GetPlayerFromCharacter(hum.Parent)) then
+        if damage > 120 then player:Kick() end
+        if not player.Character or not player.Character.Humanoid or player.Character.Humanoid.Health <= 0 then return end
+        if hum.Health > 0 then
+            if hum.Health - damage <= 0 then
+                local can = player.Character and player.Character.Humanoid
+                if not can then return end
+                if Players:GetPlayerFromCharacter(hum.Parent) or not pvpOnly then
+                    self.KillSignal:Fire(player, hum.Parent.Name, headshot, (player.Character.HumanoidRootPart.Position - hum.Parent.HumanoidRootPart.Position).Magnitude)
+                    self.NewKillSignal:FireAll(player.Name, player:GetAttribute("Weapon"), hum.Parent.Name)
+                end
             end
-        end
-        hum:TakeDamage(damage)
-        if game.Players:GetPlayerFromCharacter(hum.Parent) then
-            self.OnDamagedSignal:Fire(game.Players:GetPlayerFromCharacter(hum.Parent), player)
+            hum:TakeDamage(damage)
+            if Players:GetPlayerFromCharacter(hum.Parent) then
+                self.OnDamagedSignal:Fire(Players:GetPlayerFromCharacter(hum.Parent), player)
+            end
         end
     end
 end
@@ -57,6 +74,16 @@ function PvpService.Client:SetMaxHealth(player, num)
     if player.Character and player.Character.Humanoid then
         player.Character.Humanoid.MaxHealth = num
         if player.Character.Humanoid.Health > num then player.Character.Humanoid.Health = num end
+    end
+end
+
+function PvpService.Client:SetClass(player, classID)
+    if not player.Character or not player.Character.Humanoid then return end
+
+    player.Character.Humanoid.Health = 0
+    if classID == 1 then
+        player:SetAttribute("Class", "Voidstalker")
+        return true
     end
 end
 

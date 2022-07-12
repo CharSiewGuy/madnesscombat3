@@ -120,6 +120,8 @@ function MovementController:KnitInit()
 end
 
 function MovementController:KnitStart()
+    repeat task.wait() until Knit.Player:GetAttribute("Class")
+
     self.isSprinting = false
     self.canSprint = true
     self.isSliding = false
@@ -135,7 +137,6 @@ function MovementController:KnitStart()
 
     Knit.Player.CharacterAdded:Connect(function(character)
         local hum = character:WaitForChild("Humanoid")
-        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
 
         local animator = HumanoidAnimatorUtils.getOrCreateAnimator(hum)
         self.loadedAnimations.slide = animator:LoadAnimation(ReplicatedStorage.Assets.Animations.Slide)
@@ -434,7 +435,6 @@ function MovementController:KnitStart()
             else
                 self.airborneTime = 0
             end
-
             self.fallingSound.Volume = math.clamp(self.airborneTime, 0, 2)
 
             if hum:GetState() == Enum.HumanoidStateType.Climbing then 
@@ -453,7 +453,7 @@ function MovementController:KnitStart()
                 self.isZiplining = false
                 self.ziplineJanitor:Cleanup()
                 HudController.ScreenGui.Frame.Interact.Visible = false
-            else
+            else    
                 if not self.isZiplining and self.canZipline then
                     HudController.ScreenGui.Frame.Interact.Visible = true
                 else

@@ -90,17 +90,21 @@ function module:Initialize()
                     damage = 40
                 elseif distance < 50 then
                     damage = 35
-                else
+                elseif distance < 70 then
                     damage = 30
+                else
+                    damage = 25
                 end
             else
                 if distance < 30 then
-                    damage = 24
+                    damage = 25
                 elseif distance < 50 then
-                    damage = 20
-                else
+                    damage = 21
+                elseif distance < 70 then
                     damage = 17
-                end            
+                else
+                    damage = 15
+                end
             end
 
             if humanoid.Health > 0 then

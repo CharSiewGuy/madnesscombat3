@@ -106,7 +106,7 @@ function module:SetupAnimations(character, vm)
         local jump = self.springs.jump:update(dt)
         HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/5)) 
 
-        vm.HumanoidRootPart.CFrame *= CFrame.Angles(jump.y,-sway.x,sway.y)
+        vm.HumanoidRootPart.CFrame *= CFrame.Angles(jump.y + sway.y,-sway.x,sway.y)
 
         local idleOffset = CFrame.new(0.7,0,0.5) * CFrame.Angles(0.1,0,-0.5)
         local sprintOffset = idleOffset:Lerp(CFrame.new(0.3,0,-0.8) * CFrame.Angles(-0.4,0,0), self.lerpValues.sprint:update(dt))
@@ -166,11 +166,21 @@ function module:SetupAnimations(character, vm)
     self.loadedAnimations.attack2 = vm.AnimationController:LoadAnimation(script.Parent.Animations.Attack2)
 
     local animator = HumanoidAnimatorUtils.getOrCreateAnimator(character.Humanoid)
-    self.loaded3PAnimations.Idle = animator:LoadAnimation(script.Parent["3PAnimations"].Idle)
 
     MovementController.loadedAnimations.sprint = animator:LoadAnimation(script.Parent["3PAnimations"].Sprint)
+    self.loaded3PAnimations.attack1 = animator:LoadAnimation(script.Parent["3PAnimations"].Swing1)
+    self.loaded3PAnimations.attack2 = animator:LoadAnimation(script.Parent["3PAnimations"].Swing2)
+
+    WeaponService:SetCurWeapon("Katana")
+    HumanoidAnimatorUtils.stopAnimations(character.Humanoid, 0)
+    character.Animate.Disabled = true
+    local customAnimate = script.Parent.Animate:Clone()
+    customAnimate.Parent = character
 
     self.janitor:Add(function()
+        customAnimate:Destroy()
+        HumanoidAnimatorUtils.stopAnimations(character.Humanoid, 0)
+        character.Animate.Disabled = false
         for _, v in pairs(self.loaded3PAnimations) do
             v:Stop(0)
         end
@@ -261,7 +271,6 @@ function module:Equip(character, vm)
 
     self:SetupAnimations(character, vm)
     self.loadedAnimations.Idle:Play(0)
-    self.loaded3PAnimations.Idle:Play(0)
     
     self.loadedAnimations.equip:Play(0)
     self.loadedAnimations.equipCam:Play(0)
@@ -298,16 +307,18 @@ function module:Equip(character, vm)
                     self.isAttacking = true
                     self.lerpValues.attack.speed = 100
                     self.lerpValues.attack:set(1)
-                    MovementController.canClimb = false
 
                     local attackAnim = self.loadedAnimations["attack" .. self.combo]
                     if self.combo == 1 then
                         if self.loadedAnimations["attack2"].IsPlaying then self.loadedAnimations["attack2"]:Stop(0) end
+                        if self.loaded3PAnimations["attack2"].IsPlaying then self.loaded3PAnimations["attack2"]:Stop(0) end
                     else
                         if self.loadedAnimations["attack1"].IsPlaying then self.loadedAnimations["attack1"]:Stop(0) end
+                        if self.loaded3PAnimations["attack1"].IsPlaying then self.loaded3PAnimations["attack1"]:Stop(0) end
                     end
                     attackAnim:Play()
                     attackAnim:AdjustSpeed(0.9)
+                    self.loaded3PAnimations["attack" .. self.combo]:Play()
                     hitbox:HitStart()
                     self.janitor:AddPromise(Promise.delay(attackAnim.Length - 0.3)):andThen(function()
                         self.isAttacking = false
@@ -330,7 +341,6 @@ function module:Equip(character, vm)
                         if tick() - self.lastAttacked > attackAnim.Length then
                             hitbox:HitStop()
                             self.combo = 1
-                            MovementController.canClimb = true
                         end
                     end)
                  end
@@ -361,7 +371,6 @@ function module:Equip(character, vm)
 
     self.janitor:Add(function()
         self.loadedAnimations = {}
-        self.loaded3PAnimations.Idle:Stop(0)
         HumanoidAnimatorUtils.stopAnimations(vm.AnimationController, 0)
         ContextActionService:UnbindAction("KatanaAttack")
     end)

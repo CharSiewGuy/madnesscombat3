@@ -20,6 +20,8 @@ function SoundController:KnitInit()
 end
 
 function SoundController:KnitStart()
+    repeat task.wait() until Knit.Player:GetAttribute("Class")
+
     local WalkingFootsteps = game.SoundService:WaitForChild("WalkingFootsteps")
     local RunningFootsteps = game.SoundService:WaitForChild("RunningFootsteps")
 
@@ -59,7 +61,8 @@ function SoundController:KnitStart()
     end)
 
     SoundService.PlaySignal:Connect(function(character, weapon, name, playOnRemove)
-        local can = character and character.HumanoidRootPart
+        local can
+        pcall(function() can = character and character.HumanoidRootPart end)
         if not can then return end
         local sound
         if weapon == nil then
@@ -71,7 +74,7 @@ function SoundController:KnitStart()
         end
         if sound then
             local soundClone = sound:Clone()
-            soundClone.Parent = character.HumanoidRootPart
+            pcall(function() soundClone.Parent = character.HumanoidRootPart end)
             if playOnRemove then
                 soundClone:Destroy()
             else

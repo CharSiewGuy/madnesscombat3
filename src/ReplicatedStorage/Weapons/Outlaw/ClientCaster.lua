@@ -11,13 +11,11 @@ module.janitor = Janitor.new()
 local HudController
 local WeaponController
 local WeaponService
-local id = 0
 
 Knit.OnStart():andThen(function()
     HudController = Knit.GetController("HudController")
     WeaponController = Knit.GetController("WeaponController")
     WeaponService = Knit.GetService("WeaponService")
-    id = Knit.Player.UserId
 end)
 
 function module:Fire(origin, direction, repCharacter, spreadMagnitude)	
@@ -89,15 +87,15 @@ function module:Initialize()
             local damage = 15
             if headshot then
                 if distance < 30 then
-                    damage = 60
+                    damage = 62
                 elseif distance < 50 then
-                    damage = 58
+                    damage = 60
                 else
-                    damage = 56
+                    damage = 58
                 end
             else
                 if distance < 30 then
-                    damage = 36
+                    damage = 38
                 elseif distance < 50 then
                     damage = 34
                 else

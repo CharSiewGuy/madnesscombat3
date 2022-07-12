@@ -29,9 +29,21 @@ function HudController:KnitInit()
 end
 
 function HudController:KnitStart()
+    game.Lighting.Atmosphere.Density = 0.33
+
+    local StarterGui = game:GetService("StarterGui")
+    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
+    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+
+    repeat task.wait() until Knit.Player:GetAttribute("Class")
+    Knit.Player.CharacterAdded:Wait()
+
     self.ScreenGui = Knit.Player.PlayerGui:WaitForChild("ScreenGui")
+    self.ScreenGui.Enabled = true
     self.ScreenGui.Frame.Visible = true
     self.Overlay = Knit.Player.PlayerGui:WaitForChild("Overlay")
+    self.Overlay.Enabled = true
     self.Tutorial = Knit.Player.PlayerGui:WaitForChild("Tutorial")
     self.Tutorial.Frame.Visible = true
     game.Lighting.TutorialBlur.Enabled = true
@@ -105,12 +117,37 @@ function HudController:KnitStart()
         end
     end)
 
-    game.Lighting.Atmosphere.Density = 0.33
+    PvpService.NewKillSignal:Connect(function(playerName, weaponName, deadPlayerName)
+        print(playerName .. weaponName .. deadPlayerName)
+        local killfeed = self.ScreenGui.Frame:WaitForChild("Killfeed")
+        local killfeedFrame = ReplicatedStorage.Assets:WaitForChild("KillfeedFrame"):Clone()
+        killfeedFrame.Parent = killfeed
+        print(ReplicatedStorage.Weapons[weaponName].Name)
+        killfeedFrame.WeaponIcon.Image = ReplicatedStorage.Weapons[weaponName].WeaponIconFlipped.Image
+        killfeedFrame.Top.WeaponIcon.Image = ReplicatedStorage.Weapons[weaponName].WeaponIconFlipped.Image
+        killfeedFrame.P1.Text = playerName
+        killfeedFrame.Top.P1.Text = playerName
+        killfeedFrame.P2.Text = deadPlayerName
+        killfeedFrame.Top.P2.Text = deadPlayerName
 
-    local StarterGui = game:GetService("StarterGui")
-    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
-    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
-    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+        if playerName == Knit.Player.Name then
+            killfeedFrame.Top.P1.TextColor3 = Color3.fromRGB(227, 193, 0)
+        end
+
+        killfeedFrame.Name = tick()
+
+        if #killfeed:GetChildren() > 6 then
+            local lowest = math.huge
+            local function setLowest(v)
+                if not v:IsA("Frame") then return end
+                if tonumber(v.Name) < lowest then lowest = tonumber(v.Name) end
+            end
+            for _, v in ipairs(killfeed:GetChildren()) do
+               setLowest(v)
+            end
+            killfeed[tostring(lowest)]:Destroy()
+        end
+    end)
 
     ContextActionService:BindAction("Scoreboard", function(action, inputState)
         if action == "Scoreboard" then
@@ -144,6 +181,7 @@ function HudController:SetCurWeapon(weaponName)
         local c = icon:Clone()
         c.Parent = weaponStats
     end
+    Tween(weaponStats.ColorFrame, TweenInfo.new(0.2), {BackgroundColor3 = ReplicatedStorage.Weapons[weaponName]:GetAttribute("Color")})
 end
 
 function HudController:SetBullets(num, max)

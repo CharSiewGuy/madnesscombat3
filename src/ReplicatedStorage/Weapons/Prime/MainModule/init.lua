@@ -42,21 +42,21 @@ module.running = false
 module.OldCamCF = nil
 
 module.unscopedPattern = {
-    {1, 2, 1, -2, -1, 0.6};
-    {5, 2, 1, -1.7, -0.8, 0.8};
-    {10, 2, 1.2, -1.7, -1, 0.9};
-    {20, 2, -1, -1.7, 0.5, 1};
-    {25, 2, 1, -1.5, -0.5, 1.2};
-    {30, 2, -1, -1.5, 0.5, 1.4};
+    {1, 2, 1, -1.8, -1, 1.2};
+    {5, 2.2, 1, -1.7, -0.8, 1.4};
+    {10, 2.4, 1.2, -1.6, -1, 1.6};
+    {20, 2.5, -1, -1.4, 0.5, 1.8};
+    {25, 2.6, 1, -1.2, -0.5, 2};
+    {30, 2.6, -1, -1, 0.5, 2.2};
 }
 
 module.scopedPattern = {
     {1, 2, 1, -2, -1, 0.6};
-    {5, 2, 1, -2, -0.8, 0.8};
-    {10, 2, 1.2, -1.8, -1, 0.9};
-    {20, 2, -1, -1.7, 0.7, 1};
-    {25, 2, 1, -1.6, -0.7, 1.2};
-    {30, 2, -1, -1.6, 0.7, 1.4};
+    {5, 2, 1, -2, -1, 0.8};
+    {10, 2, 1, -1.9, -1, 0.9};
+    {20, 2, -1, -1.8, 0.9, 1};
+    {25, 2, 1, -1.7, -0.9, 1.2};
+    {30, 2, -1, -1.6, 0.9, 1.4};
 }
 
 function module:SetupAnimations(character, vm)
@@ -133,9 +133,9 @@ function module:SetupAnimations(character, vm)
         vm.HumanoidRootPart.CFrame *= finalOffset
 
         if not self.isAiming then   
-            vm.HumanoidRootPart.CFrame *= CFrame.Angles(jump.y,-sway.x,sway.y)
+            vm.HumanoidRootPart.CFrame *= CFrame.Angles(jump.y + sway.y,-sway.x,sway.y)
         else
-            vm.HumanoidRootPart.CFrame *= CFrame.Angles(jump.y/8,-sway.x,sway.y)
+            vm.HumanoidRootPart.CFrame *= CFrame.Angles(jump.y/8 + sway.y,-sway.x,sway.y)
         end
 
         if self.running then
@@ -240,7 +240,7 @@ module.aimJanitor = Janitor.new()
 module.isAiming = false
 module.scopedIn = false
 module.isFiring = false
-module.fireRate = 0.088
+module.fireRate = 0.09
 module.scopeOutPromise = nil
 
 function module:ToggleAim(inputState, vm)
@@ -263,8 +263,8 @@ function module:ToggleAim(inputState, vm)
         if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.scoped) then self.loadedAnimations.scoped:Stop(0) end
         pcall(function()MovementController.sprintJanitor:Cleanup()end)
 
-        WeaponController.baseFov:set(65)
-        game:GetService("UserInputService").MouseDeltaSensitivity = 65/90 * WeaponController.initialMouseSens
+        WeaponController.baseFov:set(70)
+        game:GetService("UserInputService").MouseDeltaSensitivity = 70/90 * WeaponController.initialMouseSens
         HudController:ShowVignette(true, 0.2)
         HudController.crosshairTransparency:set(1)
         HudController.dotTransparency:set(1)
@@ -508,7 +508,7 @@ function module:Equip(character, vm, bullets)
                 if tick() - self.lastshot > 0.3 then
                     sound.Volume = 7
                 else
-                    sound.Volume = 5
+                    sound.Volume = 4
                 end
 				sound:Play() 
                 task.delay(sound.TimeLength, function()

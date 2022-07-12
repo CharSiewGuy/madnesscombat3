@@ -120,9 +120,9 @@ function module:SetupAnimations(character, vm)
         vm.HumanoidRootPart.CFrame *= finalOffset
 
         if not self.isAiming then   
-            vm.HumanoidRootPart.CFrame *= CFrame.Angles(jump.y,-sway.x,sway.y)
+            vm.HumanoidRootPart.CFrame *= CFrame.Angles(jump.y + sway.y,-sway.x,sway.y)
         else
-            vm.HumanoidRootPart.CFrame *= CFrame.Angles(jump.y/8,-sway.x,sway.y)
+            vm.HumanoidRootPart.CFrame *= CFrame.Angles(jump.y/8 + sway.y,-sway.x,sway.y)
         end
 
         if self.running then
@@ -225,7 +225,7 @@ module.aimJanitor = Janitor.new()
 module.isAiming = false
 module.scopedIn = false
 module.isFiring = false
-module.fireRate = 0.14
+module.fireRate = 0.16
 module.scopeOutPromise = nil
 
 function module:ToggleAim(inputState, vm)
@@ -530,7 +530,7 @@ function module:Equip(character, vm, bullets)
 
                 if not self.scopedIn then
                     direction = self.camera.CFrame.LookVector
-                    ClientCaster:Fire(vm.Outlaw.Handle.MuzzleBack.WorldPosition, direction, character, 0.6)
+                    ClientCaster:Fire(vm.Outlaw.Handle.MuzzleBack.WorldPosition, direction, character, 1)
                 else
                     direction = self.camera.CFrame.LookVector
                     ClientCaster:Fire(vm.Outlaw.Handle.MuzzleBack.WorldPosition, direction, character, 0.5)

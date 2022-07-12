@@ -34,6 +34,7 @@ end
 function WeaponService.Client:SetCurWeapon(player, weaponName)
     if not player.Character then return end
     if not player.Character.Weapons:FindFirstChild(weaponName) then return end
+    player:SetAttribute("Weapon", weaponName)
     for _, weapon in pairs(player.Character.Weapons:GetChildren()) do
         if weapon.Name == weaponName then
             for _, v in pairs(weapon:GetDescendants()) do 
@@ -59,6 +60,12 @@ end
 
 function WeaponService.Client:CreateImpactEffect(player, raycastResult, human, fxCFrame)
     self.CreateImpactEffectSignal:FireExcept(player, raycastResult, human, fxCFrame)
+end
+
+function WeaponService:KnitStart()
+    game.Players.PlayerAdded:Connect(function(player)
+        player:SetAttribute("Weapon", "Prime")
+    end)   
 end
 
 return WeaponService
