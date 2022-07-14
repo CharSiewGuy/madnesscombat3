@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContextActionService = game:GetService("ContextActionService")
+local RunService = game:GetService("RunService")
 
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
@@ -11,7 +12,7 @@ local Timer = require(Packages.Timer)
 local SmoothValue = require(game.ReplicatedStorage.Modules.SmoothValue)
 
 local HudController = Knit.CreateController { Name = "HudController" }
-HudController._janitor = Janitor.new()
+HudController.janitor = Janitor.new()
 
 local PvpService
 
@@ -57,7 +58,15 @@ function HudController:KnitStart()
         self.Overlay.Crosshair.Visible = true
     end)
 
-    game:GetService("RunService").Heartbeat:Connect(function(dt)
+    if RunService:IsStudio() then
+        game.Lighting.TutorialBlur:Destroy()
+        self.Tutorial:Destroy()
+        Knit.GetController("InputController").mouseLocked = true
+        self.Overlay.Crosshair.Visible = true
+    end
+
+
+    RunService.Heartbeat:Connect(function(dt)
         if self.isAiming then
             self.crosshairOffset:set(5)
         end
@@ -118,11 +127,9 @@ function HudController:KnitStart()
     end)
 
     PvpService.NewKillSignal:Connect(function(playerName, weaponName, deadPlayerName)
-        print(playerName .. weaponName .. deadPlayerName)
         local killfeed = self.ScreenGui.Frame:WaitForChild("Killfeed")
         local killfeedFrame = ReplicatedStorage.Assets:WaitForChild("KillfeedFrame"):Clone()
         killfeedFrame.Parent = killfeed
-        print(ReplicatedStorage.Weapons[weaponName].Name)
         killfeedFrame.WeaponIcon.Image = ReplicatedStorage.Weapons[weaponName].WeaponIconFlipped.Image
         killfeedFrame.Top.WeaponIcon.Image = ReplicatedStorage.Weapons[weaponName].WeaponIconFlipped.Image
         killfeedFrame.P1.Text = playerName
@@ -147,6 +154,10 @@ function HudController:KnitStart()
             end
             killfeed[tostring(lowest)]:Destroy()
         end
+
+        task.delay(8, function()
+            killfeedFrame:Destroy()
+        end)
     end)
 
     ContextActionService:BindAction("Scoreboard", function(action, inputState)

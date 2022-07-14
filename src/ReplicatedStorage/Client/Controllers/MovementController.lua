@@ -116,7 +116,7 @@ function MovementController:KnitInit()
     SoundService = Knit.GetService("SoundService")
 
     self.airborneTime = 0
-    self.value = SmoothValue:create(self.normalSpeed, self.normalSpeed, 2)
+    self.value = SmoothValue:create(self.normalSpeed, self.normalSpeed, 4)
 end
 
 function MovementController:KnitStart()
@@ -265,10 +265,7 @@ function MovementController:KnitStart()
                     self.slideJanitor:Cleanup()
                 end
             elseif actionName == "Zipline" then
-                if inputState == Enum.UserInputState.Begin and self.canZipline then
-                    if not self.nearestZipline then print("no zipline near") return end
-                    if self.isZiplining then print("already ziplining") return end
-
+                if inputState == Enum.UserInputState.Begin and self.canZipline and self.nearestZipline then
                     self.isZiplining = true
                     self.canZipline = false
 
@@ -283,9 +280,9 @@ function MovementController:KnitStart()
 
                     local zipMagnitude
                     if math.deg(math.acos(self.camera.CFrame.LookVector:Dot(zipCF.LookVector))) > 90 then
-                        zipMagnitude = -40
+                        zipMagnitude = -50
                     else
-                        zipMagnitude = 40
+                        zipMagnitude = 50
                     end
                     
                     character.HumanoidRootPart.CFrame = CFrame.new(targetPos)

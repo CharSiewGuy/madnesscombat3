@@ -40,12 +40,16 @@ function SoundController:KnitStart()
                         self.lastplayednum = 1
                     end
                     local sound
-                    if character.Humanoid.WalkSpeed > 20 then
-                        sound = RunningFootsteps:WaitForChild("Concrete" .. self.lastplayednum):Clone()
-                        SoundService:PlaySound(RunningFootsteps, "Concrete" .. self.lastplayednum, true)
+                    local mat = "Concrete"
+                    if character.Humanoid.FloorMaterial == Enum.Material.Wood or character.Humanoid.FloorMaterial == Enum.Material.WoodPlanks then
+                        mat = "Wood"
+                    end 
+                    if character.Humanoid.WalkSpeed >= 20 then
+                        sound = RunningFootsteps:WaitForChild(mat .. self.lastplayednum):Clone()
+                        SoundService:PlaySound(RunningFootsteps, mat .. self.lastplayednum, true)
                     else
-                        sound = WalkingFootsteps:WaitForChild("Concrete" .. self.lastplayednum):Clone()
-                        SoundService:PlaySound(WalkingFootsteps, "Concrete" .. self.lastplayednum, true)
+                        sound = WalkingFootsteps:WaitForChild(mat .. self.lastplayednum):Clone()
+                        SoundService:PlaySound(WalkingFootsteps, mat .. self.lastplayednum, true)
                     end
                     if not sound then return end
                     sound.Parent = workspace.CurrentCamera
@@ -62,7 +66,7 @@ function SoundController:KnitStart()
 
     SoundService.PlaySignal:Connect(function(character, weapon, name, playOnRemove)
         local can
-        pcall(function() can = character and character.HumanoidRootPart end)
+        pcall(function() can = character and character:FindFirstChild("HumanoidRootPart") end)
         if not can then return end
         local sound
         if weapon == nil then
@@ -89,7 +93,7 @@ function SoundController:KnitStart()
     end)
 
     SoundService.StopSignal:Connect(function(character, name)
-        if not character.HumanoidRootPart then return end
+        if not character:FindFirstChild("HumanoidRootPart") then return end
         local sound = character.HumanoidRootPart:FindFirstChild(name)
         if sound then
             sound:Destroy()

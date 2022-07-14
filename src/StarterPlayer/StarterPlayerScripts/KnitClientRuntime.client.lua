@@ -28,11 +28,18 @@ Knit.Start():andThen(function()
 end):catch(warn)
 
 local assetsTable = {}
+
 for _, weaponFolder in pairs(ReplicatedStorage.Weapons:GetChildren()) do
     for _, anim in pairs(weaponFolder.Animations:GetChildren()) do
         assetsTable[#assetsTable+1] = anim.AnimationId 
     end
     for _, anim in pairs(weaponFolder["3PAnimations"]:GetChildren()) do
+        assetsTable[#assetsTable+1] = anim.AnimationId 
+    end
+end
+
+for _, classFolder in pairs(ReplicatedStorage.Classes:GetChildren()) do
+    for _, anim in pairs(classFolder.Animations:GetChildren()) do
         assetsTable[#assetsTable+1] = anim.AnimationId 
     end
 end

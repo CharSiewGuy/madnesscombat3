@@ -1,5 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService") 
+--local UserInputService = game:GetService("UserInputService") 
 
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
@@ -33,6 +33,7 @@ function ClassSelectController:KnitStart()
         Tween(VoidstalkerFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(103, 1, 255)})
         Tween(VoidstalkerFrame.Image, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(0, 0, 0)})
         Tween(VoidstalkerFrame.Text, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(0, 0, 0)})
+        self.ClassSelectUI:WaitForChild("Hover"):Play()
     end)
 
     VoidstalkerFrame.TextButton.MouseLeave:Connect(function()
@@ -50,17 +51,19 @@ function ClassSelectController:KnitStart()
             end
         end)
 
-        Tween(self.ClassSelectUI.Black, TweenInfo.new(0.8), {BackgroundTransparency = 0})
-        Tween(game.Lighting.ClassSelectBlur, TweenInfo.new(0.5), {Size = 30})
-        Tween(game.Lighting.ClassSelectCC, TweenInfo.new(0.8), {Brightness = -1}):andThen(function()
+        Tween(self.ClassSelectUI.Black, TweenInfo.new(1), {BackgroundTransparency = 0})
+        Tween(game.Lighting.ClassSelectBlur, TweenInfo.new(0.4), {Size = 30})
+        
+        task.delay(1, function()
             game.Lighting.ClassSelectBlur.Size = 0
-            game.Lighting.ClassSelectCC.Brightness = 0
             self.ClassSelectUI.Frame.Visible = false
             self.ClassSelectUI.TextLabel.Visible = false
             self.ClassSelectUI.TextLabelDS.Visible = false
-            Tween(self.ClassSelectUI:WaitForChild("Sound"), TweenInfo.new(4), {Volume = 0})
             self.janitor:Cleanup()
+            Tween(self.ClassSelectUI:WaitForChild("Sound"), TweenInfo.new(4), {Volume = 0})
         end)
+
+        self.ClassSelectUI:WaitForChild("Click"):Play()
     end))
 
     local camera = workspace.CurrentCamera
@@ -71,8 +74,11 @@ function ClassSelectController:KnitStart()
     self.janitor:Add(cameraCycle)
     cameraCycle:Start()
     cameraCycle.Tick:Connect(function()
-        curCamSpot += 1
-        if curCamSpot > 3 then curCamSpot = 1 end
+        Tween(game.Lighting.ClassSelectCC, TweenInfo.new(0.4), {Brightness = -1}):andThen(function()
+            curCamSpot += 1
+            if curCamSpot > 3 then curCamSpot = 1 end
+            Tween(game.Lighting.ClassSelectCC, TweenInfo.new(0.4), {Brightness = 0})
+        end)
     end)
 
     self.springs.sway = Spring.create()
@@ -92,8 +98,8 @@ function ClassSelectController:KnitStart()
         camera.CFrame *= CFrame.new(bobble) * CFrame.Angles(rotateX, rotateY, 0)
 
         local center = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
-        local moveVector = Vector3.new((mouse.X-center.X)/2500, -(mouse.Y-center.Y)/2500, 0)
-        camera.CFrame *= CFrame.new() * CFrame.Angles(math.rad(moveVector.Y) * 8, math.rad(moveVector.X * -1) * 8, 0)
+        local moveVector = Vector3.new((mouse.X-center.X)/2500, -(mouse.Y-center.Y)/2000, 0)
+        camera.CFrame *= CFrame.new(moveVector/6) * CFrame.Angles(math.rad(moveVector.Y) * 15, math.rad(moveVector.X * -1) * 15, 0)
     end))
 
     CoreCall('SetCore', 'ResetButtonCallback', false)

@@ -27,7 +27,9 @@ function CharacterController:KnitStart()
     repeat task.wait() until Knit.Player:GetAttribute("Class")
 
     Knit.Player.CharacterAdded:Connect(function(character)
-        Tween(Knit.GetController("ClassSelectController").ClassSelectUI.Black, TweenInfo.new(0.5), {BackgroundTransparency = 1})
+        game.Lighting.ClassSelectBlur.Size = 0
+        game.Lighting.ClassSelectCC.Brightness = 0
+        Tween(Knit.GetController("ClassSelectController").ClassSelectUI.Black, TweenInfo.new(1), {BackgroundTransparency = 1})
         CoreCall('SetCore', 'ResetButtonCallback', true)
 
         workspace.CurrentCamera.CameraType = Enum.CameraType.Custom

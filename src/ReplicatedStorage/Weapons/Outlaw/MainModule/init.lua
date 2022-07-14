@@ -341,14 +341,6 @@ function module:Reload()
             sound:Destroy()
         end))
 
-        self.janitor:AddPromise(Promise.delay(0.25)):andThen(function()
-            UtilModule:SetGlow(self.camera.viewmodel.Outlaw, false)
-        end)
-
-        self.janitor:AddPromise(Promise.delay(0.85)):andThen(function()
-            UtilModule:SetGlow(self.camera.viewmodel.Outlaw, true)
-        end)
-
         self.janitor:Add(function()
             self.isReloading = false
             MovementController.canClimb = true

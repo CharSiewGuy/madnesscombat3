@@ -19,6 +19,13 @@ local PvpService = Knit.CreateService {
 }
 
 function PvpService:KnitStart()
+    for _, spawn in pairs(workspace.Spawns:GetChildren()) do
+        for _, v in pairs(spawn:GetDescendants()) do
+            if not v:IsA("SpecialMesh") then v.Transparency = 1 end
+            if v:IsA("Decal") then v:Destroy() end
+        end        
+    end
+
     Players.PlayerAdded:Connect(function(p)
         p:SetAttribute("Deaths", 0)
         p:SetAttribute("Kills", 0)
@@ -27,8 +34,9 @@ function PvpService:KnitStart()
             if not p:GetAttribute("Class") then return end
             local randSpawn = math.random(1, #workspace.Spawns:GetChildren())
             task.defer(function()
-                repeat task.wait() until char.HumanoidRootPart
-                char:MoveTo(workspace.Spawns:GetChildren()[randSpawn].Position)
+                repeat task.wait() until char.HumanoidRootPart or not char
+                local spawnPoint = workspace.Spawns:GetChildren()[randSpawn].HumanoidRootPart
+                char.HumanoidRootPart.CFrame = spawnPoint.CFrame
             end)
         end)
     end)

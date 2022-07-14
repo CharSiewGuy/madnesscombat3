@@ -13,7 +13,7 @@ local Modules = ReplicatedStorage.Modules
 local SmoothValue = require(Modules.SmoothValue)
 
 local WeaponController = Knit.CreateController { Name = "WeaponController" }
-WeaponController._janitor = Janitor.new()
+WeaponController.janitor = Janitor.new()
 WeaponController.charJanitor = Janitor.new()
 
 local WeaponService
@@ -22,6 +22,7 @@ local HudController
 
 WeaponController.currentViewmodel = nil
 WeaponController.currentModule = nil
+WeaponController.canEquip = true
 WeaponController.loadedAnimations = {}
 
 WeaponController.initialMouseSens = 0
@@ -166,7 +167,7 @@ function WeaponController:Climb(val)
         climbAnim = self.loadedAnimations.midclimb
     end
     climbAnim:Play()
-    self._janitor:AddPromise(Promise.delay(self.loadedAnimations.midclimb.Length - 0.05)):andThen(function()
+    self.janitor:AddPromise(Promise.delay(self.loadedAnimations.midclimb.Length - 0.05)):andThen(function()
         climbAnim:Stop(0.25)
         self.isClimbing = false
     end)
@@ -184,10 +185,10 @@ end
 function WeaponController:KnitStart()
     repeat task.wait() until Knit.Player:GetAttribute("Class")
 
-    local weaponModule = require(ReplicatedStorage.Weapons.Prime.MainModule)
+    self.weaponModule = require(ReplicatedStorage.Weapons.Prime.MainModule)
     local weaponModule2 = require(ReplicatedStorage.Weapons.Outlaw.MainModule)
     local weaponModule3 = require(ReplicatedStorage.Weapons.Katana.MainModule)
-    self.currentModule = weaponModule
+    self.currentModule = self.weaponModule
 
     self.initialMouseSens = game:GetService("UserInputService").MouseDeltaSensitivity
 
@@ -200,7 +201,7 @@ function WeaponController:KnitStart()
         self.charJanitor:Cleanup()
         self.charJanitor:Add(RunService.Heartbeat:Connect(function()
             if hum.Health <= 0 then
-                weaponModule:Unequip()
+                self.weaponModule:Unequip()
                 weaponModule2:Unequip()
                 weaponModule3:Unequip()
             end
@@ -226,33 +227,34 @@ function WeaponController:KnitStart()
             task.wait()
         until character:FindFirstChild("HumanoidRootPart") and viewmodel:FindFirstChild("HumanoidRootPart")
         
-        weaponModule:Equip(character, viewmodel, weaponModule.maxBullets)
+        self.weaponModule:Equip(character, viewmodel, self.weaponModule.maxBullets)
+        self.currentModule = self.weaponModule
         WeaponService:SetCurWeapon("Prime")
         HudController:SetCurWeapon("Prime")
 
-        weaponModule.bullets = weaponModule.maxBullets
+        self.weaponModule.bullets = self.weaponModule.maxBullets
         weaponModule2.bullets = weaponModule2.maxBullets
-        local weapon1Equipped = true
-        local weapon2Equipped = false
-        local weapon3Equipped = false
+        self.weapon1Equipped = true
+        self.weapon2Equipped = false
+        self.weapon3Equipped = false
         local equipDebounce = false
         
         local function handleAction(actionName, inputState)
-            local can = not equipDebounce and (hum.Health > 0 and character.HumanoidRootPart and viewmodel.HumanoidRootPart)
+            local can = not equipDebounce and (hum.Health > 0 and character:FindFirstChild("HumanoidRootPart") and viewmodel.HumanoidRootPart) and self.canEquip
             if not can then return end
             for _, v in pairs(workspace.Projectiles:GetChildren()) do
                 if v.Name == Knit.Player.UserId then v:Destroy() end
             end
-            if actionName == "Equip" and not weapon1Equipped and (weapon2Equipped or weapon3Equipped) then
+            if actionName == "Equip" and not self.weapon1Equipped and (self.weapon2Equipped or self.weapon3Equipped) then
                 if inputState == Enum.UserInputState.Begin then
                     equipDebounce = true
                     weaponModule2:Unequip()
                     weaponModule3:Unequip()
-                    weaponModule:Equip(character, viewmodel)
-                    self.currentModule = weaponModule
-                    weapon1Equipped = true
-                    weapon2Equipped = false
-                    weapon3Equipped = false
+                    self.weaponModule:Equip(character, viewmodel)
+                    self.currentModule = self.weaponModule
+                    self.weapon1Equipped = true
+                    self.weapon2Equipped = false
+                    self.weapon3Equipped = false
                     task.delay(0.2, function()
                         equipDebounce = false
                     end)
@@ -260,16 +262,16 @@ function WeaponController:KnitStart()
                     HudController:SetCurWeapon("Prime")
                     PvpService:SetMaxHealth(100)
                 end
-            elseif actionName == "Equip2" and not weapon2Equipped and (weapon1Equipped or weapon3Equipped) then
+            elseif actionName == "Equip2" and not self.weapon2Equipped and (self.weapon1Equipped or self.weapon3Equipped) then
                 if inputState == Enum.UserInputState.Begin then
                     equipDebounce = true
-                    weaponModule:Unequip()
+                    self.weaponModule:Unequip()
                     weaponModule3:Unequip()
                     weaponModule2:Equip(character, viewmodel)
                     self.currentModule = weaponModule2
-                    weapon2Equipped = true
-                    weapon1Equipped = false
-                    weapon3Equipped = false
+                    self.weapon2Equipped = true
+                    self.weapon1Equipped = false
+                    self.weapon3Equipped = false
                     task.delay(0.2, function()
                         equipDebounce = false
                     end)
@@ -277,16 +279,16 @@ function WeaponController:KnitStart()
                     HudController:SetCurWeapon("Outlaw")
                     PvpService:SetMaxHealth(100)
                 end
-            elseif actionName == "Equip3" and not weapon3Equipped and (weapon1Equipped or weapon2Equipped) then
+            elseif actionName == "Equip3" and not self.weapon3Equipped and (self.weapon1Equipped or self.weapon2Equipped) then
                 if inputState == Enum.UserInputState.Begin then
                     equipDebounce = true
-                    weaponModule:Unequip()
+                    self.weaponModule:Unequip()
                     weaponModule2:Unequip()
                     weaponModule3:Equip(character, viewmodel)
                     self.currentModule = weaponModule3
-                    weapon3Equipped = true
-                    weapon2Equipped = false
-                    weapon1Equipped = false
+                    self.weapon3Equipped = true
+                    self.weapon2Equipped = false
+                    self.weapon1Equipped = false
                     task.delay(0.2, function()
                         equipDebounce = false
                     end)
@@ -306,7 +308,7 @@ function WeaponController:KnitStart()
             HudController:SetHealth(math.floor(h), hum.MaxHealth)
         end)
 
-        self._janitor:Add(PvpService.ExplodeSignal:Connect(function(p)
+        self.janitor:Add(PvpService.ExplodeSignal:Connect(function(p)
             local dist = (character.HumanoidRootPart.Position - p).Magnitude
 			if dist < 25 then
 				local bv = Instance.new("BodyVelocity")
@@ -357,14 +359,16 @@ function WeaponController:KnitStart()
         end))
     
 
-        self._janitor:Add(hum.Died:Connect(function()
+        self.janitor:Add(hum.Died:Connect(function()
             self.deaths += 1
             PvpService:SetDeaths(self.deaths)
             local s = ReplicatedStorage.Assets.Sounds.Death:Clone()
             s.Parent = workspace.CurrentCamera
             s:Destroy()
-            self.currentModule:Unequip(character)
-            self._janitor:Cleanup()
+            if self.currentModule then
+                self.currentModule:Unequip()
+            end
+            self.janitor:Cleanup()
         end))
     end)
 
