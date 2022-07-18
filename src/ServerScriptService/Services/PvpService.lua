@@ -5,7 +5,7 @@ local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 local Zone = require(Packages.Zone)
 
-local pvpOnly = true
+local pvpOnly = false
 local safeZone = Zone.new(workspace.SafeZones)
 
 local PvpService = Knit.CreateService {

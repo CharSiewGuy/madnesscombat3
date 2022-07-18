@@ -109,8 +109,7 @@ function module:SetupAnimations(character, vm)
 
         local gunbobcf = CFrame.new(0,0,0)
         local jump = self.springs.jump:update(dt)
-        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/5))
-
+        
         local idleOffset = CFrame.new(0.5,-0.5,-.9)
         local sprintOffset = idleOffset:Lerp(CFrame.new(1,-1.8,-.6) * CFrame.Angles(1,0,0), self.lerpValues.sprint:update(dt))
         local slideOffset = sprintOffset:Lerp(CFrame.new(-0.3,-1,-1) * CFrame.Angles(0, 0, 0.6), self.lerpValues.slide:update(dt))
@@ -522,7 +521,7 @@ function module:Equip(character, vm, bullets)
 
                 if not self.scopedIn then
                     direction = self.camera.CFrame.LookVector
-                    ClientCaster:Fire(vm.Outlaw.Handle.MuzzleBack.WorldPosition, direction, character, 1)
+                    ClientCaster:Fire(vm.Outlaw.Handle.MuzzleBack.WorldPosition, direction, character, 2)
                 else
                     direction = self.camera.CFrame.LookVector
                     ClientCaster:Fire(vm.Outlaw.Handle.MuzzleBack.WorldPosition, direction, character, 0.5)

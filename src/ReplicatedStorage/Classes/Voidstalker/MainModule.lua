@@ -7,6 +7,7 @@ local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
 local Promise = require(Packages.Promise)
 local Tween = require(Packages.TweenPromise)
+local Timer = require(Packages.Timer)
 local HumanoidAnimatorUtils = require(Packages.HumanoidAnimatorUtils)
 
 local Modules = ReplicatedStorage.Modules
@@ -107,7 +108,6 @@ function module:SetupAnimations(character ,vm)
 
         local gunbobcf = CFrame.new()
         local jump = self.springs.jump:update(dt)
-        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/5))
 
         local idleOffset = CFrame.new(0,0,0)
         vmHrp.CFrame *= idleOffset
@@ -181,6 +181,9 @@ function module:Init(character, vm)
     self.vm = vm
 
     self.loadedAnims.voidshift = vm.AnimationController:LoadAnimation(script.Parent.Animations.Voidshift)
+
+    self.classUI = self.janitor:Add(script.Parent.VoidstalkerUI:Clone())
+    self.classUI.Parent = Knit.Player.PlayerGui
 end
 
 function module.canUseAbility(char, vm)
@@ -213,45 +216,59 @@ function module:HandleAction(actionName, inputState)
                 if MovementController.isSprinting then MovementController.value:set(MovementController.sprintSpeed) else MovementController.value:set(MovementController.normalSpeed) end
 
                 self.janitor:AddPromise(Promise.delay(1.5)):andThen(function()
-                    self.voidshiftFXJanitor:Add(script.Parent.VoidCC:Clone()).Parent = game.Lighting
-
-                    self.vm.PocketWatch.Handle.SurfaceAppearance:Destroy()
-                    self.vm.PocketWatch.Lid.SurfaceAppearance:Destroy()
-
-                    for _, v in ipairs(self.vm.PocketWatch:GetChildren()) do
-                        if v:IsA("MeshPart") and v.Name ~= "Meshes/Cube.001 (2)" and v.Name ~= "Pointer1" then
-                            v:SetAttribute("Material", v.Material.Name)
-                            v.Material = Enum.Material.ForceField
-                            v.TextureID = self.vm.PocketWatch.Forcefield.Value
-                        end
-                    end
+                    local VoidCC = self.voidshiftFXJanitor:Add(script.Parent.VoidCC:Clone())
+                    VoidCC.Parent = game.Lighting
 
                     self.voidshiftFXJanitor:Add(function()
-                        if not self.vm then return end
-                        if not self.vm:FindFirstChild("PocketWatch") then return end
-                        local sAppearance = self.vm.PocketWatch.SurfaceAppearance
-                        sAppearance:Clone().Parent = self.vm.PocketWatch.Handle
-                        sAppearance:Clone().Parent = self.vm.PocketWatch.Lid
-
-                        for _, v in ipairs(self.vm.PocketWatch:GetChildren()) do
-                            if v:IsA("MeshPart") and v.Name ~= "Meshes/Cube.001 (2)" and v.Name ~= "Pointer1" then
-                                v.Material = Enum.Material[v:GetAttribute("Material")]
-                                v.TextureID = ""
-                            end
-                        end
+                        MovementController.normalSpeed = 14
+                        MovementController.sprintSpeed = 20
+                        if MovementController.isSprinting then MovementController.value:set(MovementController.sprintSpeed) else MovementController.value:set(MovementController.normalSpeed) end
                     end)
 
                     local particles1 = self.voidshiftFXJanitor:Add(script.Parent.Specs:Clone())
                     local particles2 = self.voidshiftFXJanitor:Add(script.Parent.Specs2:Clone())
                     particles1.Parent = self.character.HumanoidRootPart.RootAttachment
                     particles2.Parent = self.character.HumanoidRootPart.RootAttachment
+                    
+                    self.classUI.IntroSpeedlines.ImageTransparency = 0
+                    Tween(VoidCC, TweenInfo.new(0.2), {TintColor = Color3.fromRGB(186, 134, 232)})
+                    self.janitor:AddPromise(Tween(
+                        self.classUI.IntroSpeedlines, 
+                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+                        {Size = UDim2.fromScale(1.7,1.7), ImageTransparency = 1})
+                    ):andThen(function()
+                        self.classUI.IntroSpeedlines.Size = UDim2.fromScale(1,1)
+                    end)
+                    
+                    local LastTick = 0
+                    self.voidshiftFXJanitor:Add(RunService.RenderStepped:Connect(function()
+                        if tick() - LastTick >= 0.03 then
+                            local vel = self.character.HumanoidRootPart.Velocity
+                            LastTick = tick()
+                            for _ = 1, math.random(3, 5) do
+                                local Degree = math.rad(math.random(360))
+                                local Line = script.Parent.Line:Clone()
+                                Line.Rotation = math.deg(Degree)
+                                Line.Position = UDim2.fromScale(0.5 + math.cos(Degree) * 0.5, 0.5 + math.sin(Degree) * (self.classUI.SprintSpeedlines.AbsoluteSize.X / self.classUI.SprintSpeedlines.AbsoluteSize.Y) * 0.5)
+                                Line.ImageLabel.Size = UDim2.fromScale(math.random(80, 120) / 100, 0.05)
+                                Line.ImageLabel.ImageTransparency = 1
+                                Line.Parent = self.classUI.SprintSpeedlines
+                                Tween(Line.ImageLabel, TweenInfo.new(0.25, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
+                                    Size = UDim2.fromScale(0.5, 0), 
+                                    ImageTransparency = (30/Vector3.new(vel.X, 0, vel.Y).Magnitude) - 1
+                                }):andThen(function()
+                                    Line:Destroy()
+                                end)
+                            end
+                        end
+                    end))
 
                     self.janitor:Add(function()
                         self.voidshiftFXJanitor:Cleanup()
                     end)
 
-                    MovementController.normalSpeed = 19
-                    MovementController.sprintSpeed = 30
+                    MovementController.normalSpeed = 18
+                    MovementController.sprintSpeed = 32
                     if MovementController.isSprinting then MovementController.value:set(MovementController.sprintSpeed) else MovementController.value:set(MovementController.normalSpeed) end
                 end)
 
@@ -272,6 +289,11 @@ function module:HandleAction(actionName, inputState)
                     HudController:SetCurWeapon("Prime")
                     PvpService:SetMaxHealth(100)
                 end)
+
+                local sound = script.Parent.Sounds.Voidshift:Clone()
+                sound.Parent = self.camera
+                sound:Play()
+                self.voidshiftJanitor:Add(sound)
 
                 self.voidshiftJanitor:Add(function()
                     MovementController.canClimb = true

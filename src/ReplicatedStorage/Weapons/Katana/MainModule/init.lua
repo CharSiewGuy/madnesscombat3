@@ -104,8 +104,6 @@ function module:SetupAnimations(character, vm)
         local sway = self.springs.sway:update(dt)
 
         local jump = self.springs.jump:update(dt)
-        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/5)) 
-
         vm.HumanoidRootPart.CFrame *= CFrame.Angles(jump.y + sway.y,-sway.x,sway.y)
 
         local idleOffset = CFrame.new(0.7,0,0.5) * CFrame.Angles(0.1,0,-0.5)
@@ -221,20 +219,20 @@ function module:Equip(character, vm)
                     self.killstreak += 1
                     if self.killstreak > 3 then
                         MovementController.normalSpeed = 20
-                        MovementController.sprintSpeed = 34
-                        PvpService:SetMaxHealth(160)
+                        MovementController.sprintSpeed = 30
+                        PvpService:SetMaxHealth(140)
                     elseif self.killstreak > 2 then
                         MovementController.normalSpeed = 20
-                        MovementController.sprintSpeed = 32
-                        PvpService:SetMaxHealth(145)
+                        MovementController.sprintSpeed = 29
+                        PvpService:SetMaxHealth(130)
                     elseif self.killstreak > 1 then
                         MovementController.normalSpeed = 19
-                        MovementController.sprintSpeed = 30
-                        PvpService:SetMaxHealth(130)
+                        MovementController.sprintSpeed = 28
+                        PvpService:SetMaxHealth(120)
                     else
                         MovementController.normalSpeed = 18
-                        MovementController.sprintSpeed = 28
-                        PvpService:SetMaxHealth(115)
+                        MovementController.sprintSpeed = 27
+                        PvpService:SetMaxHealth(110)
                     end
                     if MovementController.isSprinting then MovementController.value:set(MovementController.sprintSpeed) else MovementController.value:set(MovementController.normalSpeed) end
                 end

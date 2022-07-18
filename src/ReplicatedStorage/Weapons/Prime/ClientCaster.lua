@@ -35,10 +35,10 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
     local spreadDirection = CFrame.fromOrientation(0, 0, math.random(0, math.pi * 2))
     local spreadAngle = CFrame.fromOrientation(math.rad(math.random(0, spreadMagnitude)), 0, 0)
     local finalDirection = (directionCF * spreadDirection * spreadAngle).LookVector
-    self.mainCaster:Fire(workspace.CurrentCamera.CFrame.Position, finalDirection, 1200, CastBehavior)
+    self.mainCaster:Fire(workspace.CurrentCamera.CFrame.Position, finalDirection, 1600, CastBehavior)
     CastBehavior.CosmeticBulletContainer = workspace.Projectiles
     CastBehavior.CosmeticBulletTemplate = script.Parent.BulletPart
-    self.cosmeticCaster:Fire(origin, finalDirection, 800, CastBehavior)
+    self.cosmeticCaster:Fire(origin, finalDirection, 700, CastBehavior)
     WeaponService:CastProjectile("Prime", finalDirection)
 end
 

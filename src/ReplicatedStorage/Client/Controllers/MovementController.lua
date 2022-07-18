@@ -201,7 +201,11 @@ function MovementController:KnitStart()
                 canClimb = true
                 hum.JumpPower = oldPower
                 self.zipJumpMultiplier = 1
-                self.jumpCamSpring:Impulse(Vector3.new(-math.clamp(((math.abs(humanoidRootPart.Velocity.Y)/30) ^ 2), .5, 10),0,0))
+                local LookVector = self.camera.CFrame.LookVector.Unit
+                local UpVector = Vector3.new(0, 1, 0)
+                if LookVector:Dot(UpVector) * -1 < 0.65 then 
+                    self.jumpCamSpring:Impulse(Vector3.new(-math.clamp(((math.abs(humanoidRootPart.Velocity.Y)/30) ^ 2), .5, 10),0,0))
+                end
             elseif new == Enum.HumanoidStateType.Freefall then
                 task.wait(TIME_BETWEEN_JUMPS)
                 canDoubleJump = true
@@ -235,6 +239,7 @@ function MovementController:KnitStart()
                         self.loadedAnimations.sprint:Play(0.3)
                         HudController.crosshairTransparency:set(1)
                         self.sprintJanitor:Add(function()
+                            HudController.hudShakeFrequency = 0.2
                             self.isSprinting = false
                             self.value:set(self.normalSpeed)
                             HudController.crosshairTransparency:set(0)
@@ -363,6 +368,11 @@ function MovementController:KnitStart()
                 HudController.crosshairOffset:set(20)
                 self.sprintJanitor:Cleanup()
             end
+        end))
+
+        self.janitor:Add(hum.Running:Connect(function(speed)
+            HudController.hudShakeMagnitude:set(speed/14 * 0.5)
+            HudController.hudShakeFrequency = 0.1 * (26/self.sprintSpeed)
         end))
         
         local camoffset = CFrame.new()

@@ -19,14 +19,18 @@ local PvpService
 function HudController:KnitInit()
     PvpService = Knit.GetService("PvpService")
 
-    HudController.crosshairOffset = SmoothValue:create(20, 20, 4)
-    HudController.crosshairOffset2 = SmoothValue:create(0,0,20)
-    HudController.isAiming = false
-    HudController.crosshairOffsetMultiplier = 2
-    HudController.crosshairTransparency = SmoothValue:create(0,0,4)
-    HudController.dotTransparency = SmoothValue:create(0,0,15)
+    self.crosshairOffset = SmoothValue:create(20, 20, 4)
+    self.crosshairOffset2 = SmoothValue:create(0,0,20)
+    self.isAiming = false
+    self.crosshairOffsetMultiplier = 2
+    self.crosshairTransparency = SmoothValue:create(0,0,4)
+    self.dotTransparency = SmoothValue:create(0,0,15)
     
-    HudController.score = 0
+    self.score = 0
+
+    self.hudShakeMagnitude = SmoothValue:create(0,0,5)
+    self.hudShakeFrequency = 0.1
+    self.hudShakeOffset = Vector2.new()
 end
 
 function HudController:KnitStart()
@@ -40,11 +44,32 @@ function HudController:KnitStart()
     repeat task.wait() until Knit.Player:GetAttribute("Class")
     Knit.Player.CharacterAdded:Wait()
 
-    self.ScreenGui = Knit.Player.PlayerGui:WaitForChild("ScreenGui")
+    --3D hud poggers
+    self.camera = workspace.CurrentCamera
+    self.guiPart = ReplicatedStorage:WaitForChild("GuiPart"):Clone()
+    self.guiPart.Parent = self.camera
+    self.guiPartOriginalSize = self.guiPart.Size
+
+    RunService.RenderStepped:Connect(function(dt)
+        self.guiPart.CFrame = self.camera.CFrame
+        self.guiPart.CFrame *= CFrame.new(0,0,-24) * CFrame.Angles(-0.1, 0, 0)
+        self.guiPart.Size = self.guiPartOriginalSize * self.camera.FieldOfView/90
+
+        local currentTime = tick()
+        local mag = self.hudShakeMagnitude:update(dt)
+        local freq = self.hudShakeFrequency
+        local shakeX = math.cos(currentTime/freq) * mag
+        local shakeY = math.abs(math.sin(currentTime/freq)) * 1.5 * mag 
+        self.hudShakeOffset = self.hudShakeOffset:Lerp(Vector2.new(shakeX, shakeY), 0.2)
+
+        self.guiPart.CFrame *= CFrame.new(self.hudShakeOffset.X, self.hudShakeOffset.Y, 0)
+    end)
+
+    self.ScreenGui = self.guiPart:WaitForChild("SurfaceGui")
     self.ScreenGui.Enabled = true
-    self.ScreenGui.Frame.Visible = true
     self.Overlay = Knit.Player.PlayerGui:WaitForChild("Overlay")
     self.Overlay.Enabled = true
+
     self.Tutorial = Knit.Player.PlayerGui:WaitForChild("Tutorial")
     self.Tutorial.Frame.Visible = true
     game.Lighting.TutorialBlur.Enabled = true
@@ -64,7 +89,6 @@ function HudController:KnitStart()
         Knit.GetController("InputController").mouseLocked = true
         self.Overlay.Crosshair.Visible = true
     end
-
 
     RunService.Heartbeat:Connect(function(dt)
         if self.isAiming then
@@ -394,7 +418,7 @@ function HudController:PromptKill(name)
         task.spawn(function()
             local fx = require(ReplicatedStorage.Modules.GlitchEffect)
             for _, v in pairs(fx) do
-                killPrompt.Fx.Image = v
+                killPrompt.FadeOutFx.Image = v
                 task.wait()
             end
         end)

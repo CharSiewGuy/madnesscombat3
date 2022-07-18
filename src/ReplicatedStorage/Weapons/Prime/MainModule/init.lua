@@ -123,7 +123,6 @@ function module:SetupAnimations(character, vm)
 
         local gunbobcf = CFrame.new(0,0,0)
         local jump = self.springs.jump:update(dt)
-        HudController.ScreenGui.Frame.Position = UDim2.fromScale(0.5, 0.5 + math.abs(jump.y/5))
 
         local idleOffset = CFrame.new(0.8,-0.8,-0.7)
         local sprintOffset = idleOffset:Lerp(CFrame.new(0.5,-1.5,-1.2) * CFrame.Angles(0,1,0.2), self.lerpValues.sprint:update(dt))
