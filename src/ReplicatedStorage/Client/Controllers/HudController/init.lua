@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local ContextActionService = game:GetService("ContextActionService")
 local RunService = game:GetService("RunService")
 
@@ -9,7 +10,10 @@ local Promise = require(Packages.Promise)
 local Tween = require(Packages.TweenPromise)
 local Timer = require(Packages.Timer)
 
-local SmoothValue = require(game.ReplicatedStorage.Modules.SmoothValue)
+local Modules = ReplicatedStorage.Modules
+local SmoothValue = require(Modules.SmoothValue)
+local Spring = require(Modules.Spring)
+local Spring4 = require(Modules.Spring4)
 
 local HudController = Knit.CreateController { Name = "HudController" }
 HudController.janitor = Janitor.new()
@@ -31,10 +35,14 @@ function HudController:KnitInit()
     self.hudShakeMagnitude = SmoothValue:create(0,0,5)
     self.hudShakeFrequency = 0.1
     self.hudShakeOffset = Vector2.new()
+    self.springs = {}
+    self.springs.jumpSway = Spring4.new(Vector3.new())
+    self.springs.jumpSway.Speed = 5
+    self.springs.jumpSway.Damper = 1
 end
 
 function HudController:KnitStart()
-    game.Lighting.Atmosphere.Density = 0.33
+    game.Lighting.Atmosphere.Density = 0.37
 
     local StarterGui = game:GetService("StarterGui")
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
@@ -50,9 +58,11 @@ function HudController:KnitStart()
     self.guiPart.Parent = self.camera
     self.guiPartOriginalSize = self.guiPart.Size
 
+    self.springs.guiSway = Spring.create()
+
     RunService.RenderStepped:Connect(function(dt)
         self.guiPart.CFrame = self.camera.CFrame
-        self.guiPart.CFrame *= CFrame.new(0,0,-24) * CFrame.Angles(-0.1, 0, 0)
+        self.guiPart.CFrame *= CFrame.new(0,0,-24) * CFrame.Angles(-0.075, 0, 0)
         self.guiPart.Size = self.guiPartOriginalSize * self.camera.FieldOfView/90
 
         local currentTime = tick()
@@ -63,6 +73,15 @@ function HudController:KnitStart()
         self.hudShakeOffset = self.hudShakeOffset:Lerp(Vector2.new(shakeX, shakeY), 0.2)
 
         self.guiPart.CFrame *= CFrame.new(self.hudShakeOffset.X, self.hudShakeOffset.Y, 0)
+
+        local mouseDelta = UserInputService:GetMouseDelta()
+        self.springs.guiSway:shove(Vector3.new(mouseDelta.X/420,mouseDelta.Y/420))
+        local sway = self.springs.guiSway:update(dt)
+        self.guiPart.CFrame *= CFrame.new(-sway.x * 8,-sway.y * 8, 0) * CFrame.Angles(-sway.y/2,-sway.x/2, 0)
+
+        self.springs.jumpSway:TimeSkip(dt)
+        local newoffset = CFrame.new(self.springs.jumpSway.p.x,self.springs.jumpSway.p.y,self.springs.jumpSway.p.z)
+        self.guiPart.CFrame *= newoffset
     end)
 
     self.ScreenGui = self.guiPart:WaitForChild("SurfaceGui")
@@ -375,7 +394,7 @@ function HudController:AddScore(scoreNum, reason)
     scoreBg:SetAttribute("num", scoreBg:GetAttribute("num") + scoreNum)
     scoreBg.Parent = self.ScreenGui.Frame.Score
 
-    task.delay(1, function()
+    task.delay(2, function()
         if tick() - self.lastChangedScore >= 1 then
             Tween(score, TweenInfo.new(0.3), {TextTransparency = 1, TextStrokeTransparency = 1})
             Tween(scoreBg, TweenInfo.new(0.3), {TextTransparency = 1})
@@ -391,7 +410,7 @@ function HudController:AddScore(scoreNum, reason)
     local scoreText = ReplicatedStorage.Assets.ScoreText:Clone()
     scoreText.Text = string.upper(reason)
     scoreText.Parent = self.ScreenGui.Frame.Score.Frame
-    task.delay(1, function()
+    task.delay(2, function()
         Tween(scoreText, TweenInfo.new(0.3), {TextTransparency = 1, TextStrokeTransparency = 1})
         task.delay(0.3, function()
             scoreText:Destroy()
@@ -417,6 +436,7 @@ function HudController:PromptKill(name)
         Tween(killPrompt.Bg, TweenInfo.new(0.3), {ImageTransparency = 1})
         task.spawn(function()
             local fx = require(ReplicatedStorage.Modules.GlitchEffect)
+            if not killPrompt:FindFirstChild("FadeOutFx") then return end
             for _, v in pairs(fx) do
                 killPrompt.FadeOutFx.Image = v
                 task.wait()
@@ -450,6 +470,40 @@ function HudController:ShowDamageDir(playerName, pos)
             end)
         end
     end)
+end
+
+function HudController:ResetAbility()
+    local abilityFrame = HudController.ScreenGui.Frame.Ability1
+    abilityFrame.Top.Size = UDim2.fromScale(1, 1)
+    abilityFrame.TextLabel.TextColor3 = Color3.fromRGB(0,0,0)
+    abilityFrame.InnerFrame.UIStroke.Color = Color3.fromRGB(0,0,0)
+    abilityFrame.Cooldown.TextTransparency = 1
+end
+
+function HudController:CooldownAbility(duration, janitor)
+    local abilityFrame = HudController.ScreenGui.Frame.Ability1
+    abilityFrame.Top.Size = UDim2.fromScale(1, 0)
+    janitor:AddPromise(Tween(abilityFrame.Top, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size = UDim2.fromScale(1, 1)}))
+    abilityFrame.TextLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    abilityFrame.InnerFrame.UIStroke.Color = Color3.fromRGB(150,150,150)
+    janitor:AddPromise(Tween(abilityFrame.TextLabel, TweenInfo.new(duration, Enum.EasingStyle.Linear), {TextColor3 = Color3.fromRGB(0,0,0)}))
+    janitor:AddPromise(Tween(abilityFrame.InnerFrame.UIStroke, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Color = Color3.fromRGB(0,0,0)}))
+    abilityFrame.Cooldown.TextTransparency = 0
+
+    local countdown = duration
+    abilityFrame.Cooldown.Text = countdown
+
+    local countdownTimer = Timer.new(1)
+    janitor:Add(countdownTimer)
+    countdownTimer.Tick:Connect(function()
+        countdown -= 1
+        abilityFrame.Cooldown.Text = countdown
+        if countdown <= 0 then 
+            janitor:AddPromise(Tween(abilityFrame.Cooldown, TweenInfo.new(0.5), {TextTransparency = 1}))
+            countdownTimer:Destroy()
+        end
+    end)
+    countdownTimer:Start()
 end
 
 return HudController

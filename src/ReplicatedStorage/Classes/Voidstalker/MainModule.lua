@@ -17,6 +17,7 @@ local UtilModule = require(Modules.FPSAnimUtilModule)
 
 local WeaponService
 local PvpService
+local ClassService
 local SoundService
 local WeaponController
 local HudController
@@ -30,6 +31,7 @@ module.voidshiftFXJanitor = Janitor.new()
 module.character = nil
 module.vm = nil
 module.loadedAnims = {}
+module.loaded3PAnims = {}
 module.springs = {}
 module.camera = workspace.CurrentCamera
 
@@ -99,6 +101,8 @@ function module:SetupAnimations(character ,vm)
     watchMotor6D.Part1 = watch.Handle
     self.animJanitor:Add(watchMotor6D)
 
+    ClassService:AddModel("PocketWatch", "Left Arm")
+
     self.animJanitor:Add(RunService.RenderStepped:Connect(function(dt)
         vmHrp.CFrame = self.camera.CFrame
 
@@ -157,7 +161,6 @@ function module:SetupAnimations(character ,vm)
     end))
 
     self.animJanitor:Add(function()
-        self.loadedAnimations = {}
         HumanoidAnimatorUtils.stopAnimations(vm.AnimationController, 0)
     end)
 
@@ -181,9 +184,14 @@ function module:Init(character, vm)
     self.vm = vm
 
     self.loadedAnims.voidshift = vm.AnimationController:LoadAnimation(script.Parent.Animations.Voidshift)
+    local animator = HumanoidAnimatorUtils.getOrCreateAnimator(character.Humanoid)
+    self.loaded3PAnims.voidshift = animator:LoadAnimation(script.Parent.Animations.Voidshift3P)
 
     self.classUI = self.janitor:Add(script.Parent.VoidstalkerUI:Clone())
     self.classUI.Parent = Knit.Player.PlayerGui
+
+    HudController:ResetAbility()
+    self.voidshiftCooldown = false
 end
 
 function module.canUseAbility(char, vm)
@@ -198,17 +206,19 @@ function module:HandleAction(actionName, inputState)
     if not self.character or not self.vm then return end
     if inputState == Enum.UserInputState.Begin then
         if actionName == "UseAbility1" then
-            if not self.voidshifting and self.loadedAnims.voidshift.Length > 0 and self.canUseAbility(self.character, self.vm) then
+            if not self.voidshifting and not self.voidshiftCooldown and self.loadedAnims.voidshift.Length > 0 and self.canUseAbility(self.character, self.vm) then
                 self.voidshifting = true
 
                 WeaponController.currentModule:Unequip()
+                WeaponService:SetCurWeapon(nil)
                 WeaponController.currentModule = nil
                 WeaponController.weapon1Equipped = false
                 WeaponController.weapon2Equipped = false
                 WeaponController.weapon3Equipped = false
 
-                self.loadedAnims.voidshift:Play(0)
                 self:SetupAnimations(self.character, self.vm)
+                self.loadedAnims.voidshift:Play(0)
+                self.loaded3PAnims.voidshift:Play()
                 
                 MovementController.canClimb = false
                 MovementController.normalSpeed = 14
@@ -268,12 +278,23 @@ function module:HandleAction(actionName, inputState)
                     end)
 
                     MovementController.normalSpeed = 18
-                    MovementController.sprintSpeed = 32
+                    MovementController.sprintSpeed = 30
                     if MovementController.isSprinting then MovementController.value:set(MovementController.sprintSpeed) else MovementController.value:set(MovementController.normalSpeed) end
+
+                    ClassService:UseAbility("VoidshiftIn")
+                    ClassService:RemoveModel("PocketWatch", "Left Arm")
+                    self.voidshiftFXJanitor:Add(function()
+                        ClassService:UseAbility("VoidshiftOut")
+                    end)
                 end)
 
                 self.janitor:AddPromise(Promise.delay(5.8)):andThen(function()
                     self.voidshiftFXJanitor:Cleanup()
+                    self.voidshiftCooldown = true
+                    self.janitor:AddPromise(Promise.delay(15)):andThen(function()
+                        self.voidshiftCooldown = false
+                    end)
+                    HudController:CooldownAbility(15, self.janitor)
                 end)
                    
                 self.janitor:AddPromise(Promise.delay(self.loadedAnims.voidshift.Length)):andThen(function()
@@ -321,6 +342,7 @@ Knit.OnStart():andThen(function()
     MovementController = Knit.GetController("MovementController")
     WeaponService = Knit.GetService("WeaponService")
     PvpService = Knit.GetService("PvpService")
+    ClassService = Knit.GetService("ClassService")
     SoundService = Knit.GetService("SoundService")
 end)
 

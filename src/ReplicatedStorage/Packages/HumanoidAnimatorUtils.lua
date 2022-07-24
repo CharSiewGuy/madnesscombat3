@@ -20,6 +20,14 @@ function HumanoidAnimatorUtils.stopAnimations(humanoid, fadeTime)
 	end
 end
 
+function HumanoidAnimatorUtils.stopAnimationsList(list, fadeTime)
+	for _, track in pairs(list) do
+		if track.IsPlaying == true then
+			track:Stop(fadeTime)
+		end
+	end
+end
+
 function HumanoidAnimatorUtils.isPlayingAnimationTrack(humanoid, track)
 	for _, playingTrack in pairs(humanoid:GetPlayingAnimationTracks()) do
 		if playingTrack == track then

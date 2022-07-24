@@ -164,20 +164,21 @@ function module:SetupAnimations(character, vm)
     self.loadedAnimations.attack2 = vm.AnimationController:LoadAnimation(script.Parent.Animations.Attack2)
 
     local animator = HumanoidAnimatorUtils.getOrCreateAnimator(character.Humanoid)
-
+    MovementController:SetCrouchAnim(animator, script.Parent["3PAnimations"].Crouch)
     MovementController.loadedAnimations.sprint = animator:LoadAnimation(script.Parent["3PAnimations"].Sprint)
     self.loaded3PAnimations.attack1 = animator:LoadAnimation(script.Parent["3PAnimations"].Swing1)
     self.loaded3PAnimations.attack2 = animator:LoadAnimation(script.Parent["3PAnimations"].Swing2)
 
     WeaponService:SetCurWeapon("Katana")
-    HumanoidAnimatorUtils.stopAnimations(character.Humanoid, 0)
+    HumanoidAnimatorUtils.stopAnimations(animator, 0)
     character.Animate.Disabled = true
     local customAnimate = script.Parent.Animate:Clone()
     customAnimate.Parent = character
 
     self.janitor:Add(function()
         customAnimate:Destroy()
-        HumanoidAnimatorUtils.stopAnimations(character.Humanoid, 0)
+        MovementController:SetCrouchAnim(animator, nil)
+        HumanoidAnimatorUtils.stopAnimations(animator, 0)
         character.Animate.Disabled = false
         for _, v in pairs(self.loaded3PAnimations) do
             v:Stop(0)

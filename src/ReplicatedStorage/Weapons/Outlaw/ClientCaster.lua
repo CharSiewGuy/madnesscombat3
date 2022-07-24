@@ -87,19 +87,19 @@ function module:Initialize()
             local damage = 15
             if headshot then
                 if distance < 30 then
-                    damage = 62
+                    damage = 72
                 elseif distance < 50 then
-                    damage = 60
+                    damage = 70
                 else
-                    damage = 58
+                    damage = 68
                 end
             else
                 if distance < 30 then
                     damage = 38
                 elseif distance < 50 then
-                    damage = 34
+                    damage = 36
                 else
-                    damage = 30
+                    damage = 34
                 end            
             end
 

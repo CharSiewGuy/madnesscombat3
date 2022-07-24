@@ -33,24 +33,34 @@ end
 
 function WeaponService.Client:SetCurWeapon(player, weaponName)
     if not player.Character then return end
-    if not player.Character.Weapons:FindFirstChild(weaponName) then return end
     player:SetAttribute("Weapon", weaponName)
-    for _, weapon in pairs(player.Character.Weapons:GetChildren()) do
-        if weapon.Name == weaponName then
-            for _, v in pairs(weapon:GetDescendants()) do 
-                if v:IsA("BasePart") then 
-                    v.Transparency = 0 
-                elseif v:IsA("Texture") then
-                    v.Transparency = tonumber(v.Name)
-                end
-            end
-        else
+    if weaponName == nil then
+        for _, weapon in pairs(player.Character.Weapons:GetChildren()) do
             for _, v in pairs(weapon:GetDescendants()) do 
                 if v:IsA("BasePart") or v:IsA("Texture") then 
                     v.Transparency = 1 
                 end 
             end
-         end
+        end
+    else
+        if not player.Character.Weapons:FindFirstChild(weaponName) then return end
+        for _, weapon in pairs(player.Character.Weapons:GetChildren()) do
+            if weapon.Name == weaponName then
+                for _, v in pairs(weapon:GetDescendants()) do 
+                    if v:IsA("BasePart") then 
+                        v.Transparency = 0 
+                    elseif v:IsA("Texture") then
+                        v.Transparency = tonumber(v.Name)
+                    end
+                end
+            else
+                for _, v in pairs(weapon:GetDescendants()) do 
+                    if v:IsA("BasePart") or v:IsA("Texture") then 
+                        v.Transparency = 1 
+                    end 
+                end
+            end
+        end
     end
 end
 
@@ -64,7 +74,7 @@ end
 
 function WeaponService:KnitStart()
     game.Players.PlayerAdded:Connect(function(player)
-        player:SetAttribute("Weapon", "Prime")
+        player:SetAttribute("Weapon", nil)
     end)   
 end
 

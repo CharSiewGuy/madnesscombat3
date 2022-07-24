@@ -42,12 +42,12 @@ module.running = false
 module.OldCamCF = nil
 
 module.unscopedPattern = {
-    {1, 2, 1, -1.8, -1, 1.2};
-    {5, 2.2, 1, -1.7, -0.8, 1.4};
-    {10, 2.4, 1.2, -1.6, -1, 1.6};
-    {20, 2.5, -1, -1.4, 0.5, 1.8};
-    {25, 2.6, 1, -1.2, -0.5, 2};
-    {30, 2.6, -1, -1, 0.5, 2.2};
+    {1, 2, 1, -1.8, -1, 1.6};
+    {5, 2.2, 1, -1.7, -0.8, 1.8};
+    {10, 2.4, 1.2, -1.6, -1, 2};
+    {20, 2.5, -1, -1.4, 0.5, 2.4};
+    {25, 2.6, 1, -1.2, -0.5, 2.5};
+    {30, 2.6, -1, -1, 0.5, 2.5};
 }
 
 module.scopedPattern = {
@@ -225,7 +225,15 @@ function module:SetupAnimations(character, vm)
     self.loaded3PAnimations.scopedShoot = animator:LoadAnimation(script.Parent["3PAnimations"].ScopedShoot)
     self.loaded3PAnimations.reload = animator:LoadAnimation(script.Parent["3PAnimations"].Reload)
 
-    MovementController.loadedAnimations.sprint = animator:LoadAnimation(script.Parent["3PAnimations"].Sprint)
+    if MovementController.loadedAnimations.sprint then
+        if MovementController.loadedAnimations.sprint.IsPlaying then
+            MovementController.loadedAnimations.sprint:Stop(0) 
+            MovementController.loadedAnimations.sprint = animator:LoadAnimation(script.Parent["3PAnimations"].Sprint)
+            MovementController.loadedAnimations.sprint:Play(0)
+        else
+            MovementController.loadedAnimations.sprint = animator:LoadAnimation(script.Parent["3PAnimations"].Sprint)
+        end
+    end
 
     self.janitor:Add(function()
         for _, v in pairs(self.loaded3PAnimations) do
@@ -239,7 +247,7 @@ module.aimJanitor = Janitor.new()
 module.isAiming = false
 module.scopedIn = false
 module.isFiring = false
-module.fireRate = 0.09
+module.fireRate = 0.088
 module.scopeOutPromise = nil
 
 function module:ToggleAim(inputState, vm)
@@ -262,8 +270,8 @@ function module:ToggleAim(inputState, vm)
         if HumanoidAnimatorUtils.isPlayingAnimationTrack(vm.AnimationController, self.loadedAnimations.scoped) then self.loadedAnimations.scoped:Stop(0) end
         pcall(function()MovementController.sprintJanitor:Cleanup()end)
 
-        WeaponController.baseFov:set(70)
-        game:GetService("UserInputService").MouseDeltaSensitivity = 70/90 * WeaponController.initialMouseSens
+        WeaponController.baseFov:set(65)
+        game:GetService("UserInputService").MouseDeltaSensitivity = 65/90 * WeaponController.initialMouseSens
         HudController:ShowVignette(true, 0.2)
         HudController.crosshairTransparency:set(1)
         HudController.dotTransparency:set(1)
@@ -595,9 +603,8 @@ function module:Equip(character, vm, bullets)
 
     self.janitor:Add(function()
         self.loadedAnimations = {}
-        self.loaded3PAnimations.Idle:Stop(0)
+        HumanoidAnimatorUtils.stopAnimationsList(self.loaded3PAnimations,0)
         HumanoidAnimatorUtils.stopAnimations(vm.AnimationController, 0)
-
         ContextActionService:UnbindAction("PrimeShoot")
         ContextActionService:UnbindAction("PrimeAim")
         ContextActionService:UnbindAction("PrimeReload")

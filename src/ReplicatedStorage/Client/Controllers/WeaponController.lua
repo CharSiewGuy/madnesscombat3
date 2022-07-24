@@ -378,7 +378,7 @@ function WeaponController:KnitStart()
         HudController:PromptKill(name)
         sound:Destroy()
         HudController:AddScore(100, "kill")
-        if tick() - self.lastKill <= 3 then
+        if tick() - self.lastKill <= 4 then
             HudController:AddScore(20, "multikill")
         end
         if hs then
