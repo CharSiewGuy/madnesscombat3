@@ -174,7 +174,11 @@ function WeaponController:Climb(val)
 end
 
 function WeaponController:Damage(humanoid, damage, headshot)
-    PvpService:Damage(humanoid, damage, headshot)
+    PvpService:Damage(humanoid, damage, headshot):andThen(function(success)
+        if success then
+            HudController:ShowHitmarker()
+        end
+    end)
     if humanoid.Parent.Name == "low" then
         game.Lighting.GlobalShadows = false
     elseif humanoid.Parent.Name == "high" then

@@ -72,7 +72,11 @@ function SoundController:KnitStart()
         if weapon == nil then
             sound = ReplicatedStorage.Assets.Sounds:FindFirstChild(name)
         elseif type(weapon) == "string" then
-            sound = ReplicatedStorage.Weapons[weapon].Sounds:FindFirstChild(name)
+            if ReplicatedStorage.Weapons:FindFirstChild(weapon) then
+                sound = ReplicatedStorage.Weapons[weapon].Sounds:FindFirstChild(name)
+            else
+                sound = ReplicatedStorage.Classes[weapon].Sounds:FindFirstChild(name)
+            end
         elseif weapon:IsA("SoundGroup") then
             sound = weapon:FindFirstChild(name)
         end

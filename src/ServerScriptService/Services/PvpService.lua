@@ -55,24 +55,28 @@ function PvpService:RespawnTnt(c, v)
 end
 
 function PvpService.Client:Damage(player, hum, damage, headshot)
-    if safeZone:findPlayer(player) then return end
-    if not hum.Parent then return end
-    if not Players:GetPlayerFromCharacter(hum.Parent) or not safeZone:findPlayer(Players:GetPlayerFromCharacter(hum.Parent)) then
+    if safeZone:findPlayer(player) then return false end
+    if not hum.Parent then return false end
+    local hitPlayer = Players:GetPlayerFromCharacter(hum.Parent)
+    if not hitPlayer or not safeZone:findPlayer(hitPlayer) then
         if damage > 120 then player:Kick() end
-        if not player.Character or not player.Character.Humanoid or player.Character.Humanoid.Health <= 0 then return end
-        if hum.Health > 0 then
-            if hum.Health - damage <= 0 then
-                local can = player.Character and player.Character.Humanoid
-                if not can then return end
-                if Players:GetPlayerFromCharacter(hum.Parent) or not pvpOnly then
-                    self.KillSignal:Fire(player, hum.Parent.Name, headshot, (player.Character.HumanoidRootPart.Position - hum.Parent.HumanoidRootPart.Position).Magnitude)
-                    self.NewKillSignal:FireAll(player.Name, player:GetAttribute("Weapon"), hum.Parent.Name)
+        if not player.Character or not player.Character.Humanoid or player.Character.Humanoid.Health <= 0 then return false end
+        if not (hitPlayer and hitPlayer:GetAttribute("Class") == "Voidstalker" and hitPlayer.ClassValues.IsInVoidshift.Value == true) then 
+            if hum.Health > 0 then
+                if hum.Health - damage <= 0 then
+                    if hitPlayer or not pvpOnly then
+                        self.KillSignal:Fire(player, hum.Parent.Name, headshot, (player.Character.HumanoidRootPart.Position - hum.Parent.HumanoidRootPart.Position).Magnitude)
+                        self.NewKillSignal:FireAll(player.Name, player:GetAttribute("Weapon"), hum.Parent.Name)
+                    end
                 end
+                hum:TakeDamage(damage)
+                if hitPlayer then
+                    self.OnDamagedSignal:Fire(hitPlayer, player)
+                end
+                return true
             end
-            hum:TakeDamage(damage)
-            if Players:GetPlayerFromCharacter(hum.Parent) then
-                self.OnDamagedSignal:Fire(Players:GetPlayerFromCharacter(hum.Parent), player)
-            end
+        else
+            return false
         end
     end
 end

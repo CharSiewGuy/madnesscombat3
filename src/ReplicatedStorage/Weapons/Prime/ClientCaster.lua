@@ -109,20 +109,20 @@ function module:Initialize()
 
             if humanoid.Health > 0 then
                 WeaponController:Damage(humanoid, damage, headshot)
-                
-                local sound
-                if headshot then
-                    sound = ReplicatedStorage.Assets.Sounds.Headshot:Clone()
-                else
-                    sound = ReplicatedStorage.Assets.Sounds["Hit" .. math.random(1,3)]:Clone()
+                local hitPlayer = game.Players:GetPlayerFromCharacter(humanoid.Parent)
+                if not (hitPlayer and hitPlayer:GetAttribute("Class") == "Voidstalker" and hitPlayer.ClassValues.IsInVoidshift.Value == true) then 
+                    local sound
+                    if headshot then
+                        sound = ReplicatedStorage.Assets.Sounds.Headshot:Clone()
+                    else
+                        sound = ReplicatedStorage.Assets.Sounds["Hit" .. math.random(1,3)]:Clone()
+                    end
+                    sound.Parent = workspace.CurrentCamera
+                    sound:Destroy()
+                    WeaponController:CreateImpactEffect(result, true)
+                    WeaponController:ShowDamageNumber(humanoid, damage, headshot)
+                    WeaponService:CreateImpactEffect(resultData, true)
                 end
-                sound.Parent = workspace.CurrentCamera
-                sound:Destroy()
-            
-                HudController:ShowHitmarker()
-                WeaponController:CreateImpactEffect(result, true)
-                WeaponController:ShowDamageNumber(humanoid, damage, headshot)
-                WeaponService:CreateImpactEffect(resultData, true)
             end
         else
             WeaponController:CreateImpactEffect(result, false)

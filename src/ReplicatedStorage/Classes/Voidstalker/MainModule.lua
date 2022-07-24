@@ -7,7 +7,6 @@ local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
 local Promise = require(Packages.Promise)
 local Tween = require(Packages.TweenPromise)
-local Timer = require(Packages.Timer)
 local HumanoidAnimatorUtils = require(Packages.HumanoidAnimatorUtils)
 
 local Modules = ReplicatedStorage.Modules
@@ -192,6 +191,8 @@ function module:Init(character, vm)
 
     HudController:ResetAbility()
     self.voidshiftCooldown = false
+
+    ClassService:ResetValues()
 end
 
 function module.canUseAbility(char, vm)
@@ -281,6 +282,7 @@ function module:HandleAction(actionName, inputState)
                     MovementController.sprintSpeed = 30
                     if MovementController.isSprinting then MovementController.value:set(MovementController.sprintSpeed) else MovementController.value:set(MovementController.normalSpeed) end
 
+                    ClassService:UseAbility("Voidshift", true)
                     ClassService:UseAbility("VoidshiftIn")
                     ClassService:RemoveModel("PocketWatch", "Left Arm")
                     self.voidshiftFXJanitor:Add(function()
@@ -315,6 +317,14 @@ function module:HandleAction(actionName, inputState)
                 sound.Parent = self.camera
                 sound:Play()
                 self.voidshiftJanitor:Add(sound)
+
+                self.janitor:AddPromise(Promise.delay(1.2)):andThen(function()
+                    SoundService:PlaySound("Voidstalker", "VoidshiftIn", true)
+                end)
+
+                self.janitor:AddPromise(Promise.delay(4.8)):andThen(function()
+                    SoundService:PlaySound("Voidstalker", "VoidshiftOut", true)
+                end)
 
                 self.voidshiftJanitor:Add(function()
                     MovementController.canClimb = true

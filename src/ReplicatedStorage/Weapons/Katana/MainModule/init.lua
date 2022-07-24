@@ -240,24 +240,21 @@ function module:Equip(character, vm)
             end
 
             WeaponController:Damage(hitHum, 55, false)
-            
-            local sound
-            sound = ReplicatedStorage.Assets.Sounds["Hit" .. math.random(1,3)]:Clone()
-            sound.Parent = workspace.CurrentCamera
-            sound:Destroy()
-            
+                        
             local resultData = {["Position"] = hit.Position, ["Normal"] = Vector3.new(), ["Instance"] = {["Transparency"] = 0}}
 
-            HudController:ShowHitmarker()
-            WeaponController:CreateImpactEffect(resultData, true, hit.CFrame)
-            WeaponController:ShowDamageNumber(hitHum, 55, false)
-            WeaponService:CreateImpactEffect(resultData, true, hit.CFrame)
+            local hitPlayer = game.Players:GetPlayerFromCharacter(hitHum.Parent)
+            if not (hitPlayer and hitPlayer:GetAttribute("Class") == "Voidstalker" and hitPlayer.ClassValues.IsInVoidshift.Value == true) then 
+                WeaponController:CreateImpactEffect(resultData, true, hit.CFrame)
+                WeaponController:ShowDamageNumber(hitHum, 55, false)
+                WeaponService:CreateImpactEffect(resultData, true, hit.CFrame)
 
-            local randSound = "Hit" .. math.random(1, 2)
-            sound = script.Parent.Sounds[randSound]:Clone()
-            sound.Parent = self.camera
-            sound:Destroy()
-            SoundService:PlaySound("Katana", randSound, true)
+                local randSound = "Hit" .. math.random(1, 2)
+                local sound = script.Parent.Sounds[randSound]:Clone()
+                sound.Parent = self.camera
+                sound:Destroy()
+                SoundService:PlaySound("Katana", randSound, true)
+            end
         end
     end)
 
