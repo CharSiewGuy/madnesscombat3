@@ -12,14 +12,14 @@ local Modules = ReplicatedStorage.Modules
 local Spring = require(Modules.Spring)
 local CoreCall = require(Modules.CoreCall)
 
-local PvpService
+local ClassService
 
 local ClassSelectController = Knit.CreateController { Name = "ClassSelectController" }
 ClassSelectController.janitor = Janitor.new()
 ClassSelectController.uiJanitor = Janitor.new()
 
 function ClassSelectController:KnitInit()
-    PvpService = Knit.GetService("PvpService")   
+    ClassService = Knit.GetService("ClassService")   
     self.ClassSelectUI = Knit.Player.PlayerGui:WaitForChild("ClassSelect")
     self.springs = {}
 end
@@ -45,7 +45,7 @@ function ClassSelectController:KnitStart()
     self.uiJanitor:Add(VoidstalkerFrame.TextButton.MouseButton1Click:Connect(function()
         self.uiJanitor:Cleanup()
 
-        PvpService:SetClass(1):andThen(function(success)
+        ClassService:SetClass(1):andThen(function(success)
             if success then
                 Knit.Player:SetAttribute("Class", "Voidstalker")
             end

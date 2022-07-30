@@ -394,6 +394,9 @@ function WeaponController:KnitStart()
         self.lastKill = tick()
         self.kills += 1
         PvpService:SetKills(self.kills)
+        Tween(game.Lighting, TweenInfo.new(0.15), {ExposureCompensation = 0.15}):andThen(function()
+            Tween(game.Lighting, TweenInfo.new(0.3), {ExposureCompensation = 0})
+        end)
     end)
 
     local casters = {

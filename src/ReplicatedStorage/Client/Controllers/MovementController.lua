@@ -26,6 +26,7 @@ MovementController.normalSpeed = 16
 MovementController.sprintSpeed = 24
 MovementController.loadedAnimations = {}
 MovementController.fovOffset = SmoothValue:create(0, 0, 5)
+MovementController.slideCamRotOffset = SmoothValue:create(0,0,5)
 MovementController.jumpCamSpring = Spring4.new(Vector3.new())
 MovementController.jumpCamSpring.Speed = 5
 MovementController.jumpCamSpring.Damper = 1
@@ -33,16 +34,37 @@ MovementController.jumpCamSpring.Damper = 1
 function MovementController:Slide(hum, humanoidRootPart)
     if humanoidRootPart.Velocity.Magnitude < 18 then return end
 
+    local moveDir = humanoidRootPart.CFrame:VectorToObjectSpace(hum.MoveDirection)
+    if moveDir.Z > 0.1 then return end
+    if moveDir.X <= -0.5 then
+        self.slideCamRotOffset:set(4)
+    elseif moveDir.X >= 0.5 then
+        self.slideCamRotOffset:set(-4)
+    end
+
     self.isSliding = true
-    self.canSlide = false
 
     local slideV = Instance.new("BodyVelocity")
     slideV.MaxForce = Vector3.new(1,0,1) * 30000
-    slideV.Velocity = hum.MoveDirection * 60
+    slideV.Velocity = hum.MoveDirection * (40 * math.clamp(tick() - self.lastSlide, 1, 2))
     slideV.Name = "SlideVel"
     slideV:SetAttribute("Created", tick())
     slideV.Parent = humanoidRootPart
     self.fovOffset:set(15)
+
+    local slideStartSound = ReplicatedStorage.Assets.Sounds.SlideStart:Clone()
+    slideStartSound.PlaybackSpeed = math.random(9, 11)/10
+    slideStartSound.Parent = self.camera
+    slideStartSound:Destroy()
+    SoundService:PlaySound(nil, "SlideStart", true)
+
+    local slideLoopSound = self.slideJanitor:Add(ReplicatedStorage.Assets.Sounds.SlideLoop:Clone())
+    slideLoopSound.Volume = 0
+    slideLoopSound.PlaybackSpeed = math.random(9, 11)/10
+    slideLoopSound.Parent = self.camera
+    Tween(slideLoopSound, TweenInfo.new(0.3), {Volume = 1})
+    slideLoopSound:Play()
+
     self.slideJanitor:Add(function()
         self.isSliding = false
         slideV:Destroy()
@@ -51,50 +73,31 @@ function MovementController:Slide(hum, humanoidRootPart)
             Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, 0, 0)})
         end
         self.fovOffset:set(0)
+        self.slideCamRotOffset:set(0)
+        self.lastSlide = tick()
+
+        local slideEndSound = ReplicatedStorage.Assets.Sounds.SlideEnd:Clone()
+        slideEndSound.Parent = self.camera
+        slideEndSound.PlaybackSpeed = math.random(9, 11)/10
+        slideEndSound:Destroy()
+        SoundService:PlaySound(nil, "SlideEnd", true)
     end)
 
     self.sprintJanitor:Cleanup()
 
-    local randSound = "Slide" .. math.random(1,2)
-
-    local sound = ReplicatedStorage.Assets.Sounds[randSound]:Clone()
-    sound.Parent = self.camera
-    sound:Play()
-
-    self.slideJanitor:Add(function()
-        self.slideJanitor:AddPromise(Tween(sound, TweenInfo.new(0.2), {Volume = 0}))
-        task.delay(0.2, function()
-            sound:Destroy()
-        end)
-        self.janitor:AddPromise(Promise.delay(1)):andThen(function()
-            self.canSlide = true
-        end)
-        SoundService:StopSound(randSound)
-        self.lastSlide = tick()
-    end)
-
     self.slideJanitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.7, 0)}))
-    Tween(slideV, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Velocity = hum.MoveDirection * 10})
+    self.janitor:Add(self.slideJanitor)
+
+    Tween(slideV, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Velocity = hum.MoveDirection * 15})
     self.lastSlide = tick()
-    task.delay(2.5, function()
-        if tick() - self.lastSlide >= (2.5 - 0.03) then 
-            self.isSliding = false
-            slideV:Destroy()
-            self.loadedAnimations.slide:Stop(0.2)
-            self.slideJanitor:AddPromise(Tween(sound, TweenInfo.new(0.2), {Volume = 0}))
-            self.slideJanitor:AddPromise(Promise.delay(0.2)):andThen(function()
-                sound:Destroy()
-            end)
-            self.fovOffset:set(0)
+    self.janitor:AddPromise(Promise.delay(1)):andThen(function()
+        if tick() - self.lastSlide >= (1 - 0.03) then 
             self:Crouch(hum)
+            self.slideJanitor:Cleanup()
         end
     end)
 
     self.loadedAnimations.slide:Play(0.2)
-
-    self.janitor:Add(self.slideJanitor)
-
-    SoundService:PlaySound(nil, randSound, false)
 end
 
 function MovementController:SetCrouchAnim(animator, anim)
@@ -109,7 +112,6 @@ function MovementController:Crouch(hum)
     self.isCrouching = true
     self.canSlide = false
     self.crouchJanitor:AddPromise(Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, -1.7, 0)}))
-    --REPLLACE ANIMATION TRACK FIRST, IF ITS ALRADY PLAYING THEN STOP AND PLAYS AGAIN
     self.loadedAnimations.crouch:Play(0.2)
     self.crouchJanitor:Add(function()
         Tween(hum, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CameraOffset = Vector3.new(0, 0, 0)})
@@ -159,8 +161,8 @@ function MovementController:KnitStart()
             local dir = humanoidRootPart.CFrame:VectorToObjectSpace(hum.MoveDirection)
             if dir.X < -0.9 then return "left" end
             if dir.X > 0.9 then return "right" end
-            if dir.Z < 0 then return "forward" end
-            if dir.Z > 0 then return "backward" end
+            if dir.Z > 0.1 then return "backward" end
+            return "forward"
         end
 
         self.sprintJanitor = Janitor.new()
@@ -170,6 +172,7 @@ function MovementController:KnitStart()
         self.janitor:Add(self.sprintJanitor)
         self.janitor:Add(self.slideJanitor)
         self.janitor:Add(self.crouchJanitor)
+        self.janitor:LinkToInstance(character)
 
         self.isSliding = false
         self.isZiplining = false
@@ -437,9 +440,9 @@ function MovementController:KnitStart()
                     end
                 end
             end
-            
+
             --FORCE STOP SLIDING
-            local v = character.HumanoidRootPart:FindFirstChild("SlideVel")
+            --[[local v = character.HumanoidRootPart:FindFirstChild("SlideVel")
             if v then
                 if tick() - v:GetAttribute("Created") > 0.7 then
                     v:Destroy()
@@ -448,7 +451,7 @@ function MovementController:KnitStart()
                     self.fovOffset:set(0)
                     self:Crouch(hum)
                 end
-            end 
+            end]]--
 
             --FALLING
             if hum.FloorMaterial == Enum.Material.Air then
@@ -484,12 +487,16 @@ function MovementController:KnitStart()
                     HudController.ScreenGui.Frame.Interact.Visible = false
                 end
             end
+        end))
 
+        self.janitor:Add(RunService.RenderStepped:Connect(function(dt)
             --CAMERA
             self.jumpCamSpring:TimeSkip(dt)
             local newoffset = CFrame.Angles(self.jumpCamSpring.p.x,self.jumpCamSpring.p.y,self.jumpCamSpring.p.z)
-            self.camera.CFrame = self.camera.CFrame * camoffset:Inverse() * newoffset
+            self.camera.CFrame *= camoffset:Inverse() * newoffset
             camoffset = newoffset
+            
+            self.camera.CFrame *= CFrame.Angles(0, 0, math.rad(self.slideCamRotOffset:update(dt)))
 
             self.camera.FieldOfView = WeaponController.baseFov:update(dt) + self.fovOffset:update(dt)
         end))

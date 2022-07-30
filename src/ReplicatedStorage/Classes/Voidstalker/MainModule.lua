@@ -190,9 +190,6 @@ function module:Init(character, vm)
     self.classUI.Parent = Knit.Player.PlayerGui
 
     HudController:ResetAbility()
-    self.voidshiftCooldown = false
-
-    ClassService:ResetValues()
 end
 
 function module.canUseAbility(char, vm)
@@ -207,7 +204,9 @@ function module:HandleAction(actionName, inputState)
     if not self.character or not self.vm then return end
     if inputState == Enum.UserInputState.Begin then
         if actionName == "UseAbility1" then
-            if not self.voidshifting and not self.voidshiftCooldown and self.loadedAnims.voidshift.Length > 0 and self.canUseAbility(self.character, self.vm) then
+            return
+        elseif actionName == "UseUltimateAbility" then
+            if not self.voidshifting and Knit.Player:GetAttribute("UltCharge") >= 100 and self.loadedAnims.voidshift.Length > 0 and self.canUseAbility(self.character, self.vm) then
                 self.voidshifting = true
 
                 WeaponController.currentModule:Unequip()
@@ -279,7 +278,7 @@ function module:HandleAction(actionName, inputState)
                     end)
 
                     MovementController.normalSpeed = 18
-                    MovementController.sprintSpeed = 30
+                    MovementController.sprintSpeed = 36
                     if MovementController.isSprinting then MovementController.value:set(MovementController.sprintSpeed) else MovementController.value:set(MovementController.normalSpeed) end
 
                     ClassService:UseAbility("Voidshift", true)
@@ -288,15 +287,11 @@ function module:HandleAction(actionName, inputState)
                     self.voidshiftFXJanitor:Add(function()
                         ClassService:UseAbility("VoidshiftOut")
                     end)
+                    ClassService:ResetUltProgress(Knit.Player)
                 end)
 
                 self.janitor:AddPromise(Promise.delay(5.8)):andThen(function()
                     self.voidshiftFXJanitor:Cleanup()
-                    self.voidshiftCooldown = true
-                    self.janitor:AddPromise(Promise.delay(15)):andThen(function()
-                        self.voidshiftCooldown = false
-                    end)
-                    HudController:CooldownAbility(15, self.janitor)
                 end)
                    
                 self.janitor:AddPromise(Promise.delay(self.loadedAnims.voidshift.Length)):andThen(function()

@@ -381,6 +381,8 @@ function module:Equip(character, vm, bullets)
     local can = character.Humanoid and character.Humanoid.Health > 0 and character.HumanoidRootPart and vm.HumanoidRootPart
     if not can then return end
 
+    self.janitor:LinkToInstance(character)
+
     self.equipped = false
     WeaponController.baseFov:set(90)
     MovementController.normalSpeed = 15

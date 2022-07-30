@@ -26,7 +26,7 @@ function module:Fire(origin, direction, repCharacter, spreadMagnitude)
 
     local CastBehavior = FastCast.newBehavior()
     CastBehavior.RaycastParams = CastParams
-    CastBehavior.MaxDistance = 1600
+    CastBehavior.MaxDistance = 1500
     CastBehavior.HighFidelityBehavior = FastCast.HighFidelityBehavior.Default
     CastBehavior.Acceleration = Vector3.new(0, -20, 0)
     CastBehavior.AutoIgnoreContainer = true
@@ -87,19 +87,19 @@ function module:Initialize()
             local damage = 15
             if headshot then
                 if distance < 30 then
-                    damage = 72
-                elseif distance < 50 then
-                    damage = 70
+                    damage = 90
+                elseif distance < 70 then
+                    damage = 80
                 else
-                    damage = 68
+                    damage = 70
                 end
             else
                 if distance < 30 then
-                    damage = 38
-                elseif distance < 50 then
-                    damage = 36
+                    damage = 45
+                elseif distance < 70 then
+                    damage = 43
                 else
-                    damage = 34
+                    damage = 41
                 end            
             end
 

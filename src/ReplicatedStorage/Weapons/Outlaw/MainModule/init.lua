@@ -46,8 +46,8 @@ function module:SetupAnimations(character, vm)
 
     self.springs.jump = Spring.create(1, 10, 0, 1.8)
     self.springs.fire = Spring4.new(Vector3.new())
-    self.springs.fire.Speed = 8
-    self.springs.fire.Damper = 0.6
+    self.springs.fire.Speed = 7
+    self.springs.fire.Damper = 0.7
     self.springs.speed = Spring2.spring.new()
     self.springs.speed.s = 16
     self.springs.velocity = Spring2.spring.new(Vector3.new())
@@ -230,7 +230,7 @@ module.aimJanitor = Janitor.new()
 module.isAiming = false
 module.scopedIn = false
 module.isFiring = false
-module.fireRate = 0.22
+module.fireRate = 0.132
 module.scopeOutPromise = nil
 
 function module:ToggleAim(inputState, vm)
@@ -360,6 +360,8 @@ end
 function module:Equip(character, vm, bullets)
     local can = character.Humanoid and character.Humanoid.Health > 0 and character.HumanoidRootPart and vm.HumanoidRootPart
     if not can then return end
+
+    self.janitor:LinkToInstance(character)
 
     self.equipped = false
     WeaponController.baseFov:set(90)
@@ -518,11 +520,12 @@ function module:Equip(character, vm, bullets)
                     self.loadedAnimations.scopeOut.Priority = Enum.AnimationPriority.Idle
                     self.loadedAnimations.Shoot:Play()
                     self.loaded3PAnimations.shoot:Play()
-                    self.springs.fire:Impulse(Vector3.new(1.2,0.3,1))
+                    self.springs.fire:Impulse(Vector3.new(1.8,0,1.2))
                 else
                     self.loadedAnimations.scopedShoot:Play()
+                    self.loadedAnimations.scopedShoot:AdjustSpeed(1.2)
                     self.loaded3PAnimations.scopedShoot:Play()
-                    self.springs.fire:Impulse(Vector3.new(0.8,0.2,0.6))
+                    self.springs.fire:Impulse(Vector3.new(1.5,0,0.8))
                 end
 
                 if not self.scopedIn then

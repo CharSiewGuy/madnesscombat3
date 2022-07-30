@@ -88,9 +88,11 @@ function ClassController:KnitStart()
         self.classModule:Init(character, WeaponController.currentViewmodel)
 
         ContextActionService:BindAction("UseAbility1", self.classModule.HandleActionInterface, true, Enum.KeyCode.Q)
+        ContextActionService:BindAction("UseUltimateAbility", self.classModule.HandleActionInterface, true, Enum.KeyCode.F)
 
         hum.Died:Connect(function()
             ContextActionService:UnbindAction("UseAbility1")
+            ContextActionService:UnbindAction("UseUltimateAbility")
             self.classModule:Cleanup()
             self.janitor:Cleanup()
         end)

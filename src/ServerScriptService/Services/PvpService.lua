@@ -18,6 +18,12 @@ local PvpService = Knit.CreateService {
     }
 }
 
+local ClassService 
+
+function PvpService:KnitInit()
+    ClassService = Knit.GetService("ClassService")    
+end
+
 function PvpService:KnitStart()
     for _, spawn in pairs(workspace.Spawns:GetChildren()) do
         for _, v in pairs(spawn:GetDescendants()) do
@@ -65,6 +71,7 @@ function PvpService.Client:Damage(player, hum, damage, headshot)
             if hum.Health > 0 then
                 if hum.Health - damage <= 0 then
                     if hitPlayer or not pvpOnly then
+                        ClassService:IncreaseUltCharge(player, player.ClassValues.UltChargePerKill.Value)
                         self.KillSignal:Fire(player, hum.Parent.Name, headshot, (player.Character.HumanoidRootPart.Position - hum.Parent.HumanoidRootPart.Position).Magnitude)
                         self.NewKillSignal:FireAll(player.Name, player:GetAttribute("Weapon"), hum.Parent.Name)
                     end

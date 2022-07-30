@@ -26,6 +26,8 @@ function SoundController:KnitStart()
     local RunningFootsteps = game.SoundService:WaitForChild("RunningFootsteps")
 
     Knit.Player.CharacterAdded:Connect(function(character)
+        self.janitor:LinkToInstance(character)
+
         self.janitor:Add(character:WaitForChild("Humanoid").Running:Connect(function(speed)
             self.charspeed = speed
             self.fsinterval = 6/self.charspeed

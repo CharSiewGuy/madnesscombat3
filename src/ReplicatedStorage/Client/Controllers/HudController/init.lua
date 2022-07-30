@@ -9,6 +9,7 @@ local Janitor = require(Packages.Janitor)
 local Promise = require(Packages.Promise)
 local Tween = require(Packages.TweenPromise)
 local Timer = require(Packages.Timer)
+local Option = require(Packages.Option)
 
 local Modules = ReplicatedStorage.Modules
 local SmoothValue = require(Modules.SmoothValue)
@@ -42,8 +43,6 @@ function HudController:KnitInit()
 end
 
 function HudController:KnitStart()
-    game.Lighting.Atmosphere.Density = 0.37
-
     local StarterGui = game:GetService("StarterGui")
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
@@ -77,7 +76,7 @@ function HudController:KnitStart()
         local mouseDelta = UserInputService:GetMouseDelta()
         self.springs.guiSway:shove(Vector3.new(mouseDelta.X/420,mouseDelta.Y/420))
         local sway = self.springs.guiSway:update(dt)
-        self.guiPart.CFrame *= CFrame.new(-sway.x * 8,-sway.y * 8, 0) * CFrame.Angles(-sway.y/2,-sway.x/2, 0)
+        self.guiPart.CFrame *= CFrame.new(-sway.x * 20,-sway.y * 20, 0) * CFrame.Angles(-sway.y/6,-sway.x/6, 0)
 
         self.springs.jumpSway:TimeSkip(dt)
         local newoffset = CFrame.new(self.springs.jumpSway.p.x,self.springs.jumpSway.p.y,self.springs.jumpSway.p.z)
@@ -216,6 +215,33 @@ function HudController:KnitStart()
             end
         end
     end, true, Enum.KeyCode.Tab)
+
+    Knit.Player:GetAttributeChangedSignal("UltCharge"):Connect(function()
+        local percentage = Knit.Player:GetAttribute("UltCharge")
+        local gradientRotation = (percentage/100) * 180
+        Tween(self.ScreenGui.Frame.UltProgress.HalfFrame.ImageLabel.UIGradient, TweenInfo.new(0.2), {Rotation = gradientRotation})
+        self.ScreenGui.Frame.Ult.Frame.Percentage.Text = percentage .. "%"
+    end)
+
+    Knit.Player:GetAttributeChangedSignal("IsUltReady"):Connect(function()
+        if Knit.Player:GetAttribute("IsUltReady") then
+            local notif = self.ScreenGui.Frame.UltChargedNotif
+            notif.BackgroundTransparency = 0.6
+            notif.TextLabel.TextTransparency = 0
+            notif.TextLabel.TextStrokeTransparency = 0.8
+            notif.Size = UDim2.fromScale(0.25, 0.1)
+            Tween(notif, TweenInfo.new(0.2), {Size = UDim2.fromScale(0.2, 0.05)})
+            
+            task.delay(3, function()
+                Tween(notif, TweenInfo.new(1), {BackgroundTransparency = 1})
+                Tween(notif.TextLabel, TweenInfo.new(1), {TextTransparency = 1, TextStrokeTransparency = 1})
+            end)
+
+            Tween(game.Lighting.ColorCorrection, TweenInfo.new(0.5), {TintColor = Color3.fromRGB(255, 245, 225)}):andThen(function()
+                Tween(game.Lighting.ColorCorrection, TweenInfo.new(1), {TintColor = Color3.fromRGB(255, 255, 255)})
+            end)
+        end
+    end)
 end
 
 function HudController:ExpandCrosshair()
@@ -436,10 +462,15 @@ function HudController:PromptKill(name)
         Tween(killPrompt.Bg, TweenInfo.new(0.3), {ImageTransparency = 1})
         task.spawn(function()
             local fx = require(ReplicatedStorage.Modules.GlitchEffect)
-            if not killPrompt:FindFirstChild("FadeOutFx") then return end
             for _, v in pairs(fx) do
-                killPrompt.FadeOutFx.Image = v
-                task.wait()
+                local fadeOutFxOpt = Option.Some(killPrompt:FindFirstChild("FadeOutFx"))
+                fadeOutFxOpt:Match{
+                    Some = function(fadeOutFx)
+                        fadeOutFx.Image = v
+                        task.wait()
+                    end,
+                    None = function() return end
+                }
             end
         end)
         task.delay(.6, function()
